@@ -30,20 +30,20 @@ days <- 1
 seagrass_each <- (24 / (min_per_i / 60)) * days
 
 # save results only every m days
-days <- 25
+days <- 25 # which(max_i %% ((24 / (min_per_i / 60)) * (1:365)) == 0)
 
 save_each <- (24 / (min_per_i / 60)) * days
 
 max_i %% save_each
 
 # set frequency of input peaks
-freq_mn <- 5
+freq_mn <- years / 10
 
 # set number of repetitions
 itr <- 50
 
 # number of local metaecosystems
-n <- 7
+n <- 9
 
 # create no reefs
 reefs <- NULL
@@ -79,36 +79,25 @@ default_starting$detritus_pool <- stable_values$detritus_pool
 input_mn <- stable_values$nutr_input
 
 # setup metaecosystems
-metasyst <- setup_meta(n = n, max_i = max_i, dimensions = dimensions, grain = grain, reefs = reefs,
-                       starting_values = default_starting, parameters = default_parameters)
+metasyst <- meta.arrR::setup_meta(n = n, max_i = max_i, 
+                                  starting_values = default_starting, parameters = default_parameters, 
+                                  dimensions = dimensions, grain = grain, reefs = reefs,)
 
 #### Setup experiment ####
 
-# define parts to sample CV
-part <- c("bg_biomass", "ag_biomass", "bg_production", "ag_production")
+itr <- 50
 
-# set low and high variability treatment levels
-variability_lo <- 0.0
-
-variability_hi <- 0.5
-
-# combine full grid
-variability_full <- expand.grid(ampl = c(variability_lo, variability_hi), 
-                                freq = c(variability_lo, variability_hi)) %>% 
-  dplyr::bind_cols(label = factor(x = c("lo_lo", "hi_lo", "lo_hi", "hi_hi"), 
-                                  levels = c("lo_lo", "hi_lo", "lo_hi", "hi_hi"), 
-                                  labels = c("Low amplitude - Low frequency",
-                                             "High amplitude - Low frequency",
-                                             "Low amplitude - High frequency",
-                                             "High amplitude - High frequency")))
-
-# create experiment data.frame
-variability_exp <- dplyr::bind_cols(
-  ampl = rep(variability_full$ampl, each = itr),
-  freq = rep(variability_full$freq, each = itr), 
-  label = rep(variability_full$label, each = itr), 
-  itr = rep(x = 1:itr, times = nrow(variability_full))
-)
+# create variability data.frame with all combinations 
+variability_experiment <- expand.grid(amplitude = c(0, 0.5, 1), 
+                                      phase = c(0, 0.5, 1)) %>% 
+  dplyr::mutate(amplitude_label = dplyr::case_when(amplitude == 0 ~ "Low", 
+                                                   amplitude == 0.5 ~ "Medium", 
+                                                   TRUE ~ "High"), 
+                phase_label = dplyr::case_when(phase == 0 ~ "Low", 
+                                               phase == 0.5 ~ "Medium", 
+                                               TRUE ~ "High")) %>% 
+  tidyr::unite("combined_label", amplitude_label, phase_label, sep = "_", remove = FALSE) %>% 
+  dplyr::slice(rep(1:n(), each = itr))
 
 #### Setup future plan ####
 
@@ -128,21 +117,22 @@ plan(list(
 ))
 
 # create globals
-globals_meta <- list(n = n, max_i = max_i, variability_exp = variability_exp,
+globals_meta <- list(n = n, max_i = max_i, variability_experiment = variability_experiment,
                      input_mn = input_mn, freq_mn = freq_mn, metasyst = metasyst, 
                      default_parameters = default_parameters, min_per_i = min_per_i, 
-                     seagrass_each = seagrass_each, save_each = save_each, part = part)
+                     seagrass_each = seagrass_each, save_each = save_each)
 
 #### Run model on HPC ####
 
-sampled_cv_nofish %<-% future.apply::future_lapply(1:nrow(variability_exp), FUN = function(i) {
+metarn_nofish %<-% future.apply::future_lapply(1:nrow(variability_experiment), FUN = function(i) {
   
   result %<-% {
     
     # simulate input 
     input_temp <- meta.arrR::sim_nutr_input(n = n, max_i = max_i,
-                                            variability = as.numeric(variability_exp[i, 1:2]),
-                                            input_mn = input_mn, freq_mn = freq_mn)
+                                            variability = as.numeric(variability_experiment[i, 1:2]),
+                                            input_mn = input_mn, freq_mn = freq_mn, 
+                                            verbose = FALSE)
     
     # run model
     result_temp <- meta.arrR::run_meta(metasyst = metasyst, nutr_input = input_temp,
@@ -151,22 +141,12 @@ sampled_cv_nofish %<-% future.apply::future_lapply(1:nrow(variability_exp), FUN 
                                        seagrass_each = seagrass_each,
                                        save_each = save_each, verbose = FALSE)
     
-    # sample CV for increasing scale
-    cv_temp <- purrr::map_dfr(part, function(j) meta.arrR::sample_cv_gamma(result_temp, what = j)) 
-    
-    # add information of run
-    cv_temp <- dplyr::bind_cols(label = variability_exp[i, 3], itr = variability_exp[i, 4], 
-                                part = rep(part, each = n), cv_temp)
-    
-    # reshape to long format
-    cv_temp <- tidyr::pivot_longer(cv_temp, -c(label, itr, part, n), names_to = "stat")
-    
     # create filename
     file_name <- paste0("/home/mhessel/results/meta-rn_nofish_", i, ".rds")
 
     # save result explicit in folder
-    saveRDS(object = cv_temp, file = file_name)
-    
+    saveRDS(object = result_temp, file = file_name)
+
     # only return string
     file_name
     
@@ -178,17 +158,15 @@ sampled_cv_nofish %<-% future.apply::future_lapply(1:nrow(variability_exp), FUN 
 overwrite <- FALSE
 
 # get data from HPC and save to ~/Downloads/results
-sampled_cv_nofish <- list.files(path = "~/Downloads/results",
+
+# get id of all results
+result_id <- list.files(path = "~/Downloads/results",
                                full.names = TRUE, pattern = "^meta-rn_nofish_*") %>%
   stringr::str_sort(numeric = TRUE) %>% 
-  purrr::map_dfr(readRDS) %>% 
-  dplyr::mutate(n = factor(n, ordered = TRUE))
+  map_int(function(i) stringr::str_extract(i, pattern = "[0-9]+") %>% as.integer)
 
-# check if all runs are present (input treatments x local systems x ag/bg x stat)
-nrow(variability_exp) * n * length(part) * 4 == nrow(sampled_cv_nofish)
+# check if all ids are there
+which(!1:nrow(variability_experiment) %in% result_id)
 
-suppoRt::save_rds(object = variability_exp, filename = "variability_exp.rds", 
-                  path = "02_Data/", overwrite = overwrite)
-
-suppoRt::save_rds(object = sampled_cv_nofish, filename = "sampled_cv_nofish.rds", 
+suppoRt::save_rds(object = variability_experiment, filename = "variability_experiment.rds", 
                   path = "02_Data/", overwrite = overwrite)
