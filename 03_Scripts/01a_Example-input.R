@@ -26,71 +26,94 @@ input_mn <- meta.arrR::meta.arrR_starting_values$nutrients_pool * 0.1
 
 freq_mn <- years / 10
 
-#### Setup experiment ####
-
-itr <- 5
-
 # create variability data.frame with all combinations 
-variability_experiment <- expand.grid(amplitude = c(0, 0.5, 1), 
-                                      phase = c(0, 0.5, 1)) %>% 
+variability_input <- expand.grid(amplitude = c(0, 0.5, 1), 
+                                phase = c(0, 0.5, 1)) %>% 
   dplyr::mutate(amplitude_label = dplyr::case_when(amplitude == 0 ~ "Low", 
                                                    amplitude == 0.5 ~ "Medium", 
                                                    TRUE ~ "High"), 
                 phase_label = dplyr::case_when(phase == 0 ~ "Low", 
                                                phase == 0.5 ~ "Medium", 
                                                TRUE ~ "High")) %>% 
-  tidyr::unite("combined_label", amplitude_label, phase_label, sep = "_", remove = FALSE) %>% 
-  dplyr::slice(rep(1:n(), each = itr))
+  tidyr::unite("combined_label", amplitude_label, phase_label, sep = "_", remove = FALSE)
+
+#### alpha scale ####
 
 #### Simulate input ####
 
 # simulate all treatment levels
-input_full <- purrr::map(1:nrow(variability_experiment), function(i) {
+alpha_list <- purrr::map(1:nrow(variability_input), function(i) {
   
   meta.arrR::sim_nutr_input(n = n, max_i = max_i, 
-                            variability = as.numeric(variability_experiment[i, 1:2]),
-                            input_mn = input_mn, freq_mn = freq_mn)
-  
-})
-
-# name list
-names(input_full) <- variability_experiment$combined_label
+                            variability = as.numeric(variability_input[i, 1:2]),
+                            input_mn = input_mn, freq_mn = freq_mn)}) %>% 
+  purrr::set_names(variability_input$combined_label)
 
 ### Flatten data ####
 
 # create data.frame with all values
-input_df <- purrr::map_dfr(input_full, meta.arrR::get_input_df, 
+alpha_df <- purrr::map_dfr(alpha_list, meta.arrR::get_input_df, 
                            gamma = FALSE, long = TRUE, .id = "Input") %>% 
-  dplyr::group_by(Input, Timestep, Meta) %>% 
-  dplyr::summarise(mean = mean(Value), sd = sd(Value), 
-                   .groups = "drop") %>% 
-  dplyr::mutate(Input = factor(Input, levels = variability_full$combined_label, 
-                               labels = paste0(variability_full$amplitude_label, " Amplitude // ", 
-                                               variability_full$phase_label, " Phase")))
-
-# calculate gamma value
-input_df_gamma <- dplyr::group_by(input_df, Input, Timestep) %>%
-  dplyr::summarise(Value = sum(Value))
+  dplyr::mutate(Input = factor(Input, levels = variability_input$combined_label, 
+                               labels = paste0(variability_input$amplitude_label, " Amplitude // ", 
+                                               variability_input$phase_label, " Phase")))
 
 #### Create ggplot ####
 
-gg_input_local <- ggplot(data = input_df) +
-  geom_line(aes(x = Timestep, y = mean, col = Meta)) +
-  geom_ribbon(aes(x = Timestep, ymin = mean - sd, ymax = mean + sd, col = Meta)) + 
+gg_input_local <- ggplot(data = alpha_df) +
+  geom_line(aes(x = Timestep, y = Value, col = Meta)) +
   geom_hline(yintercept = 0, linetype = 2, color = "grey") +
   facet_wrap(. ~ Input) +
-  coord_cartesian(xlim = c(0, max_i / 25 * 3)) +
+  # coord_cartesian(xlim = c(0, max_i / 25 * 3)) +
   scale_color_viridis_d(name = "Meta-ecosystems") +
   labs(x = "Time step", y = "Nutrient input") +
   guides(color = guide_legend(nrow = 1)) +
   theme_classic() + theme(legend.position = "bottom")
 
-gg_input_regional <- ggplot(data = input_df_gamma) +
-  geom_line(aes(x = Timestep, y = Value, col = "Gamma")) +
+#### gamma scale ####
+
+#### Simulate input ####
+
+itr <- 50
+
+# simulate all treatment levels
+gamma_list <- purrr::map(1:nrow(variability_input), function(i) {
+  
+  purrr::map_dfr(1:itr, function(j) {
+    
+    message("\r> Variability: ", i, "/", nrow(variability_input), 
+            " --- Iteration: ", j, "/", itr, "\t\t", 
+            appendLF = FALSE)
+    
+    meta.arrR::sim_nutr_input(n = n, max_i = max_i,
+                              variability = as.numeric(variability_input[i, 1:2]),
+                              input_mn = input_mn, freq_mn = freq_mn) %>% 
+      meta.arrR::get_input_df() %>% 
+      dplyr::select(Timestep, Gamma) %>% 
+      dplyr::bind_cols(itr = j, .)
+    }) %>% 
+    dplyr::group_by(Timestep) %>% 
+    dplyr::summarise(Mean = mean(Gamma), SD = sd(Gamma))
+  }) %>% 
+  purrr::set_names(variability_input$combined_label)
+
+### Flatten data ####
+
+# create data.frame with all values
+gamma_df <- dplyr::bind_rows(gamma_list, .id = "Input") %>% 
+  dplyr::mutate(Input = factor(Input, levels = variability_input$combined_label, 
+                               labels = paste0(variability_input$amplitude_label, " Amplitude // ", 
+                                               variability_input$phase_label, " Phase")))
+
+gg_input_regional <- ggplot(data = gamma_df) +
+  geom_ribbon(aes(x = Timestep, ymin = Mean - SD, ymax = Mean + SD, fill  = "Gamma"), 
+              alpha = 0.25) + 
+  geom_line(aes(x = Timestep, y = Mean, col = "Gamma")) +
   geom_hline(yintercept = 0, linetype = 2, color = "grey") +
   facet_wrap(. ~ Input) +
-  coord_cartesian(xlim = c(0, max_i / 25 * 3)) +
-  scale_color_manual(name = "Meta-ecosystems", values = "black") +
+  scale_fill_manual(name = "", values = "black") +
+  scale_color_manual(name = "Meta-ecosystems (mean±sd)", values = "black") +
+  guides(fill = "none") +
   labs(x = "Time step", y = "Nutrient input") +
   guides(color = guide_legend(nrow = 1)) +
   theme_classic() + theme(legend.position = "bottom")
