@@ -10,6 +10,7 @@
 library(meta.arrR) # remotes::install_github("Allgeier-Lab/meta.arrR", ref = "development")
 library(arrR)
 
+library(raster)
 library(suppoRt) # remotes::install_github("mhesselbarth/suppoRt")
 library(tidyverse)
 
