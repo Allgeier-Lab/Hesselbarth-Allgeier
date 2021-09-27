@@ -62,9 +62,9 @@ variability_df <- purrr::map_dfr(1:nrow(variability_experiment), function(i) {
 
 gg_input_continuous <- ggplot(data = variability_df) + 
   geom_raster(aes(x = amplitude, y = phase, fill = mean)) + 
-  geom_point(aes(x = amplitude, y = phase, size = sd), alpha = 1/2) +
-  scale_fill_continuous(name = "gamma", type = "viridis", limits = c(0, 1)) +
-  scale_size_continuous(name = "SD", limits = c(0, 1)) + 
+  geom_point(aes(x = amplitude, y = phase, size = sd), pch = 1) +
+  scale_fill_continuous(name = "gamma", type = "viridis") +
+  scale_size_continuous(name = "SD") + 
   guides(fill = guide_colorbar(order = 1), size = guide_legend(order = 0)) + 
   labs(x = "Variability Amplitude", y = "Variability Phase") +
   coord_equal() + 

@@ -146,6 +146,6 @@ overwrite <- FALSE
 suppoRt::save_rds(object = variability_input, filename = "variability_example.rds", 
                   path = "02_Data/", overwrite = overwrite)
 
-suppoRt::save_ggplot(plot = gg_variability_input, filename = "gg_example_variability.png", 
+suppoRt::save_ggplot(plot = gg_variability_input, filename = "gg_example-input_variability.png", 
                      path = "04_Figures/", width = height, height = width, dpi = dpi, 
                      units = units, overwrite = overwrite)
