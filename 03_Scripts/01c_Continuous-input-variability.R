@@ -31,36 +31,54 @@ freq_mn <- years / 10
 itr <- 50
 
 # create variability data.frame with all combinations 
-variability_experiment <- expand.grid(amplitude = seq(from = 0, to = 1, by = 0.1), 
-                                      phase = seq(from = 0, to = 1, by = 0.1)) %>% 
+variability_experiment <- expand.grid(amplitude = seq(from = 0, to = 1, by = 0.2), 
+                                      phase = seq(from = 0, to = 1, by = 0.2)) %>% 
   dplyr::slice(rep(1:n(), each = itr))
 
-#### Variability of input ####
+#### Create function ####
 
-# sample variability for different treatment lvls and increasing scale
-variability_df <- purrr::map_dfr(1:nrow(variability_experiment), function(i) {
+foo <- function(amplitude, phase) {
   
-    # print progress
-    message("\r> Variability: ", i, " / ", nrow(variability_experiment), "\t\t", 
-            appendLF = FALSE)
-    
-    # simulate input
-    input_temp <- meta.arrR::sim_nutr_input(n = n, max_i = max_i,
-                                            variability = as.numeric(variability_experiment[i, 1:2]),
-                                            input_mn = input_mn, freq_mn = freq_mn)
-    
-    # sample cv
-    cv_temp <- meta.arrR::calc_variability(input_temp)
-    
-    # create data.frame
-    dplyr::bind_cols(amplitude = variability_experiment[i, 1], phase = variability_experiment[i, 2], 
-                     gamma = cv_temp$gamma)}) %>% 
-  dplyr::group_by(amplitude, phase) %>% 
+  # simulate input
+  input_temp <- meta.arrR::sim_nutr_input(n = n, max_i = max_i,
+                                          variability = c(amplitude, phase),
+                                          input_mn = input_mn, freq_mn = freq_mn)
+  
+  # sample cv
+  cv_temp <- meta.arrR::calc_variability(input_temp)
+  
+  # combine to vector
+  c(amplitude = amplitude, phase = phase, gamma = cv_temp$gamma)
+  
+}
+
+#### Submit to HPC #### 
+
+variability_sbatch <- rslurm::slurm_apply(f = foo, params = variability_experiment, 
+                                          global_objects = c("n", "max_i", "input_mn", "freq_mn"),
+                                          jobname = 'vari_cont',
+                                          nodes = nrow(variability_experiment), cpus_per_node = 1, 
+                                          slurm_options = list("account" = "jeallg1", 
+                                                               "partition" = "standard",
+                                                               "time" = "00:10:00", ## hh:mm::ss
+                                                               "mem-per-cpu" = "7G",
+                                                               "error" = "vari_cont.log"),
+                                          pkgs = "meta.arrR",
+                                          rscript_path = rscript_path, sh_template = sh_template, 
+                                          submit = FALSE)
+
+#### Collect results ####
+
+variability_result <- rslurm::get_slurm_out(variability_sbatch, outtype = "table")
+
+variability_result <- dplyr::group_by(variability_result, amplitude, phase) %>% 
   dplyr::summarise(mean = mean(gamma), sd = sd(gamma), .groups = "drop")
+
+rslurm::cleanup_files(variability_sbatch)
 
 #### Create ggplot ####
 
-gg_input_continuous <- ggplot(data = variability_df) + 
+gg_input_continuous <- ggplot(data = variability_result) + 
   geom_raster(aes(x = amplitude, y = phase, fill = mean)) + 
   geom_point(aes(x = amplitude, y = phase, size = sd), pch = 1) +
   scale_fill_continuous(name = "gamma", type = "viridis") +
