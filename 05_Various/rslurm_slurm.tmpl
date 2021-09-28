@@ -1,0 +1,17 @@
+#!/bin/bash
+
+#SBATCH --job-name={{{jobname}}}
+#SBATCH --array=0-{{{max_node}}}{{{job_array_task_limit}}}
+#SBATCH --cpus-per-task={{{cpus_per_node}}}
+#SBATCH --output=slurm_%a.out
+{{#flags}}
+#SBATCH --{{{name}}}
+{{/flags}}
+{{#options}}
+#SBATCH --{{{name}}}={{{value}}}
+{{/options}}
+
+module load gcc/8.2.0
+module load R/4.0.2
+
+{{{rscript}}} --vanilla slurm_run.R
