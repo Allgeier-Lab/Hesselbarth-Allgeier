@@ -11,6 +11,7 @@ library(meta.arrR) # remotes::install_github("Allgeier-Lab/meta.arrR", ref = "de
 library(arrR)
 
 library(raster)
+library(rslurm)
 library(suppoRt) # remotes::install_github("mhesselbarth/suppoRt")
 library(tidyverse)
 
