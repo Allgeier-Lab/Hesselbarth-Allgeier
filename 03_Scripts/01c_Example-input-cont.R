@@ -35,6 +35,8 @@ variability_experiment <- expand.grid(amplitude = seq(from = 0, to = 1, by = 0.2
                                       phase = seq(from = 0, to = 1, by = 0.2)) %>% 
   dplyr::slice(rep(1:n(), each = itr))
 
+#### HPC ####
+
 #### Create function ####
 
 foo <- function(amplitude, phase) {
@@ -56,13 +58,12 @@ foo <- function(amplitude, phase) {
 
 variability_sbatch <- rslurm::slurm_apply(f = foo, params = variability_experiment, 
                                           global_objects = c("n", "max_i", "input_mn", "freq_mn"),
-                                          jobname = 'vari_cont',
+                                          jobname = "vari_cont",
                                           nodes = nrow(variability_experiment), cpus_per_node = 1, 
                                           slurm_options = list("account" = "jeallg1", 
                                                                "partition" = "standard",
-                                                               "time" = "00:10:00", ## hh:mm::ss
-                                                               "mem-per-cpu" = "7G",
-                                                               "error" = "vari_cont.log"),
+                                                               "time" = "00:05:00", ## hh:mm::ss
+                                                               "error" = "rslurm.log"),
                                           pkgs = "meta.arrR",
                                           rscript_path = rscript_path, sh_template = sh_template, 
                                           submit = FALSE)
@@ -71,10 +72,19 @@ variability_sbatch <- rslurm::slurm_apply(f = foo, params = variability_experime
 
 variability_result <- rslurm::get_slurm_out(variability_sbatch, outtype = "table")
 
+rslurm::cleanup_files(variability_sbatch)
+
+#### Save data ####
+
+suppoRt::save_rds(object = variability_result, filename = "variability_continuous.rds", 
+                  path = "02_Data/", overwrite = FALSE)
+
+#### Load data #### 
+
+variability_result <- readRDS("02_Data/variability_continuous.rds")
+
 variability_result <- dplyr::group_by(variability_result, amplitude, phase) %>% 
   dplyr::summarise(mean = mean(gamma), sd = sd(gamma), .groups = "drop")
-
-rslurm::cleanup_files(variability_sbatch)
 
 #### Create ggplot ####
 
