@@ -59,7 +59,7 @@ foo <- function(amplitude, phase) {
 
 variability_sbatch <- rslurm::slurm_apply(f = foo, params = variability_experiment, 
                                           global_objects = c("n", "max_i", "input_mn", "freq_mn"),
-                                          jobname = "exampl_vari",
+                                          jobname = "example_sample_vari",
                                           nodes = nrow(variability_experiment), cpus_per_node = 1, 
                                           slurm_options = list("account" = "jeallg1", 
                                                                "partition" = "standard",
@@ -76,12 +76,14 @@ rslurm::cleanup_files(variability_sbatch)
 
 #### Save data ####
 
-suppoRt::save_rds(object = variability_result, filename = "example-variability.rds", 
+suppoRt::save_rds(object = variability_result, filename = "example_sample-variability.rds", 
                   path = "02_Data/", overwrite = FALSE)
 
 #### Load data ####
 
-variability_result <- readRDS("02_Data/example-variability.rds")
+variability_result <- readRDS("02_Data/example_sample-variability.rds")
+
+#### Pre-process data ####
 
 variability_result <- dplyr::mutate(variability_result, 
                                     amplitude_label = dplyr::case_when(amplitude == 0 ~ "Low",
@@ -90,52 +92,49 @@ variability_result <- dplyr::mutate(variability_result,
                                     phase_label = dplyr::case_when(phase == 0 ~ "Low",
                                                                    phase == 0.5 ~ "Medium",
                                                                    TRUE ~ "High")) %>%
-  tidyr::unite("input", amplitude_label, phase_label, sep = "_", remove = FALSE) %>% 
-  dplyr::mutate(input = factor(input, levels = input, 
+  tidyr::unite("input", amplitude_label, phase_label, sep = "_", remove = FALSE) %>%
+  tidyr::pivot_longer(c(alpha, beta, gamma, synchrony), names_to = "stat") %>% 
+  dplyr::mutate(part = factor(part), 
+                n = factor(n, ordered = TRUE),
+                input = factor(input, levels = input, 
                                labels = paste0(amplitude_label, " Amplitude // ", 
                                                phase_label, " Phase")), 
-                n = factor(n, ordered = TRUE)) %>% 
-  tidyr::pivot_longer(c(alpha, beta, gamma, synchrony), names_to = "stat") %>% 
-  dplyr::mutate(stat = factor(stat, levels = c("alpha", "beta", "gamma", "synchrony")))
+                stat = factor(stat, levels = c("alpha", "beta", "gamma", "synchrony")))
 
 #### Fit NLS decay model ####
 
-# create vector with names
-variability_input_names <- paste(rep(x = levels(variability_result$input), each = 2), 
-                              c("gamma", "synchrony")) %>% 
-  stringr::str_remove_all(pattern = "// ") %>%
-  stringr::str_replace_all(c("Amplitude" = "-", "Phase " = "", " - " = "-", " " = "_")) %>% 
-  stringr::str_to_lower()
-
 # fit NLS model
-variability_input_fit <- dplyr::filter(variability_result, stat %in% c("gamma", "synchrony")) %>% 
+variability_fit <- dplyr::filter(variability_result, stat %in% c("gamma", "synchrony")) %>% 
   dplyr::mutate(n = as.numeric(n)) %>% 
   dplyr::group_by(input, stat) %>% 
-  dplyr::group_split() %>% 
-  purrr::set_names(variability_input_names) %>% 
+  dplyr::group_split() 
+
+# create names
+variability_names <- purrr::map_chr(variability_fit, function(i) {
+  
+  paste(unique(i$input), unique(i$stat), sep = "-") 
+  
+})
+
+# set names and fit model
+variability_fit <- purrr::set_names(variability_fit, variability_names) %>%
   purrr::map(fit_nls)
 
 # predict data
-variability_input_pred <- purrr::map_dfr(variability_input_fit, predict_nls, x = 1:9, .id = "input") %>% 
-  tidyr::separate(col = input, sep = "_", into = c("input", "stat")) %>% 
-  dplyr::mutate(input = factor(input, levels = c("low-low", "medium-low", "high-low", 
-                                                 "low-medium", "medium-medium", "high-medium",
-                                                 "low-high", "medium-high", "high-high"), 
-                               labels = levels(variability_result$input))) 
+variability_pred <- purrr::map_dfr(variability_fit, predict_nls, x = 1:9, .id = "input") %>% 
+  tidyr::separate(col = input, sep = "-", into = c("input", "stat")) %>% 
+  dplyr::mutate(input = factor(input, levels = unique(input))) 
 
 #### Table with coefficients ####
 
-variability_input_coef <- dplyr::bind_rows(variability_input_fit, .id = "input") %>% 
-  tidyr::separate(col = input, sep = "_", into = c("input", "stat")) %>% 
-  dplyr::mutate(input = factor(input, levels = c("low-low", "medium-low", "high-low", 
-                                                 "low-medium", "medium-medium", "high-medium",
-                                                 "low-high", "medium-high", "high-high"), 
-                               labels = levels(variability_result$input)),
+variability_coef <- dplyr::bind_rows(variability_fit, .id = "input") %>% 
+  tidyr::separate(col = input, sep = "-", into = c("input", "stat")) %>% 
+  dplyr::mutate(input = factor(input, levels = unique(input)),
                 model = factor(dplyr::case_when(is.na(p.value) ~ "const", 
                                                 !is.na(p.value) ~ "nls"), 
                                levels = c("const", "nls")))
 
-dplyr::filter(variability_input_coef, p.value < 0.05)
+dplyr::filter(variability_coef, p.value < 0.05)
 
 #### Create ggplot ####
 
@@ -147,17 +146,17 @@ y_text_b <- 0.8
 
 digits_text <- 5
 
-gg_variability_input <- dplyr::filter(variability_result, stat %in% c("gamma", "synchrony")) %>%
+gg_variability <- dplyr::filter(variability_result, stat %in% c("gamma", "synchrony")) %>%
   ggplot() +
   geom_hline(yintercept = 0, linetype = 2, col = "grey") +
   geom_boxplot(aes(x = n, y = value, fill = stat), alpha = 0.25) +
-  geom_line(data = variability_input_pred, aes(x = x, y = value, col = stat)) +
-  geom_label(data = dplyr::filter(variability_input_coef, 
+  geom_line(data = variability_pred, aes(x = x, y = value, col = stat)) +
+  geom_label(data = dplyr::filter(variability_coef, 
                                   stat == "gamma", term %in% c("n", "beta")), 
             aes(x = x_text, y = y_text_a, col = "gamma", 
                 label = paste(term, ":", round(estimate, digits = digits_text))), 
             size = size_text, show.legend = FALSE) + 
-  geom_label(data = dplyr::filter(variability_input_coef, 
+  geom_label(data = dplyr::filter(variability_coef, 
                                   stat == "synchrony", term %in% c("n", "beta")), 
             aes(x = x_text, y = y_text_b, col = "synchrony", 
                 label = paste(term, ":", round(estimate, digits = digits_text))), 
@@ -171,6 +170,6 @@ gg_variability_input <- dplyr::filter(variability_result, stat %in% c("gamma", "
 
 #### Save ggplot ####
 
-suppoRt::save_ggplot(plot = gg_variability_input, filename = "gg_example-input_variability.png", 
+suppoRt::save_ggplot(plot = gg_variability, filename = "gg_example_sample-variability.png", 
                      path = "04_Figures/", width = height, height = width, dpi = dpi, 
                      units = units, overwrite = FALSE)

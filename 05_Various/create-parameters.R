@@ -71,11 +71,11 @@ default_parameters <- list(
 
 #### default starting values ####
 
-ag <- meta.arrR_parameters$ag_biomass_min +
-  (meta.arrR_parameters$ag_biomass_max - meta.arrR_parameters$ag_biomass_min) * 0.5
+ag <- default_parameters$ag_biomass_min +
+  (default_parameters$ag_biomass_max - default_parameters$ag_biomass_min) * 0.5
 
-bg <- meta.arrR_parameters$bg_biomass_min +
-  (meta.arrR_parameters$bg_biomass_max - meta.arrR_parameters$bg_biomass_min) * 0.5
+bg <- default_parameters$bg_biomass_min +
+  (default_parameters$bg_biomass_max - default_parameters$bg_biomass_min) * 0.5
 
 default_starting <- list(
   
@@ -95,8 +95,10 @@ default_starting <- list(
 
 #### save results ####
 
+overwrite <- FALSE
+
 suppoRt::save_rds(object = default_parameters, filename = "default_parameters.rds", 
-                  path = "02_Data/", overwrite = TRUE)
+                  path = "02_Data/", overwrite = overwrite)
 
 suppoRt::save_rds(object = default_starting, filename = "default_starting.rds", 
-                  path = "02_Data/", overwrite = TRUE)
+                  path = "02_Data/", overwrite = overwrite)

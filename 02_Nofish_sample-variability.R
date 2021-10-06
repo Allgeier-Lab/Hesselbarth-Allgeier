@@ -52,12 +52,6 @@ dimensions <- c(100, 100)
 
 grain <- 1
 
-# create vector with parts to calc variability
-part <- c("bg_biomass", "ag_biomass", "bg_production", "ag_production")
-
-# create vector for lag
-lag <- c(FALSE, FALSE, TRUE, TRUE)
-
 #### Adapt parameters ####
 
 default_starting$pop_n <- 0
@@ -71,7 +65,7 @@ default_parameters$detritus_fish_diffusion <- 0.0
 #### Stable values ####
 
 stable_values <- arrR::get_stable_values(starting_values = default_starting,
-                                       parameters = default_parameters)
+                                         parameters = default_parameters)
 
 default_starting$nutrients_pool <- stable_values$nutrients_pool
 
@@ -94,8 +88,7 @@ variability_experiment <- expand.grid(amplitude = c(0, 0.5, 1),
 globals <- list(n = n, max_i = max_i, input_mn = input_mn, freq_mn = freq_mn, 
                 default_starting = default_starting, default_parameters = default_parameters, 
                 dimensions = dimensions, grain = grain,
-                min_per_i = min_per_i, seagrass_each = seagrass_each, save_each = save_each, 
-                part = part, lag = lag) 
+                min_per_i = min_per_i, seagrass_each = seagrass_each, save_each = save_each) 
 
 foo <- function(amplitude, phase, globals) {
   
@@ -120,16 +113,12 @@ foo <- function(amplitude, phase, globals) {
                                      save_each = globals$save_each, verbose = FALSE)
   
   # sample variability for input
-  cv_temp_in <- cbind(what = "input", part = NA,
-                      meta.arrR::sample_variability(x = result_temp$nutr_input, 
-                                                    verbose = FALSE))
+  cv_temp_in <- meta.arrR::sample_variability(x = result_temp$nutr_input, 
+                                              verbose = FALSE)
   
   # sample variability for output and biomass and production
-  cv_temp_out <- purrr::map_dfr(seq_along(globals$part), function(i) {
-    cbind(what = "output", part = globals$part[i],
-          meta.arrR::sample_variability(x = result_temp, 
-                                        what = globals$part[i], lag = globals$lag[i], 
-                                        verbose = FALSE))
+  cv_temp_out <- purrr::map_dfr(c("biomass", "production", "turnover"), function(i) {
+    meta.arrR::sample_variability(x = result_temp, what = i, verbose = FALSE)
   })
   
   # combine to df
@@ -139,7 +128,7 @@ foo <- function(amplitude, phase, globals) {
 #### Submit to HPC #### 
 
 nofish_sbatch <- rslurm::slurm_apply(f = foo, params = variability_experiment, 
-                                     globals = globals, jobname = "nofish",
+                                     globals = globals, jobname = "nofish_sample_vari",
                                      nodes = nrow(variability_experiment), cpus_per_node = 1, 
                                      slurm_options = list("account" = "jeallg1", 
                                                           "partition" = "standard",
@@ -158,60 +147,60 @@ rslurm::cleanup_files(nofish_sbatch)
 
 #### Save data ####
 
-suppoRt::save_rds(object = nofish_result, filename = "nofish_variability.rds", 
+suppoRt::save_rds(object = nofish_result, filename = "nofish_sample-variability.rds", 
                   path = "02_Data/", overwrite = FALSE)
 
 #### Load data ####
 
-nofish_result <- readRDS(file = "02_Data/nofish_variability.rds")
+nofish_result <- readRDS(file = "02_Data/nofish_sample-variability.rds")
 
-nofish_result <- dplyr::mutate(nofish_result,
-                               amplitude_label = dplyr::case_when(amplitude == 0 ~ "Low",
-                                                                  amplitude == 0.5 ~ "Medium",
-                                                                  TRUE ~ "High"),
-                               phase_label = dplyr::case_when(phase == 0 ~ "Low",
-                                                              phase == 0.5 ~ "Medium",
-                                                              TRUE ~ "High")) %>%
-  tidyr::unite("input", amplitude_label, phase_label, sep = "_", remove = FALSE) %>% 
-  dplyr::mutate(input = factor(input, levels = input, 
+#### Pre-process data ####
+
+nofish_result <- dplyr::mutate(nofish_result, 
+              amplitude_label = dplyr::case_when(amplitude == 0 ~ "Low",
+                                                 amplitude == 0.5 ~ "Medium",
+                                                 TRUE ~ "High"),
+              phase_label = dplyr::case_when(phase == 0 ~ "Low",
+                                             phase == 0.5 ~ "Medium",
+                                             TRUE ~ "High")) %>%
+  tidyr::unite("input", amplitude_label, phase_label, sep = "_", remove = FALSE) %>%
+  tidyr::pivot_longer(c(alpha, beta, gamma, synchrony), names_to = "stat") %>% 
+  dplyr::mutate(part = factor(part), 
+                n = factor(n, ordered = TRUE),
+                input = factor(input, levels = input, 
                                labels = paste0(amplitude_label, " Amplitude // ", 
                                                phase_label, " Phase")), 
-                part = factor(part, levels = c("bg_biomass", "ag_biomass", 
-                                               "bg_production", "ag_production")),
-                n = factor(n, ordered = TRUE))
-
-#### Output variability ####
-
-# filter only input data, get required columns to reshape to long
-variability_output <- dplyr::filter(nofish_result, what == "output") %>% 
-  dplyr::select(-c(what, alpha, beta, amplitude, phase)) %>% 
-  tidyr::pivot_longer(cols = c(gamma, synchrony), names_to = "stat") %>% 
-  dplyr::mutate(stat = factor(stat, levels = c("gamma", "synchrony")))
+                stat = factor(stat, levels = c("alpha", "beta", "gamma", "synchrony")))
 
 #### Fit decay model #####
 
-# create names
-variability_output_names <- paste(rep(levels(variability_output$input), each = 4 * 2), 
-                                  rep(levels(variability_output$stat), each = 4),
-                                  levels(variability_output$part), sep = "-")
-
 # fit NLS model
-variability_output_fit <- dplyr::mutate(variability_output, n = as.numeric(n)) %>% 
-  dplyr::group_by(input, stat, part,) %>% 
-  dplyr::group_split() %>%
-  purrr::set_names(variability_output_names) %>%
+variability_fit <- dplyr::mutate(nofish_result, n = as.numeric(n)) %>% 
+  dplyr::group_by(part, input, stat) %>% 
+  dplyr::group_split()
+
+# create names
+variability_names <- purrr::map_chr(variability_fit, function(i) {
+  
+  paste(unique(i$part), unique(i$input), unique(i$stat), sep = "-") 
+  
+})
+
+# set names and fit model
+variability_fit <- purrr::set_names(variability_fit, variability_names) %>%
   purrr::map(fit_nls)
 
 # predict data
-variability_output_pred <- purrr::map_dfr(variability_output_fit, predict_nls, x = 1:9, 
+variability_pred <- purrr::map_dfr(variability_fit, predict_nls, x = 1:9, 
                                           .id = "input") %>% 
-  tidyr::separate(col = input, sep = "-", into = c("input", "stat", "part")) %>% 
-  dplyr::mutate(input = factor(input, levels = levels(nofish_result$input)))
+  tidyr::separate(col = input, sep = "-", into = c("part", "input", "stat")) %>% 
+  dplyr::mutate(input = factor(input, levels = unique(input)))
 
 # get coefficients of model
-variability_output_coef <- dplyr::bind_rows(variability_output_fit, .id = "input") %>% 
-  tidyr::separate(col = input, sep = "-", into = c("input", "stat", "part")) %>% 
-  dplyr::mutate(input = factor(input, levels = levels(nofish_result$input)))
+variability_coef <- dplyr::bind_rows(variability_fit, .id = "input") %>% 
+  tidyr::separate(col = input, sep = "-", into = c("part", "input", "stat")) %>% 
+  dplyr::mutate(input = factor(input, levels = unique(input)))
+
 
 #### Create ggplot ####
 
@@ -223,14 +212,20 @@ y_text_b <- 0.8
 
 digits_text <- 5
 
-gg_variability_output <- purrr::map(part, function(i) {
+parts <- c("bg_biomass", "ag_biomass", "bg_production", "ag_production", 
+           "bg_turnover", "ag_turnover")
+
+gg_variability_output <- purrr::map(parts, function(i) {
   
   # filter data by part
-  output_temp <- dplyr::filter(variability_output, part == i)
+  output_temp <- dplyr::filter(nofish_result, part %in% i, 
+                               stat %in% c("gamma", "synchrony"))
   
-  pred_temp <- dplyr::filter(variability_output_pred, part == i)
+  pred_temp <- dplyr::filter(variability_pred, part %in% i, 
+                             stat %in% c("gamma", "synchrony"))
   
-  coef_temp <- dplyr::filter(variability_output_coef, part == i)
+  coef_temp <- dplyr::filter(variability_coef, part %in% i, 
+                             stat %in% c("gamma", "synchrony"))
   
   ggplot() +
     geom_hline(yintercept = 0, linetype = 2, col = "grey") +
@@ -250,6 +245,7 @@ gg_variability_output <- purrr::map(part, function(i) {
     labs(x = "# local ecosystems", y = "Variability value", title = i) +
     theme_classic() +
     theme(legend.position = "bottom")
+  
 })
 
 #### Save ggplot ####
@@ -257,11 +253,11 @@ gg_variability_output <- purrr::map(part, function(i) {
 overwrite <- FALSE
 
 # save all output figures
-purrr::walk(seq_along(part), function(i) {
+purrr::walk(seq_along(parts), function(i) {
   
-  part_temp <- stringr::str_replace(string = part[i], pattern = "_", replacement = "-")
+  part_temp <- stringr::str_replace(string = parts[i], pattern = "_", replacement = "-")
   
-  name_temp <- paste0("gg_nofish_variability_", part_temp, ".png")
+  name_temp <- paste0("gg_nofish_sample-variability_", part_temp, ".png")
   
   suppoRt::save_ggplot(plot = gg_variability_output[[i]], filename = name_temp, 
                        path = "04_Figures/", width = height, height = width, dpi = dpi, 

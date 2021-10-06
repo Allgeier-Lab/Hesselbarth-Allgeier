@@ -8,6 +8,12 @@
 
 source("05_Various/setup.R")
 
+#### Load data ####
+
+default_starting <- readRDS("02_Data/default_starting.rds")
+
+default_parameters <- readRDS("02_Data/default_parameters.rds")
+
 #### Basic parameters ####
 
 # number of local metaecosystems
@@ -21,10 +27,14 @@ years <- 25
 
 max_i <- (60 * 24 * 365 * years) / min_per_i
 
-# setup nutrient input to be maximum 10% of inital nutrients
-input_mn <- meta.arrR::meta.arrR_starting_values$nutrients_pool * 0.1
-
 freq_mn <- years * 1/4
+
+#### Stabel values ####
+
+stable_values <- arrR::get_stable_values(starting_values = default_starting,
+                                         parameters = default_parameters)
+
+input_mn <- stable_values$nutr_input
 
 # create variability data.frame with all combinations 
 variability_input <- expand.grid(amplitude = c(0, 0.5, 1), 
@@ -122,10 +132,10 @@ gg_input_regional <- ggplot(data = gamma_df) +
 
 #### Save ggplot ####
 
-suppoRt::save_ggplot(plot = gg_input_local, filename = "gg_example-input_local.png", 
+suppoRt::save_ggplot(plot = gg_input_local, filename = "gg_example_input-alpha.png", 
                      path = "04_Figures/", width = height, height = width, dpi = dpi, 
                      units = units, overwrite = overwrite)
 
-suppoRt::save_ggplot(plot = gg_input_regional, filename = "gg_example-input_regional.png", 
+suppoRt::save_ggplot(plot = gg_input_regional, filename = "gg_example_input-gamma.png", 
                      path = "04_Figures/", width = height, height = width, dpi = dpi, 
                      units = units, overwrite = overwrite)

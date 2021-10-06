@@ -10,14 +10,15 @@
 library(meta.arrR) # remotes::install_github("Allgeier-Lab/meta.arrR", ref = "development")
 library(arrR)
 
+library(cowplot)
 library(raster)
 library(rslurm)
 library(suppoRt) # remotes::install_github("mhesselbarth/suppoRt")
 library(tidyverse)
 
-library(future)
-library(future.batchtools)
-library(future.apply)
+# library(future)
+# library(future.batchtools)
+# library(future.apply)
 
 # Set some plotting defaults
 
