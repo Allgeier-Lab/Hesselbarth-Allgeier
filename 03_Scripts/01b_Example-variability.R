@@ -26,7 +26,7 @@ max_i <- (60 * 24 * 365 * years) / min_per_i
 # setup nutrient input to be maximum 10% of inital nutrients
 input_mn <- meta.arrR::meta.arrR_starting_values$nutrients_pool * 0.1
 
-freq_mn <- years / 10
+freq_mn <- years * 1/4
 
 # set number of repetitions
 itr <- 50
@@ -63,8 +63,7 @@ variability_sbatch <- rslurm::slurm_apply(f = foo, params = variability_experime
                                           nodes = nrow(variability_experiment), cpus_per_node = 1, 
                                           slurm_options = list("account" = "jeallg1", 
                                                                "partition" = "standard",
-                                                               "time" = "00:10:00", ## hh:mm::ss
-                                                               "error" = "rslurm.log"),
+                                                               "time" = "00:10:00"), ## hh:mm::ss
                                           pkgs = "meta.arrR",
                                           rscript_path = rscript_path, sh_template = sh_template, 
                                           submit = FALSE)
@@ -77,12 +76,12 @@ rslurm::cleanup_files(variability_sbatch)
 
 #### Save data ####
 
-suppoRt::save_rds(object = variability_result, filename = "variability_example.rds", 
+suppoRt::save_rds(object = variability_result, filename = "example-variability.rds", 
                   path = "02_Data/", overwrite = FALSE)
 
 #### Load data ####
 
-variability_result <- readRDS("02_Data/variability_example.rds")
+variability_result <- readRDS("02_Data/example-variability.rds")
 
 variability_result <- dplyr::mutate(variability_result, 
                                     amplitude_label = dplyr::case_when(amplitude == 0 ~ "Low",

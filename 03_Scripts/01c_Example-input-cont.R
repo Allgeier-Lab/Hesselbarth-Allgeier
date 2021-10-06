@@ -24,7 +24,7 @@ max_i <- (60 * 24 * 365 * years) / min_per_i
 # setup nutrient input to be maximum 10% of inital nutrients
 input_mn <- meta.arrR::meta.arrR_starting_values$nutrients_pool * 0.1
 
-freq_mn <- years / 10
+freq_mn <- years * 1/4
 
 #### Setup experiment ####
 
@@ -62,8 +62,7 @@ variability_sbatch <- rslurm::slurm_apply(f = foo, params = variability_experime
                                           nodes = nrow(variability_experiment), cpus_per_node = 1, 
                                           slurm_options = list("account" = "jeallg1", 
                                                                "partition" = "standard",
-                                                               "time" = "00:05:00", ## hh:mm::ss
-                                                               "error" = "rslurm.log"),
+                                                               "time" = "00:05:00"), ## hh:mm::ss
                                           pkgs = "meta.arrR",
                                           rscript_path = rscript_path, sh_template = sh_template, 
                                           submit = FALSE)
@@ -76,12 +75,12 @@ rslurm::cleanup_files(variability_sbatch)
 
 #### Save data ####
 
-suppoRt::save_rds(object = variability_result, filename = "variability_continuous.rds", 
+suppoRt::save_rds(object = variability_result, filename = "example-variability_cont.rds", 
                   path = "02_Data/", overwrite = FALSE)
 
 #### Load data #### 
 
-variability_result <- readRDS("02_Data/variability_continuous.rds")
+variability_result <- readRDS("02_Data/example-variability_cont.rds")
 
 variability_result <- dplyr::group_by(variability_result, amplitude, phase) %>% 
   dplyr::summarise(mean = mean(gamma), sd = sd(gamma), .groups = "drop")
@@ -92,7 +91,7 @@ gg_input_continuous <- ggplot(data = variability_result) +
   geom_raster(aes(x = amplitude, y = phase, fill = mean)) + 
   geom_point(aes(x = amplitude, y = phase, size = sd), pch = 1) +
   scale_fill_continuous(name = "gamma", type = "viridis") +
-  scale_size_continuous(name = "SD") + 
+  scale_size_continuous(name = "sd") + 
   guides(fill = guide_colorbar(order = 1), size = guide_legend(order = 0)) + 
   labs(x = "Variability Amplitude", y = "Variability Phase") +
   coord_equal() + 

@@ -1,5 +1,6 @@
 # alpha: coefficients$estimate[1]
-# beta: coefficients$estimate[]
+# beta: coefficients$estimate[2]
+# theta: coefficients$estimate[3]
 
 predict_nls <- function(x, coefficients) {
   

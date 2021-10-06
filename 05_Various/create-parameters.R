@@ -26,14 +26,14 @@ default_parameters <- list(
   # seagrass
   seagrass_thres = -1/3,
   seagrass_slope = 2.0,
-  seagrass_slough = 0.01,
+  seagrass_slough = 0.001,
   
   # nutrients
   nutrients_diffusion = 2/3,
-  nutrients_output = 0.01,
+  nutrients_output = 0.001,
   
   # detritus
-  detritus_mineralization = 0.01,
+  detritus_mineralization = 0.001,
   detritus_diffusion = 1/3,
   detritus_fish_decomp = 0.5,
   detritus_fish_diffusion = 1/3,

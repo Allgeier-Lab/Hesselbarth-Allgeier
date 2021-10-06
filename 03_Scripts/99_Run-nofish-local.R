@@ -30,24 +30,20 @@ days <- 1
 seagrass_each <- (24 / (min_per_i / 60)) * days
 
 # save results only every m days
-days <- 25 # which(max_i %% ((24 / (min_per_i / 60)) * (1:365)) == 0)
+days <- 125 # which(max_i %% ((24 / (min_per_i / 60)) * (1:365)) == 0)
 
 save_each <- (24 / (min_per_i / 60)) * days
 
 max_i %% save_each
 
 # set frequency of input peaks
-freq_mn <- years / 10
+freq_mn <- years * 1/4
 
 # number of local metaecosystems
 n <- 9
 
 # create no reefs
 reefs <- NULL
-
-# # create 5 reef cells in center of seafloor
-# reefs <- matrix(data = c(-1, 0, 0, 1, 1, 0, 0, -1, 0, 0),
-#                 ncol = 2, byrow = TRUE)
 
 # setup extent and grain
 dimensions <- c(100, 100)
@@ -64,8 +60,6 @@ default_parameters$detritus_diffusion <- 0.0
 
 default_parameters$detritus_fish_diffusion <- 0.0
 
-# default_parameters$seagrass_thres <- -1/4
-
 #### Stable values ####
 
 stable_values <- arrR::get_stable_values(starting_values = default_starting,
@@ -75,7 +69,7 @@ default_starting$nutrients_pool <- stable_values$nutrients_pool
 
 default_starting$detritus_pool <- stable_values$detritus_pool
 
-input_mn <- stable_values$nutr_input * 0.75
+input_mn <- stable_values$nutr_input
 
 #### Setup experiment ####
 
@@ -92,23 +86,21 @@ input_mn <- stable_values$nutr_input * 0.75
 # setup metaecosystems
 metasyst <- meta.arrR::setup_meta(n = n, max_i = max_i, 
                                   starting_values = default_starting, parameters = default_parameters,
-                                  dimensions = dimensions, grain = grain, reefs = reefs,)
+                                  dimensions = dimensions, grain = grain, reefs = reefs)
 
 # simulate input 
 input_temp <- meta.arrR::sim_nutr_input(n = n, max_i = max_i,
-                                        variability = c(1.0, 1.0),
+                                        variability = c(0.0, 0.0),
                                         input_mn = input_mn, freq_mn = freq_mn)
 
-# # filter input to same timesteps as output will be
-# input_filtered <- filter_nutr_input(nutr_input = input_temp, 
-#                                     timesteps = seq(from = save_each, to = max_i, 
-#                                                     by = save_each))
+get_input_df(input_temp, gamma = FALSE) %>%
+  dplyr::select(-Timestep) %>%
+  apply(MARGIN = 2, FUN = sum)
 
-# get_input_df(input_temp) %>%
-#   dplyr::select(-c(Timestep, Gamma)) %>%
-#   apply(MARGIN = 2, FUN = sum)
+stable_values$nutr_input * max_i
 
-# stable_values$nutr_input * max_i
+plot(input_temp, gamma = FALSE) + 
+  geom_hline(yintercept = input_mn, linetype = 2, col = "black")
 
 #### Run model ####
 
@@ -120,16 +112,12 @@ result <- meta.arrR::run_meta(metasyst = metasyst, nutr_input = input_temp,
 
 #### plot result ####
 
-plot(result$nutr_input, gamma = FALSE) + 
-  geom_hline(yintercept = stable_values$nutr_input, linetype = 3, col = "grey") +
-  geom_hline(yintercept = input_mn, linetype = 1, col = "black")
-
 plot(result, summarize = TRUE)
+
+plot_meta_production(result, lag = TRUE)
 
 #### Calc variability ####
 
-# meta.arrR::calc_variability(x = result$nutr_input)
-# meta.arrR::calc_variability(x = result, what = "ag_biomass")
+calc_variability(result, what = "biomass")
 
-sample_variability(result$nutr_input)
-sample_variability(result, what = "ag_production", lag = TRUE, verbose = FALSE)
+sample_variability(result, what = "biomass", lag = TRUE, verbose = FALSE)

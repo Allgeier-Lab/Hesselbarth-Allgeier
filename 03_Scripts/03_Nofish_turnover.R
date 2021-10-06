@@ -32,14 +32,14 @@ days <- 1
 seagrass_each <- (24 / (min_per_i / 60)) * days
 
 # save results only every m days
-days <- 25 # which(max_i %% ((24 / (min_per_i / 60)) * (1:365)) == 0)
+days <- 125 # which(max_i %% ((24 / (min_per_i / 60)) * (1:365)) == 0)
 
 save_each <- (24 / (min_per_i / 60)) * days
 
 max_i %% save_each
 
 # set frequency of input peaks
-freq_mn <- years / 10
+freq_mn <- years * 1/4
 
 # set number of repetitions
 itr <- 50
@@ -71,7 +71,7 @@ default_parameters$detritus_fish_diffusion <- 0.0
 #### Stable values ####
 
 stable_values <- arrR::get_stable_values(starting_values = default_starting,
-                                       parameters = default_parameters)
+                                         parameters = default_parameters)
 
 default_starting$nutrients_pool <- stable_values$nutrients_pool
 
@@ -119,18 +119,34 @@ foo <- function(amplitude, phase, globals) {
                                      seagrass_each = globals$seagrass_each,
                                      save_each = globals$save_each, verbose = FALSE)
   
-  # sample variability for input
-  cv_temp_in <- cbind(what = "input", part = NA,
-                      meta.arrR::sample_variability(x = result_temp$nutr_input, 
-                                                    verbose = FALSE))
+  # calculate input gamma cv
+  input_gamma <- meta.arrR::calc_variability(input_temp)
   
-  # sample variability for output and biomass and production
-  cv_temp_out <- purrr::map_dfr(seq_along(globals$part), function(i) {
-    cbind(what = "output", part = globals$part[i],
-          meta.arrR::sample_variability(x = result_temp, 
-                                        what = globals$part[i], lag = globals$lag[i], 
-                                        verbose = FALSE))
-  })
+  # calculate turnover
+  output_turnover <- get_meta_production(result = result_temp, turnover = TRUE)
+  
+  output_turnover[is.infinite(output_turnover$value), "value"] <- NA
+  
+  output_turnover <- output_turnover[complete.cases(output_turnover),]
+  
+  dplyr::summarise(dplyr::group_by(output_turnover, meta, part), 
+                   mn = mean(value, na.rm = TRUE))
+  
+  # HERE! 
+  
+  
+  # # sample variability for input
+  # cv_temp_in <- cbind(what = "input", part = NA,
+  #                     meta.arrR::sample_variability(x = result_temp$nutr_input, 
+  #                                                   verbose = FALSE))
+  # 
+  # # sample variability for output and biomass and production
+  # cv_temp_out <- purrr::map_dfr(seq_along(globals$part), function(i) {
+  #   cbind(what = "output", part = globals$part[i],
+  #         meta.arrR::sample_variability(x = result_temp, 
+  #                                       what = globals$part[i], lag = globals$lag[i], 
+  #                                       verbose = FALSE))
+  # })
   
   # combine to df
   cbind(amplitude = amplitude, phase = phase, rbind(cv_temp_in, cv_temp_out))
@@ -139,12 +155,13 @@ foo <- function(amplitude, phase, globals) {
 #### Submit to HPC #### 
 
 nofish_sbatch <- rslurm::slurm_apply(f = foo, params = variability_experiment, 
-                                     globals = globals, jobname = "nofish",
+                                     globals = globals, jobname = "nofish_turnover",
                                      nodes = nrow(variability_experiment), cpus_per_node = 1, 
                                      slurm_options = list("account" = "jeallg1", 
                                                           "partition" = "standard",
                                                           "time" = "01:00:00", ## hh:mm::ss
-                                                          "mem-per-cpu" = "12G"),
+                                                          "mem-per-cpu" = "3G", 
+                                                          "exclude" = "gl3324,gl3325,gl3326"),
                                      pkgs = c("meta.arrR", "purrr"),
                                      rscript_path = rscript_path, sh_template = sh_template, 
                                      submit = FALSE)
@@ -157,12 +174,12 @@ rslurm::cleanup_files(nofish_sbatch)
 
 #### Save data ####
 
-suppoRt::save_rds(object = nofish_result, filename = "variability_nofish.rds", 
+suppoRt::save_rds(object = nofish_result, filename = "nofish_variability.rds", 
                   path = "02_Data/", overwrite = FALSE)
 
 #### Load data ####
 
-nofish_result <- readRDS(file = "02_Data/variability_nofish.rds")
+nofish_result <- readRDS(file = "02_Data/nofish_variability.rds")
 
 nofish_result <- dplyr::mutate(nofish_result,
                                amplitude_label = dplyr::case_when(amplitude == 0 ~ "Low",
@@ -179,10 +196,6 @@ nofish_result <- dplyr::mutate(nofish_result,
                                                "bg_production", "ag_production")),
                 n = factor(n, ordered = TRUE))
 
-variability_output_names <- paste(rep(levels(variability_output$input), each = 4 * 2), 
-                                  rep(levels(variability_output$stat), each = 4),
-                                  levels(variability_output$part), sep = "-")
-
 #### Output variability ####
 
 # filter only input data, get required columns to reshape to long
@@ -192,6 +205,11 @@ variability_output <- dplyr::filter(nofish_result, what == "output") %>%
   dplyr::mutate(stat = factor(stat, levels = c("gamma", "synchrony")))
 
 #### Fit decay model #####
+
+# create names
+variability_output_names <- paste(rep(levels(variability_output$input), each = 4 * 2), 
+                                  rep(levels(variability_output$stat), each = 4),
+                                  levels(variability_output$part), sep = "-")
 
 # fit NLS model
 variability_output_fit <- dplyr::mutate(variability_output, n = as.numeric(n)) %>% 
@@ -221,7 +239,7 @@ y_text_b <- 0.8
 
 digits_text <- 5
 
-gg_variability_output <- purrr::map(parts, function(i) {
+gg_variability_output <- purrr::map(part, function(i) {
   
   # filter data by part
   output_temp <- dplyr::filter(variability_output, part == i)
@@ -255,11 +273,11 @@ gg_variability_output <- purrr::map(parts, function(i) {
 overwrite <- FALSE
 
 # save all output figures
-purrr::walk(seq_along(parts), function(i) {
+purrr::walk(seq_along(part), function(i) {
   
-  part_temp <- stringr::str_replace(string = parts[i], pattern = "_", replacement = "-")
+  part_temp <- stringr::str_replace(string = part[i], pattern = "_", replacement = "-")
   
-  name_temp <- paste0("gg_output_variability_", part_temp, ".png")
+  name_temp <- paste0("gg_nofish_variability_", part_temp, ".png")
   
   suppoRt::save_ggplot(plot = gg_variability_output[[i]], filename = name_temp, 
                        path = "04_Figures/", width = height, height = width, dpi = dpi, 

@@ -24,7 +24,7 @@ max_i <- (60 * 24 * 365 * years) / min_per_i
 # setup nutrient input to be maximum 10% of inital nutrients
 input_mn <- meta.arrR::meta.arrR_starting_values$nutrients_pool * 0.1
 
-freq_mn <- years / 10
+freq_mn <- years * 1/4
 
 # create variability data.frame with all combinations 
 variability_input <- expand.grid(amplitude = c(0, 0.5, 1), 
@@ -84,17 +84,17 @@ gamma_df <- purrr::map(1:nrow(variability_input), function(i) {
 
 overwrite <- FALSE
 
-suppoRt::save_rds(object = alpha_df, filename = "input_example_alpha.rds", 
+suppoRt::save_rds(object = alpha_df, filename = "example_alpha.rds", 
                   path = "02_Data/", overwrite = overwrite)
 
-suppoRt::save_rds(object = gamma_df, filename = "input_example_gamma.rds", 
+suppoRt::save_rds(object = gamma_df, filename = "example_gamma.rds", 
                   path = "02_Data/", overwrite = overwrite)
 
 #### Load data ####
 
-alpha_df <- readRDS("02_Data/input_example_alpha.rds")
+alpha_df <- readRDS("02_Data/example_alpha.rds")
 
-gamma_df <- readRDS("02_Data/input_example_gamma.rds")
+gamma_df <- readRDS("02_Data/example_gamma.rds")
 
 #### Create ggplot ####
 
