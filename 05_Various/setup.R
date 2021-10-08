@@ -38,3 +38,5 @@ rscript_path <- "/sw/arcts/centos7/stacks/gcc/8.2.0/R/4.0.2/lib64/R/bin/Rscript"
 
 # check file in 99_various/hpc for raw template
 sh_template <- "05_Various/rslurm_slurm.tmpl"
+
+overwrite <- FALSE
