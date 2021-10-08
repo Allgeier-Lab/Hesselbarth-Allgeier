@@ -76,7 +76,7 @@ rslurm::cleanup_files(variability_sbatch)
 #### Save data ####
 
 suppoRt::save_rds(object = variability_result, filename = "example_cont-variability.rds", 
-                  path = "02_Data/", overwrite = FALSE)
+                  path = "02_Data/", overwrite = overwrite)
 
 #### Load data #### 
 
@@ -108,4 +108,4 @@ gg_continuous <- cowplot::plot_grid(plotlist = gg_continuous, nrow = 2, ncol = 2
 
 suppoRt::save_ggplot(plot = gg_continuous, filename = "gg_example_cont-variability.png", 
                      path = "04_Figures/", width = height, height = width, dpi = dpi, 
-                     units = units, overwrite = FALSE)
+                     units = units, overwrite = overwrite)

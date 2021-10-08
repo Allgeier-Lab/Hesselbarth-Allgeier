@@ -7,8 +7,6 @@
 ##--------------------------------------------##
 
 source("05_Various/setup.R")
-source("01_Functions/fit_nls.R")
-source("01_Functions/predict_nls.R")
 
 #### Load data ####
 
@@ -90,7 +88,7 @@ globals <- list(n = n, max_i = max_i, input_mn = input_mn, freq_mn = freq_mn,
                 dimensions = dimensions, grain = grain,
                 min_per_i = min_per_i, seagrass_each = seagrass_each, save_each = save_each) 
 
-foo <- function(amplitude, phase, globals) {
+foo <- function(amplitude, phase) {
   
   # setup metaecosystems
   metasyst_temp <- meta.arrR::setup_meta(n = globals$n, max_i = globals$max_i, 
@@ -121,20 +119,26 @@ foo <- function(amplitude, phase, globals) {
     meta.arrR::calc_variability(x = result_temp, what = i, verbose = FALSE)
   })
   
+  out_gamma <- cv_temp_out[which(cv_temp_out$measure == "gamma"), c(1, 3)]
+  
+  out_synchrony <- cv_temp_out[which(cv_temp_out$measure == "synchrony"), c(1, 3)]
+  
   # combine to df
-  cbind(amplitude = amplitude, phase = phase, rbind(cv_temp_in, cv_temp_out))
+  data.frame(amplitude = amplitude, phase = phase, part = out_gamma[, "part"], 
+             in_gamma = cv_temp_in[3, "value"], in_synchrony = cv_temp_in[4, "value"], 
+             out_gamma = out_gamma[, "value"], out_synchrony = out_synchrony[, "value"])
+
 }
 
 #### Submit to HPC #### 
 
 nofish_sbatch <- rslurm::slurm_apply(f = foo, params = variability_experiment, 
-                                     globals = globals, jobname = "nofish_calc_vari",
+                                     global_objects = "globals", jobname = "nofish_inout",
                                      nodes = nrow(variability_experiment), cpus_per_node = 1, 
                                      slurm_options = list("account" = "jeallg1", 
                                                           "partition" = "standard",
                                                           "time" = "01:00:00", ## hh:mm::ss
-                                                          "mem-per-cpu" = "3G", 
-                                                          "exclude" = "gl3324,gl3325,gl3326"),
+                                                          "mem-per-cpu" = "3G"),
                                      pkgs = c("meta.arrR", "purrr"),
                                      rscript_path = rscript_path, sh_template = sh_template, 
                                      submit = FALSE)
@@ -147,61 +151,30 @@ rslurm::cleanup_files(nofish_sbatch)
 
 #### Save data ####
 
-suppoRt::save_rds(object = nofish_result, filename = "nofish_calc-variability.rds", 
-                  path = "02_Data/", overwrite = FALSE)
+suppoRt::save_rds(object = nofish_result, filename = "nofish_in-vs-out.rds", 
+                  path = "02_Data/", overwrite = overwrite)
 
 #### Load data ####
 
-nofish_result <- readRDS(file = "02_Data/nofish_calc-variability.rds")
+nofish_result <- readRDS(file = "02_Data/nofish_in-vs-out.rds")
 
 #### Pre-process data ####
 
 nofish_result <- dplyr::mutate(nofish_result,
-                               amplitude_label = dplyr::case_when(amplitude == 0 ~ "Low",
-                                                                  amplitude == 0.5 ~ "Medium",
-                                                                  TRUE ~ "High"),
-                               phase_label = dplyr::case_when(phase == 0 ~ "Low",
-                                                              phase == 0.5 ~ "Medium",
-                                                              TRUE ~ "High")) %>%
-  tidyr::unite("input", amplitude_label, phase_label, sep = "_", remove = FALSE) %>% 
-  dplyr::mutate(input = factor(input, levels = input, 
-                               labels = paste0(amplitude_label, " Amplitude\n// ", 
-                                               phase_label, " Phase")), 
-                measure = factor(measure, levels = c("alpha", "beta", "gamma", "synchrony")))
+                               part = factor(part, levels = c("bg_biomass", "ag_biomass",
+                                                              "bg_production", "ag_production", 
+                                                              "bg_turnover", "ag_turnover")))
 
-#### Create ggplot ####
+# reshape to long gamma syncro
 
-parts <- list(c("bg_biomass", "ag_biomass"), c("bg_production", "ag_production"), 
-              c("bg_turnover", "ag_turnover"))
+gg_inout <- ggplot(data = nofish_result) + 
+  geom_point(aes(x = in_synchrony, y = out_synchrony), pch = 1) + 
+  geom_smooth(aes(x = in_synchrony, y = out_synchrony)) + 
+  facet_wrap(. ~ part, scales = "free_y", ncol = 2) +
+  labs(x = "gamma variability input", y = "gamma variability output") +
+  theme_classic()
 
-gg_variability <- purrr::map(parts, function(i) { 
-  dplyr::filter(nofish_result, part %in% i) %>% 
-    ggplot() +
-    geom_hline(yintercept = 0, linetype = 2, col = "grey") +
-    geom_boxplot(aes(x = input, y = value, fill = part)) +
-    facet_wrap(. ~ measure, scales = "free_x", ncol = 2) +
-    scale_fill_manual(name = "", values = c("#ED5B66", "#60BAE4")) +
-    labs(x = "Input classification variability", y = "Output variability") +
-    coord_flip() +
-    theme_classic() +
-    theme(legend.position = "bottom")
-  
-})
+suppoRt::save_ggplot(plot = gg_inout, filename = "gg_nofish_in-vs-out_synchrony.png", 
+                     path = "04_Figures/", width = width, height = height, dpi = dpi, 
+                     units = units, overwrite = overwrite)
 
-#### Save ggplot ####
-
-overwrite <- FALSE
-
-parts <- c("biomas", "production", "turnover")
-
-# save all output figures
-purrr::walk(seq_along(parts), function(i) {
-  
-  part_temp <- stringr::str_replace(string = parts[i], pattern = "_", replacement = "-")
-  
-  name_temp <- paste0("gg_nofish_calc-variability_", part_temp, ".png")
-  
-  suppoRt::save_ggplot(plot = gg_variability[[i]], filename = name_temp, 
-                       path = "04_Figures/", width = height, height = width, dpi = dpi, 
-                       units = units, overwrite = overwrite)
-})

@@ -92,8 +92,6 @@ gamma_df <- purrr::map(1:nrow(variability_input), function(i) {
 
 #### Save data ####
 
-overwrite <- FALSE
-
 suppoRt::save_rds(object = alpha_df, filename = "example_alpha.rds", 
                   path = "02_Data/", overwrite = overwrite)
 

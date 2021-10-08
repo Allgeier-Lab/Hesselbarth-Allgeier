@@ -88,9 +88,10 @@ variability_experiment <- expand.grid(amplitude = c(0, 0.5, 1),
 globals <- list(n = n, max_i = max_i, input_mn = input_mn, freq_mn = freq_mn, 
                 default_starting = default_starting, default_parameters = default_parameters, 
                 dimensions = dimensions, grain = grain,
-                min_per_i = min_per_i, seagrass_each = seagrass_each, save_each = save_each) 
+                min_per_i = min_per_i, seagrass_each = seagrass_each, save_each = save_each, 
+                itr = itr) 
 
-foo <- function(amplitude, phase, globals) {
+foo <- function(amplitude, phase) {
   
   # setup metaecosystems
   metasyst_temp <- meta.arrR::setup_meta(n = globals$n, max_i = globals$max_i, 
@@ -112,13 +113,14 @@ foo <- function(amplitude, phase, globals) {
                                      seagrass_each = globals$seagrass_each,
                                      save_each = globals$save_each, verbose = FALSE)
   
-  # sample variability for input
-  cv_temp_in <- meta.arrR::sample_variability(x = result_temp$nutr_input, 
+  # sample variability for output and biomass and production
+  cv_temp_in <- meta.arrR::sample_variability(x = result_temp$nutr_input, itr = globals$itr, 
                                               verbose = FALSE)
   
   # sample variability for output and biomass and production
   cv_temp_out <- purrr::map_dfr(c("biomass", "production", "turnover"), function(i) {
-    meta.arrR::sample_variability(x = result_temp, what = i, verbose = FALSE)
+    meta.arrR::sample_variability(x = result_temp, what = i, itr = globals$itr, 
+                                  verbose = FALSE)
   })
   
   # combine to df
@@ -128,13 +130,12 @@ foo <- function(amplitude, phase, globals) {
 #### Submit to HPC #### 
 
 nofish_sbatch <- rslurm::slurm_apply(f = foo, params = variability_experiment, 
-                                     globals = globals, jobname = "nofish_sample_vari",
+                                     global_objects = "globals", jobname = "nofish_sample_vari",
                                      nodes = nrow(variability_experiment), cpus_per_node = 1, 
                                      slurm_options = list("account" = "jeallg1", 
                                                           "partition" = "standard",
                                                           "time" = "01:00:00", ## hh:mm::ss
-                                                          "mem-per-cpu" = "3G", 
-                                                          "exclude" = "gl3324,gl3325,gl3326"),
+                                                          "mem-per-cpu" = "3G"),
                                      pkgs = c("meta.arrR", "purrr"),
                                      rscript_path = rscript_path, sh_template = sh_template, 
                                      submit = FALSE)
@@ -147,8 +148,8 @@ rslurm::cleanup_files(nofish_sbatch)
 
 #### Save data ####
 
-suppoRt::save_rds(object = nofish_result, filename = "nofish_sample-variability.rds", 
-                  path = "02_Data/", overwrite = FALSE)
+suppoRt::save_rds(object = nofish_result, filename = "nofish_variability.rds", 
+                  path = "02_Data/", overwrite = overwrite)
 
 #### Load data ####
 
@@ -157,14 +158,14 @@ nofish_result <- readRDS(file = "02_Data/nofish_sample-variability.rds")
 #### Pre-process data ####
 
 nofish_result <- dplyr::mutate(nofish_result, 
-              amplitude_label = dplyr::case_when(amplitude == 0 ~ "Low",
-                                                 amplitude == 0.5 ~ "Medium",
-                                                 TRUE ~ "High"),
-              phase_label = dplyr::case_when(phase == 0 ~ "Low",
-                                             phase == 0.5 ~ "Medium",
-                                             TRUE ~ "High")) %>%
+                               amplitude_label = dplyr::case_when(amplitude == 0 ~ "Low",
+                                                                  amplitude == 0.5 ~ "Medium",
+                                                                  TRUE ~ "High"),
+                               phase_label = dplyr::case_when(phase == 0 ~ "Low",
+                                                              phase == 0.5 ~ "Medium",
+                                                              TRUE ~ "High")) %>%
   tidyr::unite("input", amplitude_label, phase_label, sep = "_", remove = FALSE) %>%
-  tidyr::pivot_longer(c(alpha, beta, gamma, synchrony), names_to = "stat") %>% 
+  # tidyr::pivot_longer(c(alpha, beta, gamma, synchrony), names_to = "stat") %>% 
   dplyr::mutate(part = factor(part), 
                 n = factor(n, ordered = TRUE),
                 input = factor(input, levels = input, 
@@ -192,7 +193,7 @@ variability_fit <- purrr::set_names(variability_fit, variability_names) %>%
 
 # predict data
 variability_pred <- purrr::map_dfr(variability_fit, predict_nls, x = 1:9, 
-                                          .id = "input") %>% 
+                                   .id = "input") %>% 
   tidyr::separate(col = input, sep = "-", into = c("part", "input", "stat")) %>% 
   dplyr::mutate(input = factor(input, levels = unique(input)))
 
@@ -229,7 +230,7 @@ gg_variability_output <- purrr::map(parts, function(i) {
   
   ggplot() +
     geom_hline(yintercept = 0, linetype = 2, col = "grey") +
-    geom_boxplot(data = output_temp, aes(x = n, y = value, fill = stat), alpha = 0.25) +
+    geom_boxplot(data = output_temp, aes(x = n, y = mean, fill = stat), alpha = 0.25) +
     geom_line(data = pred_temp, aes(x = x, y = value, col = stat)) +
     geom_label(data = dplyr::filter(coef_temp, stat == "gamma", term %in% c("n", "beta")),
                aes(x = x_text, y = y_text_a, col = "gamma",
@@ -249,8 +250,6 @@ gg_variability_output <- purrr::map(parts, function(i) {
 })
 
 #### Save ggplot ####
-
-overwrite <- FALSE
 
 # save all output figures
 purrr::walk(seq_along(parts), function(i) {

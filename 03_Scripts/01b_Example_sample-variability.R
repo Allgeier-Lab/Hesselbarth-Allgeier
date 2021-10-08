@@ -48,7 +48,7 @@ foo <- function(amplitude, phase) {
                                           input_mn = input_mn, freq_mn = freq_mn)
   
   # sample cv
-  cv_temp <- meta.arrR::sample_variability(input_temp)
+  cv_temp <- meta.arrR::sample_variability(input_temp, itr = itr, verbose = FALSE)
   
   # combine to vector
   cbind(amplitude = amplitude, phase = phase, cv_temp)
@@ -58,7 +58,7 @@ foo <- function(amplitude, phase) {
 #### Submit to HPC #### 
 
 variability_sbatch <- rslurm::slurm_apply(f = foo, params = variability_experiment, 
-                                          global_objects = c("n", "max_i", "input_mn", "freq_mn"),
+                                          global_objects = c("n", "max_i", "input_mn", "freq_mn", "itr"),
                                           jobname = "example_sample_vari",
                                           nodes = nrow(variability_experiment), cpus_per_node = 1, 
                                           slurm_options = list("account" = "jeallg1", 
@@ -77,7 +77,7 @@ rslurm::cleanup_files(variability_sbatch)
 #### Save data ####
 
 suppoRt::save_rds(object = variability_result, filename = "example_sample-variability.rds", 
-                  path = "02_Data/", overwrite = FALSE)
+                  path = "02_Data/", overwrite = overwrite)
 
 #### Load data ####
 
@@ -93,7 +93,7 @@ variability_result <- dplyr::mutate(variability_result,
                                                                    phase == 0.5 ~ "Medium",
                                                                    TRUE ~ "High")) %>%
   tidyr::unite("input", amplitude_label, phase_label, sep = "_", remove = FALSE) %>%
-  tidyr::pivot_longer(c(alpha, beta, gamma, synchrony), names_to = "stat") %>% 
+  # tidyr::pivot_longer(c(alpha, beta, gamma, synchrony), names_to = "stat") %>% 
   dplyr::mutate(part = factor(part), 
                 n = factor(n, ordered = TRUE),
                 input = factor(input, levels = input, 
@@ -149,7 +149,7 @@ digits_text <- 5
 gg_variability <- dplyr::filter(variability_result, stat %in% c("gamma", "synchrony")) %>%
   ggplot() +
   geom_hline(yintercept = 0, linetype = 2, col = "grey") +
-  geom_boxplot(aes(x = n, y = value, fill = stat), alpha = 0.25) +
+  geom_boxplot(aes(x = n, y = mean, fill = stat), alpha = 0.25) +
   geom_line(data = variability_pred, aes(x = x, y = value, col = stat)) +
   geom_label(data = dplyr::filter(variability_coef, 
                                   stat == "gamma", term %in% c("n", "beta")), 
@@ -172,4 +172,4 @@ gg_variability <- dplyr::filter(variability_result, stat %in% c("gamma", "synchr
 
 suppoRt::save_ggplot(plot = gg_variability, filename = "gg_example_sample-variability.png", 
                      path = "04_Figures/", width = height, height = width, dpi = dpi, 
-                     units = units, overwrite = FALSE)
+                     units = units, overwrite = overwrite)

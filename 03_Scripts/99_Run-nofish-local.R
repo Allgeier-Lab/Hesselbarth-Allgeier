@@ -55,10 +55,12 @@ grain <- 1
 default_starting$pop_n <- 0
 
 default_parameters$nutrients_diffusion <- 0.0
-
 default_parameters$detritus_diffusion <- 0.0
-
 default_parameters$detritus_fish_diffusion <- 0.0
+
+# default_parameters$seagrass_slough <- 0.001
+# default_parameters$nutrients_output <- 0.001
+# default_parameters$detritus_mineralization <- 0.001
 
 #### Stable values ####
 
@@ -69,7 +71,7 @@ default_starting$nutrients_pool <- stable_values$nutrients_pool
 
 default_starting$detritus_pool <- stable_values$detritus_pool
 
-input_mn <- stable_values$nutr_input
+input_mn <- stable_values$nutr_input # * 0.75
 
 #### Setup experiment ####
 
@@ -90,17 +92,17 @@ metasyst <- meta.arrR::setup_meta(n = n, max_i = max_i,
 
 # simulate input 
 input_temp <- meta.arrR::sim_nutr_input(n = n, max_i = max_i,
-                                        variability = c(0.0, 0.0),
+                                        variability = c(1.0, 1.0),
                                         input_mn = input_mn, freq_mn = freq_mn)
 
-get_input_df(input_temp, gamma = FALSE) %>%
-  dplyr::select(-Timestep) %>%
-  apply(MARGIN = 2, FUN = sum)
-
-stable_values$nutr_input * max_i
-
-plot(input_temp, gamma = FALSE) + 
-  geom_hline(yintercept = input_mn, linetype = 2, col = "black")
+# get_input_df(input_temp, gamma = FALSE) %>%
+#   dplyr::select(-Timestep) %>%
+#   apply(MARGIN = 2, FUN = sum)
+# 
+# stable_values$nutr_input * max_i
+# 
+# plot(input_temp, gamma = FALSE) + 
+#   geom_hline(yintercept = input_mn, linetype = 2, col = "black")
 
 #### Run model ####
 
@@ -117,7 +119,13 @@ plot(result, summarize = TRUE)
 plot_meta_production(result, lag = TRUE)
 
 #### Calc variability ####
+variability <- sample_variability(x = result, what = "production", itr = 100)
 
-calc_variability(result, what = "biomass")
-
-sample_variability(result, what = "biomass", lag = TRUE, verbose = FALSE)
+dplyr::filter(variability, stat %in% c("gamma", "synchrony")) %>% 
+  ggplot() + 
+  geom_line(aes(x = factor(n), y = mean, group = stat), col = "grey") + 
+  geom_point(aes(x = factor(n), y = mean, col = stat)) + 
+  geom_linerange(aes(x = factor(n), ymin = mean - sd, ymax = mean + sd, col = stat)) + 
+  facet_wrap(. ~ part, nrow = 2) +
+  scale_y_continuous(limits = c(0, 1)) + 
+  theme_classic()

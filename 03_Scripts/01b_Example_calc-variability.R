@@ -77,7 +77,7 @@ rslurm::cleanup_files(variability_sbatch)
 #### Save data ####
 
 suppoRt::save_rds(object = variability_result, filename = "example_calc-variability.rds", 
-                  path = "02_Data/", overwrite = FALSE)
+                  path = "02_Data/", overwrite = overwrite)
 
 #### Load data ####
 
@@ -113,4 +113,4 @@ gg_variability <- ggplot(data = variability_result) +
 
 suppoRt::save_ggplot(plot = gg_variability, filename = "gg_example_calc-variability.png", 
                      path = "04_Figures/", width = height, height = width, dpi = dpi, 
-                     units = units, overwrite = FALSE)
+                     units = units, overwrite = overwrite)

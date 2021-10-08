@@ -8,10 +8,10 @@
 fit_nls <- function(x) {
   
   # fit linear model for starting value estimate
-  linear_model <- lm(value ~ n, data = x)
+  linear_model <- lm(mean ~ n, data = x)
   
   # estimate starting value for theta
-  theta_start <- min(x$value) * 0.5
+  theta_start <- min(x$mean) * 0.5
   
   alpha_start <- exp(coef(linear_model)[1])
   
@@ -21,7 +21,7 @@ fit_nls <- function(x) {
   start_values <- list(alpha = alpha_start, beta = beta_start, theta = theta_start)
 
   # fit NLS model and get coefficients
-  coefficients <- tryCatch(expr = dplyr::bind_cols(broom::tidy(stats::nls(value ~ (alpha * exp(beta * n)) + theta,
+  coefficients <- tryCatch(expr = dplyr::bind_cols(broom::tidy(stats::nls(mean ~ (alpha * exp(beta * n)) + theta,
                                                          start = start_values, data = x)),
                                                    model = "nls"),
                            error = function(e) dplyr::bind_cols(broom::tidy(linear_model), 
