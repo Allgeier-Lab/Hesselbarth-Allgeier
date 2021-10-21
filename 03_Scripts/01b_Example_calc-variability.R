@@ -6,25 +6,15 @@
 ##    www.github.com/mhesselbarth             ##
 ##--------------------------------------------##
 
+#### Load setup ####
+
 source("05_Various/setup.R")
-source("01_Functions/fit_nls.R")
-source("01_Functions/predict_nls.R")
 
-#### Basic parameters ####
+#### Setup experiment ####
 
-# number of local metaecosystems
-n <- 9
-
-# set min_per_i
-min_per_i <- 120
-
-# run the model for n years
-years <- 25
-
-max_i <- (60 * 24 * 365 * years) / min_per_i
-
-# setup nutrient input to be maximum 10% of inital nutrients
-input_mn <- meta.arrR::meta.arrR_starting_values$nutrients_pool * 0.1
+input_mn <- get_stable_values(starting_values = default_starting, 
+                              parameters = default_parameters) %>% 
+  magrittr::extract2("nutr_input")
 
 freq_mn <- years * 1/4
 
@@ -36,9 +26,7 @@ variability_experiment <- expand.grid(amplitude = c(0, 0.5, 1),
                                       phase = c(0, 0.5, 1)) %>% 
   dplyr::slice(rep(1:n(), each = itr))
 
-#### HPC ####
-
-#### Create function ####
+#### Create HPC function ####
 
 foo <- function(amplitude, phase) {
   
@@ -76,12 +64,12 @@ rslurm::cleanup_files(variability_sbatch)
 
 #### Save data ####
 
-suppoRt::save_rds(object = variability_result, filename = "example_calc-variability.rds", 
+suppoRt::save_rds(object = variability_result, filename = "01_example_calc-variability.rds", 
                   path = "02_Data/", overwrite = overwrite)
 
 #### Load data ####
 
-variability_result <- readRDS("02_Data/example_calc-variability.rds")
+variability_result <- readRDS("02_Data/01_example_calc-variability.rds")
 
 #### Pre-process data ####
 
@@ -111,6 +99,6 @@ gg_variability <- ggplot(data = variability_result) +
 
 #### Save ggplot ####
 
-suppoRt::save_ggplot(plot = gg_variability, filename = "gg_example_calc-variability.png", 
+suppoRt::save_ggplot(plot = gg_variability, filename = "01_gg_example_calc-variability.png", 
                      path = "04_Figures/", width = height, height = width, dpi = dpi, 
                      units = units, overwrite = overwrite)

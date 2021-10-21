@@ -6,30 +6,11 @@
 ##    www.github.com/mhesselbarth             ##
 ##--------------------------------------------##
 
+#### Load setup ####
+
 source("05_Various/setup.R")
 
-#### Load data ####
-
-default_starting <- readRDS("02_Data/default_starting.rds")
-
-default_parameters <- readRDS("02_Data/default_parameters.rds")
-
-#### Basic parameters ####
-
-# number of local metaecosystems
-n <- 9
-
-# set min_per_i
-min_per_i <- 120
-
-# run the model for n years
-years <- 25
-
-max_i <- (60 * 24 * 365 * years) / min_per_i
-
-freq_mn <- years * 1/4
-
-#### Stabel values ####
+#### Stable values ####
 
 stable_values <- arrR::get_stable_values(starting_values = default_starting,
                                          parameters = default_parameters)
@@ -92,17 +73,17 @@ gamma_df <- purrr::map(1:nrow(variability_input), function(i) {
 
 #### Save data ####
 
-suppoRt::save_rds(object = alpha_df, filename = "example_alpha.rds", 
+suppoRt::save_rds(object = alpha_df, filename = "01_example_alpha.rds", 
                   path = "02_Data/", overwrite = overwrite)
 
-suppoRt::save_rds(object = gamma_df, filename = "example_gamma.rds", 
+suppoRt::save_rds(object = gamma_df, filename = "01_example_gamma.rds", 
                   path = "02_Data/", overwrite = overwrite)
 
 #### Load data ####
 
-alpha_df <- readRDS("02_Data/example_alpha.rds")
+alpha_df <- readRDS("02_Data/01_example_alpha.rds")
 
-gamma_df <- readRDS("02_Data/example_gamma.rds")
+gamma_df <- readRDS("02_Data/01_example_gamma.rds")
 
 #### Create ggplot ####
 
@@ -130,10 +111,10 @@ gg_input_regional <- ggplot(data = gamma_df) +
 
 #### Save ggplot ####
 
-suppoRt::save_ggplot(plot = gg_input_local, filename = "gg_example_input-alpha.png", 
+suppoRt::save_ggplot(plot = gg_input_local, filename = "01_gg_example_input-alpha.png", 
                      path = "04_Figures/", width = height, height = width, dpi = dpi, 
                      units = units, overwrite = overwrite)
 
-suppoRt::save_ggplot(plot = gg_input_regional, filename = "gg_example_input-gamma.png", 
+suppoRt::save_ggplot(plot = gg_input_regional, filename = "01_gg_example_input-gamma.png", 
                      path = "04_Figures/", width = height, height = width, dpi = dpi, 
                      units = units, overwrite = overwrite)

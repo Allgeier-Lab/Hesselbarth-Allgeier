@@ -6,59 +6,22 @@
 ##    www.github.com/mhesselbarth             ##
 ##--------------------------------------------##
 
+#### Load setup ####
+
 source("05_Various/setup.R")
-
-#### Load data ####
-
-default_starting <- readRDS("02_Data/default_starting.rds")
-
-default_parameters <- readRDS("02_Data/default_parameters.rds")
-
-#### Basic parameters ####
-
-# set min_per_i
-min_per_i <- 120
-
-# run the model for n years
-years <- 25
-
-max_i <- (60 * 24 * 365 * years) / min_per_i
-
-# run seagrass only 1 day
-days <- 1
-
-seagrass_each <- (24 / (min_per_i / 60)) * days
-
-# save results only every m days
-days <- 125 # which(max_i %% ((24 / (min_per_i / 60)) * (1:365)) == 0)
-
-save_each <- (24 / (min_per_i / 60)) * days
-
-max_i %% save_each
-
-# set frequency of input peaks
-freq_mn <- years * 1/4
-
-# set number of repetitions
-itr <- 50
-
-# number of local metaecosystems
-n <- 9
-
-# setup extent and grain
-dimensions <- c(100, 100)
-
-grain <- 1
 
 #### Adapt parameters ####
 
+default_parameters$nutrients_diffusion <- 0.0
+default_parameters$detritus_diffusion <- 0.0
+default_parameters$detritus_fish_diffusion <- 0.0
+
+default_starting$bg_biomass <- default_parameters$bg_biomass_max
+default_starting$ag_biomass <- default_parameters$ag_biomass_max
+
 default_starting$pop_n <- 0
 
-default_parameters$nutrients_diffusion <- 0.0
-
-default_parameters$detritus_diffusion <- 0.0
-
-default_parameters$detritus_fish_diffusion <- 0.0
+freq_mn <- years * 1/4
 
 #### Stable values ####
 
@@ -73,12 +36,12 @@ input_mn <- stable_values$nutr_input
 
 #### Setup experiment ####
 
-itr <- 50
+itr <- 1000
 
 # create variability data.frame with all combinations 
-variability_experiment <- expand.grid(amplitude = c(0, 0.5, 1), 
-                                      phase = c(0, 0.5, 1)) %>% 
-  dplyr::slice(rep(1:n(), each = itr))
+sim_experiment <- data.frame(amplitude = runif(n = itr, min = 0, max = 1), 
+                             phase = runif(n = itr, min = 0, max = 1)) %>% 
+  dplyr::slice(1:10)
 
 #### Create function ####
 
@@ -89,6 +52,8 @@ globals <- list(n = n, max_i = max_i, input_mn = input_mn, freq_mn = freq_mn,
                 min_per_i = min_per_i, seagrass_each = seagrass_each, save_each = save_each) 
 
 foo <- function(amplitude, phase) {
+  
+  # simulate data #
   
   # setup metaecosystems
   metasyst_temp <- meta.arrR::setup_meta(n = globals$n, max_i = globals$max_i, 
@@ -110,6 +75,21 @@ foo <- function(amplitude, phase) {
                                      seagrass_each = globals$seagrass_each,
                                      save_each = globals$save_each, verbose = FALSE)
   
+  # filter data #
+  
+  # filter input
+  input_temp <- meta.arrR::filter_meta(x = input_temp,
+                                       filter = seq(from = globals$max_i / 2, 
+                                                    to = globals$max_i,
+                                                    by = globals$save_each), 
+                                       verbose = FALSE)
+
+  # fiter result
+  result_temp <- meta.arrR::filter_meta(x = result_temp, filter = c(globals$max_i / 2, 
+                                                                    globals$max_i))
+
+  # calc cv #
+    
   # sample variability for input
   cv_temp_in <- meta.arrR::calc_variability(x = result_temp$nutr_input, 
                                             verbose = FALSE)
@@ -119,19 +99,23 @@ foo <- function(amplitude, phase) {
     meta.arrR::calc_variability(x = result_temp, what = i, verbose = FALSE)
   })
   
+  # create data.frame #
+  
   # combine to df
   cbind(amplitude = amplitude, phase = phase, rbind(cv_temp_in, cv_temp_out))
+  
 }
 
 #### Submit to HPC #### 
 
-nofish_sbatch <- rslurm::slurm_apply(f = foo, params = variability_experiment, 
-                                     global_objects = "globals", jobname = "nofish_calc_vari",
-                                     nodes = nrow(variability_experiment), cpus_per_node = 1, 
+nofish_sbatch <- rslurm::slurm_apply(f = foo, params = sim_experiment, 
+                                     global_objects = "globals", jobname = "nofish_cv",
+                                     nodes = nrow(sim_experiment), cpus_per_node = 1, 
                                      slurm_options = list("account" = "jeallg1", 
                                                           "partition" = "standard",
                                                           "time" = "01:00:00", ## hh:mm::ss
-                                                          "mem-per-cpu" = "3G"),
+                                                          "mem-per-cpu" = "15G"
+                                                          ),
                                      pkgs = c("meta.arrR", "purrr"),
                                      rscript_path = rscript_path, sh_template = sh_template, 
                                      submit = FALSE)

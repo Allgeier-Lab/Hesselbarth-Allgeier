@@ -22,7 +22,7 @@ default_parameters <- readRDS("02_Data/default_parameters.rds")
 min_per_i <- 120
 
 # run the model for n years
-years <- 25
+years <- 50
 
 max_i <- (60 * 24 * 365 * years) / min_per_i
 

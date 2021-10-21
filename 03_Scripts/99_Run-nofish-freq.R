@@ -6,51 +6,9 @@
 ##    www.github.com/mhesselbarth             ##
 ##--------------------------------------------##
 
+#### Load setup ####
+
 source("05_Various/setup.R")
-
-#### Load data ####
-
-default_starting <- readRDS("02_Data/default_starting.rds")
-
-default_parameters <- readRDS("02_Data/default_parameters.rds")
-
-#### Basic parameters ####
-
-# set min_per_i
-min_per_i <- 120
-
-# run the model for n years
-years <- 50
-
-max_i <- (60 * 24 * 365 * years) / min_per_i
-
-# run seagrass only 1 day
-days <- 1
-
-seagrass_each <- (24 / (min_per_i / 60)) * days
-
-# save results only every m days
-days <- 125 # which(max_i %% ((24 / (min_per_i / 60)) * (1:365)) == 0)
-
-save_each <- (24 / (min_per_i / 60)) * days
-
-max_i %% save_each
-
-# set frequency of input peaks
-freq_mn_df <- data.frame(freq_mn = seq(from = 1, to = years, by = 0.5))
-
-# number of local metaecosystems
-n <- 9
-
-# setup extent and grain
-dimensions <- c(100, 100)
-
-grain <- 1
-
-# setup variability
-amplitude <- 1.0
-
-phase <- 1.0
 
 #### Adapt parameters ####
 

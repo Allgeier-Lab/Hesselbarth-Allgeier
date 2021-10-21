@@ -6,27 +6,18 @@
 ##    www.github.com/mhesselbarth             ##
 ##--------------------------------------------##
 
+#### Load setup ####
+
 source("05_Various/setup.R")
 
-#### Basic parameters ####
+#### Setup experiment ####
 
-# number of local metaecosystems
-n <- 9
+stable_values <- arrR::get_stable_values(starting_values = default_starting,
+                                         parameters = default_parameters)
 
-# set min_per_i
-min_per_i <- 120
-
-# run the model for n years
-years <- 25
-
-max_i <- (60 * 24 * 365 * years) / min_per_i
-
-# setup nutrient input to be maximum 10% of inital nutrients
-input_mn <- meta.arrR::meta.arrR_starting_values$nutrients_pool * 0.1
+input_mn <- stable_values$nutr_input
 
 freq_mn <- years * 1/4
-
-#### Setup experiment ####
 
 itr <- 50
 
@@ -35,9 +26,7 @@ variability_experiment <- expand.grid(amplitude = seq(from = 0, to = 1, by = 0.2
                                       phase = seq(from = 0, to = 1, by = 0.2)) %>% 
   dplyr::slice(rep(1:n(), each = itr))
 
-#### HPC ####
-
-#### Create function ####
+#### Create HPC function ####
 
 foo <- function(amplitude, phase) {
   
@@ -75,12 +64,12 @@ rslurm::cleanup_files(variability_sbatch)
 
 #### Save data ####
 
-suppoRt::save_rds(object = variability_result, filename = "example_cont-variability.rds", 
+suppoRt::save_rds(object = variability_result, filename = "01_example_cont-variability.rds", 
                   path = "02_Data/", overwrite = overwrite)
 
 #### Load data #### 
 
-variability_result <- readRDS("02_Data/example_cont-variability.rds")
+variability_result <- readRDS("02_Data/01_example_cont-variability.rds")
 
 #### Pre-process data ####
 
@@ -100,12 +89,13 @@ gg_continuous <- purrr::map(unique(variability_result$measure), function(i) {
     labs(x = "Variability Amplitude", y = "Variability Phase", subtitle = i) +
     coord_equal() + 
     theme_classic()
+  
 })
 
 gg_continuous <- cowplot::plot_grid(plotlist = gg_continuous, nrow = 2, ncol = 2)
 
 #### Save ggplot ####
 
-suppoRt::save_ggplot(plot = gg_continuous, filename = "gg_example_cont-variability.png", 
+suppoRt::save_ggplot(plot = gg_continuous, filename = "01_gg_example_cont-variability.png", 
                      path = "04_Figures/", width = height, height = width, dpi = dpi, 
                      units = units, overwrite = overwrite)

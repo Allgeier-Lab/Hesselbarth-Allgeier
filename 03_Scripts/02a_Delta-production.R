@@ -6,57 +6,22 @@
 ##    www.github.com/mhesselbarth             ##
 ##--------------------------------------------##
 
+#### Load setup ####
+
 source("05_Various/setup.R")
 
-#### Load data ####
-
-default_starting <- readRDS("02_Data/default_starting.rds")
-
-default_parameters <- readRDS("02_Data/default_parameters.rds")
-
-#### Basic parameters ####
-
-# set min_per_i
-min_per_i <- 120
-
-# run the model for n years
-years <- 50
-
-max_i <- (60 * 24 * 365 * years) / min_per_i
-
-# run seagrass only 1 day
-days <- 1
-
-seagrass_each <- (24 / (min_per_i / 60)) * days
-
-# save results only every m days
-days <- 25 # which(max_i %% ((24 / (min_per_i / 60)) * (1:365)) == 0)
-
-save_each <- (24 / (min_per_i / 60)) * days
-
-max_i %% save_each
-
-# set frequency of input peaks
-freq_mn <- years * seq(from = 1/4, to = 1, by = 1/4)
-
-# set number of repetitions
-itr <- 50
-
-# number of local metaecosystems
-n <- 1
-
-# setup extent and grain
-dimensions <- c(100, 100)
-
-grain <- 1
-
 #### Adapt parameters ####
-
-default_starting$pop_n <- 0
 
 default_parameters$nutrients_diffusion <- 0.0
 default_parameters$detritus_diffusion <- 0.0
 default_parameters$detritus_fish_diffusion <- 0.0
+
+default_starting$bg_biomass <- default_parameters$bg_biomass_max
+default_starting$ag_biomass <- default_parameters$ag_biomass_max
+
+n <- 1 
+
+default_starting$pop_n <- 0
 
 #### Stable values ####
 
@@ -69,13 +34,15 @@ default_starting$detritus_pool <- stable_values$detritus_pool
 
 #### Setup experiment ####
 
+freq_mn <- years * seq(from = 1/4, to = 1, by = 1/4)
+
 itr <- 1000
 
-# create variability data.frame with all combinations 
-amp_freq_experiment <- data.frame(amplitude_mod = runif(n = itr, min = 0, max = 1), 
+# create variability data.frame with all combinations
+amp_freq_experiment <- data.frame(amplitude_mod = runif(n = itr, min = 0, max = 1),
                                   freq_mn = sample(x = freq_mn, size = itr, replace = TRUE))
 
-#### Create function ####
+#### Create HPC function ####
 
 # create globals
 globals <- list(n = n, max_i = max_i, default_starting = default_starting, 
@@ -85,6 +52,12 @@ globals <- list(n = n, max_i = max_i, default_starting = default_starting,
                 save_each = save_each) 
 
 foo <- function(amplitude_mod, freq_mn) {
+  
+  # simulate data #
+  
+  # create vector to classify cycles
+  cycle_temp <- unique(c(seq(from = 0, to = globals$max_i, by = globals$max_i / freq_mn), 
+                         globals$max_i))
   
   # setup metaecosystems
   metasyst_temp <- meta.arrR::setup_meta(n = globals$n, max_i = globals$max_i, 
@@ -106,18 +79,60 @@ foo <- function(amplitude_mod, freq_mn) {
                                      seagrass_each = globals$seagrass_each,
                                      save_each = globals$save_each, verbose = FALSE)
   
+  # calc delta input #
+  
+  # filter input
+  input_temp <- meta.arrR::filter_meta(x = input_temp,
+                                       filter = seq(from = globals$max_i / 2, to = globals$max_i,
+                                                    by = globals$save_each), verbose = FALSE)
+  
+  # calculate difference for cycles
+  delta_in <- dplyr::mutate(input_temp$values$Meta_1,
+                            cycle = cut(timestep, breaks = cycle_temp, labels = FALSE,
+                                        include.lowest = TRUE))
+  
+  # calculate delta difference per cycle
+  delta_in <- dplyr::summarise(dplyr::group_by(delta_in, cycle),
+                               input_min = min(input, na.rm = TRUE),
+                               input_max = max(input, na.rm = TRUE),
+                               delta = input_max - input_min, .groups = "drop")
+  
+  # calculate mean per part
+  delta_in <- mean(delta_in$delta)
+  
+  # calc delta output #
+  
+  result_temp <- meta.arrR::filter_meta(x = result_temp, 
+                                        filter = c(globals$max_i / 2, globals$max_i))
+  
   # calculate production
-  prod <- dplyr::summarize(dplyr::group_by(get_meta_production(result = result_temp, 
-                                                               lag = TRUE, turnover = FALSE),
-                                           meta, part), 
-                           value_min = min(value, na.rm = TRUE), 
-                           value_max = max(value, na.rm = TRUE), .groups = "drop")
+  prod_temp <- dplyr::mutate(get_meta_production(result = result_temp, lag = TRUE, 
+                                                 turnover = FALSE), 
+                             cycle = cut(timestep, breaks = cycle_temp, labels = FALSE, 
+                                         include.lowest = TRUE))
   
-  delta_in <- max(input_temp$values$Meta_1) - min(input_temp$values$Meta_1)
+  # remove NA case due to lag = TRUE
+  prod_temp <- prod_temp[complete.cases(prod_temp), ]
   
-  # delta_in_rel <- delta_in / max(input_temp$values$Meta_1) 
+  # calc total prod
+  prod_temp <- dplyr::mutate(tidyr::pivot_wider(prod_temp, names_from = part, 
+                                                values_from = value), 
+                             ttl_production = ag_production + bg_production)
   
-  delta_out <- dplyr::mutate(prod, delta_out = value_max - value_min)
+  # reshape to long
+  prod_temp <- tidyr::pivot_longer(prod_temp, -c(meta, timestep, cycle), 
+                                   names_to = "part", values_to = "value")
+  
+  # calculate delta difference per cycle
+  delta_out <- dplyr::summarise(dplyr::group_by(prod_temp, part, cycle), 
+                                value_min = min(value, na.rm = TRUE), 
+                                value_max = max(value, na.rm = TRUE),
+                                delta = value_max - value_min, .groups = "drop")
+  
+  # calculate mean per part
+  delta_out <- dplyr::summarise(dplyr::group_by(delta_out, part), delta_out = mean(delta))
+  
+  # combine data #
   
   data.frame(freq = freq_mn, amplitude = amplitude_mod, 
              delta_in = delta_in, delta_out[, c('part', "delta_out")])
@@ -127,13 +142,13 @@ foo <- function(amplitude_mod, freq_mn) {
 #### Submit to HPC #### 
 
 deltaprod_sbatch <- rslurm::slurm_apply(f = foo, params = amp_freq_experiment, 
-                                        global_objects = "globals", jobname = "delta_prod",
+                                        global_objects = "globals", jobname = "deltaprod",
                                         nodes = nrow(amp_freq_experiment), cpus_per_node = 1, 
                                         slurm_options = list("account" = "jeallg1", 
                                                              "partition" = "standard",
                                                              "time" = "00:30:00", ## hh:mm::ss
                                                              "mem-per-cpu" = "5G"),
-                                        pkgs = c("meta.arrR", "dplyr"),
+                                        pkgs = c("meta.arrR", "dplyr", "tidyr"),
                                         rscript_path = rscript_path, sh_template = sh_template, 
                                         submit = FALSE)
 
@@ -141,14 +156,14 @@ deltaprod_sbatch <- rslurm::slurm_apply(f = foo, params = amp_freq_experiment,
 
 deltaprod_result <- rslurm::get_slurm_out(deltaprod_sbatch, outtype = "table")
 
-suppoRt::save_rds(object = deltaprod_result, filename = "nofish_delta-prod.rds", 
+suppoRt::save_rds(object = deltaprod_result, filename = "02_nofish_delta-prod.rds", 
                   path = "02_Data/", overwrite = overwrite)
 
 rslurm::cleanup_files(deltaprod_sbatch)
 
 #### Load data ####
 
-deltaprod_result <- readRDS(file = "02_Data/nofish_delta-prod.rds")
+deltaprod_result <- readRDS(file = "02_Data/02_nofish_delta-prod.rds")
 
 #### Pre-process data ####
 
@@ -156,15 +171,14 @@ deltaprod_result <- readRDS(file = "02_Data/nofish_delta-prod.rds")
 
 gg_delta_prod <- ggplot(data = deltaprod_result, 
                         aes(x = delta_in, y = delta_out, col = factor(freq))) +
-  geom_point(pch = 1) +
-  geom_smooth(size = 0.25) + 
-  facet_wrap(. ~ part, scales = "free_y") +
-  scale_color_viridis_d(name = "Frequency", option = "A") +
+  geom_point(pch = 19) +
+  facet_wrap(. ~ part, scales = "free_y", nrow = 3) +
+  scale_color_viridis_d(name = "Frequency", option = "C") +
   labs(x = "Delta input", y = "Delta production") + 
   theme_classic() + 
   theme(legend.position = "bottom")
 
 #### Save ggplot ####
-suppoRt::save_ggplot(plot = gg_delta_prod, filename = "gg_nofish_delta-production.png", 
+suppoRt::save_ggplot(plot = gg_delta_prod, filename = "02_gg_nofish_delta-production.png", 
                      path = "04_Figures/", width = height, height = width, dpi = dpi, 
                      units = units, overwrite = overwrite)
