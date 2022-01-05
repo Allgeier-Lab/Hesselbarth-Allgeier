@@ -146,9 +146,7 @@ df_pe_prod <- readRDS("02_Data/02_PE-Prod_Enrich.rds") %>%
 #### Create CV ggplot ####
 
 # col_palette_part <- c("#586F7E", "#168B98", "#ED5B66")
-# 
 # col_palette_enrich <- c("#C7247B", "#A5E100", "#172969")
-# 
 # col_palette <- c("#5ABCD6", "#FAD510", "#F22301")
 
 # create some ggplot settings/objects
@@ -168,13 +166,13 @@ gg_pe_prod <- purrr::map(seq_along(parts), function(i){
     dplyr::mutate(gamma = gamma / 10000) %>% 
     ggplot(aes(x = beta, y = gamma)) +
     geom_point(pch = 1) + 
-    geom_smooth(method = lm, se = TRUE, col = "black") + 
-    stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`;`~")),
-             p.accuracy = 0.01, r.accuracy = 0.001) +
-    facet_wrap(. ~ enrichment, ncol = 3, nrow = 1, scales = "free_x",
+    geom_smooth(method = lm, se = TRUE, linetype = 2, col = "black") + 
+    # stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`;`~")),
+    #          p.accuracy = 0.01, r.accuracy = 0.001) +
+    facet_wrap(. ~ enrichment, ncol = 3, nrow = 1, scales = "fixed",
                labeller = labeller(enrichment = labels_facet[[i]])) + 
     # expand_limits(x = 1) + 
-    scale_color_manual(name = "", values = col_palette_part) +
+    # scale_color_manual(name = "", values = col_palette_enrich) +
     labs(y = y_axis[[i]], x = x_axis[[i]], subtitle = names(parts)[i]) +
     theme_classic(base_size = base_size) + 
     theme(legend.position = "none", strip.background = element_blank(), 
@@ -184,11 +182,6 @@ gg_pe_prod <- purrr::map(seq_along(parts), function(i){
 
 gg_pe_prod <- cowplot::plot_grid(plotlist = gg_pe_prod, ncol = 1, nrow = 3)
 
-dplyr::mutate(df_pe_prod, enrichment = factor(enrichment, 
-                                              labels = c("Low enrichment", 
-                                                         "Medium enrichment", 
-                                                         "High enrichment"))) %>% 
-
 gg_var_density <- dplyr::mutate(df_pe_prod, enrichment = factor(enrichment,
                                                                 labels = c("Low enrichment", 
                                                                            "Medium enrichment", 
@@ -196,6 +189,18 @@ gg_var_density <- dplyr::mutate(df_pe_prod, enrichment = factor(enrichment,
   ggplot() +
   geom_density(aes(x = variability, fill = enrichment, col = enrichment), alpha = 0.25) + 
   labs(x = "Input variability", y = "Density") +
+  scale_color_manual(name = "", values = c("#C7247B", "#A5E100", "#172969")) +
+  scale_fill_manual(name = "", values = c("#C7247B", "#A5E100", "#172969")) +
+  theme_classic(base_size = base_size) + 
+  theme(legend.position = "bottom")
+
+gg_pe_density <- dplyr::mutate(df_pe_prod, enrichment = factor(enrichment,
+                                                               labels = c("Low enrichment", 
+                                                                          "Medium enrichment", 
+                                                                          "High enrichment"))) %>% 
+  ggplot() +
+  geom_density(aes(x = beta, fill = enrichment, col = enrichment), alpha = 0.25) + 
+  labs(x = "Portfolio effect (beta)", y = "Density") +
   scale_color_manual(name = "", values = c("#C7247B", "#A5E100", "#172969")) +
   scale_fill_manual(name = "", values = c("#C7247B", "#A5E100", "#172969")) +
   theme_classic(base_size = base_size) + 
