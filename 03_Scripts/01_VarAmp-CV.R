@@ -40,6 +40,9 @@ enrichment_levels <- c(low = 0.5, medium = 0.75, high = 1.0)
 
 amplitude_levels <- c(low = 0.05, medium = 0.5, high = 1.0)
 
+# MH: Instead of creating the names which is really complicated, just add columns
+# with values at the end of foo() function call
+
 # create vector with names
 enrich_names <- rep(enrichment_levels, each = length(amplitude_levels) * (n + 1) * itr)
 

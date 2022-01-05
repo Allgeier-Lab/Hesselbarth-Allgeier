@@ -31,10 +31,11 @@ default_starting$detritus_pool <- stable_values$detritus_pool
 
 #### Simulate input ####
 
+# number of iterations
 itr <- 50
 
 # setup enrichment levels
-enrichment_levels <- rep(c(low = 0.75, medium = 1.0, high = 1.25), each = itr)
+enrichment_levels <- rep(c(low = 0.5, medium = 0.75, high = 1.0), each = itr)
 
 variability <- runif(n = length(enrichment_levels), min = 0.0, max = 1.0)
 
@@ -69,9 +70,10 @@ foo <- function(variability, enrichment) {
                                      seagrass_each = globals$seagrass_each,
                                      save_each = globals$save_each, verbose = FALSE)
   
-  # # filter only second half of timesteps
-  # result_temp <- meta.arrR::filter_meta(x = result_temp, filter = c(globals$max_i / 2, 
-  #                                                                   globals$max_i))
+  # filter only second half of timesteps
+  result_temp <- meta.arrR::filter_meta(x = result_temp, filter = c(globals$max_i / 2,
+                                                                    globals$max_i), 
+                                        reset = TRUE, verbose = FALSE)
   
   # calc CV
   cv_temp <- dplyr::bind_rows(meta.arrR::calc_variability(x = result_temp, lag = c(FALSE, TRUE), 
@@ -80,31 +82,29 @@ foo <- function(variability, enrichment) {
   # add type col
   cv_temp <- dplyr::bind_cols(type = "cv", cv_temp)
   
-  # only get last timestep
-  result_temp <- meta.arrR::filter_meta(x = result_temp, filter = globals$max_i, 
-                                        verbose = FALSE)
-  
   # get the total sum of each timestep and metaecosystem
-  sum_temp <- dplyr::bind_rows(meta.arrR::summarize_meta(result = result_temp))
+  result_sum <- dplyr::bind_rows(meta.arrR::summarize_meta(result = result_temp))
   
   # filter only final timestep
-  sum_temp <- dplyr::filter(sum_temp, timestep == max(timestep))
+  result_sum <- dplyr::filter(result_sum, timestep == max(timestep))
   
   # calculate mean (alpha) and total (gamma) biomass values
-  sum_temp <- apply(X = sum_temp[, -c(1,2)] , MARGIN = 2, 
-                    FUN = function(x) c(alpha = mean(x, na.rm = TRUE), 
-                                        gamma = sum(x, na.rm = TRUE)))
+  result_sum <- apply(X = result_sum[, -c(1, 2)] , MARGIN = 2, 
+                      FUN = function(x) c(alpha = mean(x, na.rm = TRUE), 
+                                          gamma = sum(x, na.rm = TRUE)))
   
   # reshape to long format
-  sum_temp <- tidyr::pivot_longer(data.frame(type = "absolute", measure = row.names(sum_temp), 
-                                             sum_temp), -c(type, measure), 
-                                  names_to = "part")
+  result_sum <- tidyr::pivot_longer(data.frame(type = "absolute", measure = row.names(result_sum), 
+                                               result_sum), -c(type, measure), 
+                                    names_to = "part")
   
   # rearrange cols
-  sum_temp <- dplyr::select(sum_temp, type, part, measure, value)
+  result_sum <- dplyr::select(result_sum, type, part, measure, value)
   
   # combine to one df
-  dplyr::arrange(dplyr::bind_rows(cv_temp, sum_temp), type, part, measure)
+  dplyr::bind_cols(enrichment = enrichment, variability = variability, 
+                   dplyr::arrange(dplyr::bind_rows(cv_temp, result_sum), 
+                                  type, part, measure))
   
 }
 
@@ -134,44 +134,70 @@ rslurm::cleanup_files(sbatch_pe_prod)
 #### Load data ####
 
 df_pe_prod <- readRDS("02_Data/02_PE-Prod_Enrich.rds") %>% 
-  dplyr::mutate(type = factor(type, levels = c("absolute", "cv")),
-                enrichment = factor(enrichment, levels = c(0.75, 1, 1.25), 
-                                    labels = c("Low enrichment", "Medium enrichment", "High enrichment")),
-                part = factor(part, levels = c("ag_biomass", "ag_production",
-                                               "bg_biomass", "bg_production")),
-                measure = factor(measure, levels = c("alpha", "beta", "gamma", "synchrony"))) %>% 
   dplyr::filter(c(type == "cv" & measure == "beta") | c(type == "absolute" & measure == "gamma")) %>% 
   dplyr::select(-type) %>%
   tidyr::pivot_wider(names_from = "measure", values_from = value, values_fn = list) %>% 
-  tidyr::unnest(cols = tidyselect::everything())
+  tidyr::unnest(cols = tidyselect::everything()) %>% 
+  dplyr::mutate(enrichment = factor(enrichment, levels = c(0.5, 0.75, 1.0), labels = c("low", "medium", "high")),
+                variability = as.numeric(variability),
+                part = factor(part, levels = c("ag_biomass", "ag_production", "ttl_biomass",
+                                               "bg_biomass", "bg_production", "ttl_production")))
 
-df_pe_prod_ttl <- tidyr::separate(df_pe_prod, col = part, sep = "_", into = c("part", "measure"))
-  
 #### Create CV ggplot ####
 
-col_palette_part <- c("#586F7E", "#168B98", "#ED5B66", "#DAAD4F")
+# col_palette_part <- c("#586F7E", "#168B98", "#ED5B66")
+# 
+# col_palette_enrich <- c("#C7247B", "#A5E100", "#172969")
+# 
+# col_palette <- c("#5ABCD6", "#FAD510", "#F22301")
 
-col_palette_enrich <- c("#C7247B", "#A5E100", "#172969")
+# create some ggplot settings/objects
+parts <- c(Aboveground = "ag_production", Belowground = "bg_production", Total = "ttl_production")
 
-gg_pe_prod <- ggplot(data = df_pe_prod, aes(x = beta, y = gamma)) +
-  geom_point(pch = 19, aes(col = part), alpha = 1) + 
-  geom_smooth(method = lm, se = TRUE, col = "black") + 
-  stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`;`~")),
-           p.accuracy = 0.01, r.accuracy = 0.001) +
-  facet_wrap(. ~ enrichment + part, nrow = 3, scales = "free") + 
-  # scale_x_log10() + scale_y_log10() + 
-  scale_color_manual(name = "", values = col_palette_part) +
-  labs(y = expression(paste(Sigma, " Biomass / Production")), 
-       x = expression(paste("Portfolio effect ", beta))) +
-  theme_classic(base_size = base_size) + 
-  theme(legend.position = "bottom")
+labels_facet <- list(c(low = "Low enrichment", medium = "Medium enrichment", high = "High enrichment"), 
+                     c(low = "", medium = "", high = ""), 
+                     c(low = "", medium = "", high = ""))
 
-gg_var_density <- ggplot(data = df_pe_prod) +
+x_axis <- c(" ", " ", "Portfolio effect (beta)")
+
+y_axis <- c(" ", "Absolute production per sqm", " ")
+
+gg_pe_prod <- purrr::map(seq_along(parts), function(i){
+  
+  dplyr::filter(df_pe_prod, part == parts[i]) %>% 
+    dplyr::mutate(gamma = gamma / 10000) %>% 
+    ggplot(aes(x = beta, y = gamma)) +
+    geom_point(pch = 1) + 
+    geom_smooth(method = lm, se = TRUE, col = "black") + 
+    stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`;`~")),
+             p.accuracy = 0.01, r.accuracy = 0.001) +
+    facet_wrap(. ~ enrichment, ncol = 3, nrow = 1, scales = "free_x",
+               labeller = labeller(enrichment = labels_facet[[i]])) + 
+    # expand_limits(x = 1) + 
+    scale_color_manual(name = "", values = col_palette_part) +
+    labs(y = y_axis[[i]], x = x_axis[[i]], subtitle = names(parts)[i]) +
+    theme_classic(base_size = base_size) + 
+    theme(legend.position = "none", strip.background = element_blank(), 
+          strip.text = element_text(hjust = 0))
+  
+})
+
+gg_pe_prod <- cowplot::plot_grid(plotlist = gg_pe_prod, ncol = 1, nrow = 3)
+
+dplyr::mutate(df_pe_prod, enrichment = factor(enrichment, 
+                                              labels = c("Low enrichment", 
+                                                         "Medium enrichment", 
+                                                         "High enrichment"))) %>% 
+
+gg_var_density <- dplyr::mutate(df_pe_prod, enrichment = factor(enrichment,
+                                                                labels = c("Low enrichment", 
+                                                                           "Medium enrichment", 
+                                                                           "High enrichment"))) %>% 
+  ggplot() +
   geom_density(aes(x = variability, fill = enrichment, col = enrichment), alpha = 0.25) + 
   labs(x = "Input variability", y = "Density") +
-  scale_color_manual(name = "", values = col_palette_enrich) +
-  scale_fill_manual(name = "", values = col_palette_enrich) +
-  
+  scale_color_manual(name = "", values = c("#C7247B", "#A5E100", "#172969")) +
+  scale_fill_manual(name = "", values = c("#C7247B", "#A5E100", "#172969")) +
   theme_classic(base_size = base_size) + 
   theme(legend.position = "bottom")
 
