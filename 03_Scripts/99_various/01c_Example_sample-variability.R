@@ -19,8 +19,6 @@ input_mn <- get_stable_values(starting_values = default_starting,
                               parameters = default_parameters) %>% 
   magrittr::extract2("nutr_input")
 
-freq_mn <- years * 1/4
-
 # set number of repetitions
 itr <- 50
 

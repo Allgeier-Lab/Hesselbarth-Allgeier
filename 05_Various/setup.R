@@ -11,6 +11,7 @@ library(meta.arrR) # remotes::install_github("Allgeier-Lab/meta.arrR", ref = "de
 library(arrR)
 
 library(cowplot)
+library(ggpubr)
 library(magrittr)
 library(raster)
 library(rslurm)
@@ -38,10 +39,13 @@ days_seagrass <- 1
 seagrass_each <- (24 / (min_per_i / 60)) * days_seagrass
 
 # save results only every m days
-days_save <- 25 # which(max_i %% ((24 / (min_per_i / 60)) * (1:365)) == 0)
-save_each <- (24 / (min_per_i / 60)) * days_save
+days_save <- 125 # which(max_i %% ((24 / (min_per_i / 60)) * (1:365)) == 0)
+save_each <-  (24 / (min_per_i / 60)) * days_save
 
 # max_i %% save_each
+
+# set frequency of input peaks
+freq_mn <- years * 1/4
 
 # number of local metaecosystems
 n <- 9
@@ -63,6 +67,11 @@ height <- 297
 # set pixels
 dpi <- 900
 
+# set base_size
+base_size <- 12
+
+#### HPC settings ####
+
 # path for rslurm
 # run file.path(R.home("bin"), "Rscript") on HPC
 rscript_path <- "/sw/arcts/centos7/stacks/gcc/8.2.0/R/4.1.0/lib64/R/bin/Rscript"
@@ -73,6 +82,9 @@ sh_template <- "05_Various/rslurm_slurm.tmpl"
 overwrite <- FALSE
 
 message("\nUsing R v", stringr::str_split(rscript_path, pattern = "/", simplify = TRUE)[, 9], " on HPC")
+
+# exclude slow nodes
+exclude_nodes <- c("gl[3324-3327]", "gl[3368-3371]")
 
 #### Remove some basic parameters ####
 

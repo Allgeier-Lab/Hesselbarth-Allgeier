@@ -12,16 +12,13 @@ source("05_Various/setup.R")
 
 #### Adapt parameters ####
 
-default_parameters$nutrients_diffusion <- 0.0
-default_parameters$detritus_diffusion <- 0.0
-default_parameters$detritus_fish_diffusion <- 0.0
-
-default_starting$bg_biomass <- default_parameters$bg_biomass_max
-default_starting$ag_biomass <- default_parameters$ag_biomass_max
-
 n <- 1 
 
 default_starting$pop_n <- 0
+
+default_parameters$nutrients_diffusion <- 0.0
+default_parameters$detritus_diffusion <- 0.0
+default_parameters$detritus_fish_diffusion <- 0.0
 
 #### Stable values ####
 
@@ -38,7 +35,7 @@ input_mn <- stable_values$nutr_input * seq(from = 1/2, to = 3/2, by = 1/4)
 
 freq_mn <- years * seq(from = 1/4, to = 1, by = 1/4)
 
-itr <- 1000
+itr <- 500
 
 # create variability data.frame with all combinations 
 sim_experiment <- data.frame(amplitude_mod = runif(n = itr, min = 0, max = 1), 

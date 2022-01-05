@@ -39,9 +39,6 @@ input_mn <- stable_values$nutr_input
 
 #### Setup metaecosystems ####
 
-# set frequency of input peaks
-freq_mn <- years * 1/4
-
 # setup metaecosystems
 metasyst <- meta.arrR::setup_meta(n = n, max_i = max_i, 
                                   starting_values = default_starting, parameters = default_parameters,

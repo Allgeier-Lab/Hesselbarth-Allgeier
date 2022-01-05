@@ -12,18 +12,16 @@ source("05_Various/setup.R")
 
 #### Setup experiment ####
 
-input_mn <- get_stable_values(starting_values = default_starting, 
-                              parameters = default_parameters) %>% 
-  magrittr::extract2("nutr_input")
+stable_values <- arrR::get_stable_values(starting_values = default_starting,
+                                         parameters = default_parameters)
 
-freq_mn <- years * 1/4
+input_mn <- stable_values$nutr_input
 
-# set number of repetitions
 itr <- 50
 
 # create variability data.frame with all combinations 
-variability_experiment <- expand.grid(amplitude = c(0, 0.5, 1), 
-                                      phase = c(0, 0.5, 1)) %>% 
+variability_experiment <- expand.grid(amplitude = seq(from = 0, to = 1, by = 0.2), 
+                                      phase = seq(from = 0, to = 1, by = 0.2)) %>% 
   dplyr::slice(rep(1:n(), each = itr))
 
 #### Create HPC function ####
@@ -47,11 +45,11 @@ foo <- function(amplitude, phase) {
 
 variability_sbatch <- rslurm::slurm_apply(f = foo, params = variability_experiment, 
                                           global_objects = c("n", "max_i", "input_mn", "freq_mn"),
-                                          jobname = "example_calc_vari",
+                                          jobname = "example_cont_vari",
                                           nodes = nrow(variability_experiment), cpus_per_node = 1, 
                                           slurm_options = list("account" = "jeallg1", 
                                                                "partition" = "standard",
-                                                               "time" = "00:10:00"), ## hh:mm::ss
+                                                               "time" = "00:05:00"), ## hh:mm::ss
                                           pkgs = "meta.arrR",
                                           rscript_path = rscript_path, sh_template = sh_template, 
                                           submit = FALSE)
@@ -64,41 +62,38 @@ rslurm::cleanup_files(variability_sbatch)
 
 #### Save data ####
 
-suppoRt::save_rds(object = variability_result, filename = "01_example_calc-variability.rds", 
+suppoRt::save_rds(object = variability_result, filename = "01_example_cont-variability.rds", 
                   path = "02_Data/", overwrite = overwrite)
 
-#### Load data ####
+#### Load data #### 
 
-variability_result <- readRDS("02_Data/01_example_calc-variability.rds")
+variability_result <- readRDS("02_Data/01_example_cont-variability.rds")
 
 #### Pre-process data ####
 
-variability_result <- dplyr::mutate(variability_result, 
-                                    amplitude_label = dplyr::case_when(amplitude == 0 ~ "Low",
-                                                                       amplitude == 0.5 ~ "Medium",
-                                                                       TRUE ~ "High"),
-                                    phase_label = dplyr::case_when(phase == 0 ~ "Low",
-                                                                   phase == 0.5 ~ "Medium",
-                                                                   TRUE ~ "High")) %>%
-  tidyr::unite("input", amplitude_label, phase_label, sep = "_", remove = FALSE) %>% 
-  dplyr::mutate(input = factor(input, levels = input, 
-                               labels = paste0(amplitude_label, " Amplitude\n// ", 
-                                               phase_label, " Phase")), 
-                measure = factor(measure, levels = c("alpha", "beta", "gamma", "synchrony")))
+variability_result <- dplyr::group_by(variability_result, amplitude, phase, measure) %>% 
+  dplyr::summarise(mean = mean(value), sd = sd(value), .groups = "drop")
 
 #### Create ggplot ####
 
-gg_variability <- ggplot(data = variability_result) +
-  geom_hline(yintercept = 0, linetype = 2, col = "grey") +
-  geom_boxplot(aes(x = input, y = value)) +
-  facet_wrap(. ~ measure, scales = "free_x", ncol = 2) +
-  labs(x = "Input classification variability", y = "Output variability") +
-  coord_flip() +
-  theme_classic() +
-  theme(legend.position = "bottom")
+gg_continuous <- purrr::map(unique(variability_result$measure), function(i) {
+  
+  dplyr::filter(variability_result, measure == i) %>% 
+    ggplot() + 
+    geom_raster(aes(x = amplitude, y = phase, fill = mean)) + 
+    geom_point(aes(x = amplitude, y = phase, size = sd), pch = 1) +
+    scale_fill_continuous(name = "gamma", type = "viridis") +
+    guides(fill = guide_colorbar(order = 1), size = "none") + 
+    labs(x = "Variability Amplitude", y = "Variability Phase", subtitle = i) +
+    coord_equal() + 
+    theme_classic()
+  
+})
+
+gg_continuous <- cowplot::plot_grid(plotlist = gg_continuous, nrow = 2, ncol = 2)
 
 #### Save ggplot ####
 
-suppoRt::save_ggplot(plot = gg_variability, filename = "01_gg_example_calc-variability.png", 
+suppoRt::save_ggplot(plot = gg_continuous, filename = "01_gg_example_cont-variability.png", 
                      path = "04_Figures/", width = height, height = width, dpi = dpi, 
                      units = units, overwrite = overwrite)

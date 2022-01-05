@@ -21,7 +21,10 @@ default_starting$ag_biomass <- default_parameters$ag_biomass_max
 
 default_starting$pop_n <- 0
 
-freq_mn <- years * 1/4
+# save results only every m days
+days_save <- 125 # which(max_i %% ((24 / (min_per_i / 60)) * (1:365)) == 0)
+
+save_each <- (24 / (min_per_i / 60)) * days_save
 
 #### Stable values ####
 
@@ -40,8 +43,7 @@ itr <- 1000
 
 # create variability data.frame with all combinations 
 sim_experiment <- data.frame(amplitude = runif(n = itr, min = 0, max = 1), 
-                             phase = runif(n = itr, min = 0, max = 1)) %>% 
-  dplyr::slice(1:10)
+                             phase = runif(n = itr, min = 0, max = 1))
 
 #### Create function ####
 
@@ -114,7 +116,7 @@ nofish_sbatch <- rslurm::slurm_apply(f = foo, params = sim_experiment,
                                      slurm_options = list("account" = "jeallg1", 
                                                           "partition" = "standard",
                                                           "time" = "01:00:00", ## hh:mm::ss
-                                                          "mem-per-cpu" = "15G"
+                                                          "mem-per-cpu" = "5G"
                                                           ),
                                      pkgs = c("meta.arrR", "purrr"),
                                      rscript_path = rscript_path, sh_template = sh_template, 
@@ -128,59 +130,15 @@ rslurm::cleanup_files(nofish_sbatch)
 
 #### Save data ####
 
-suppoRt::save_rds(object = nofish_result, filename = "nofish_sample-variability.rds", 
+suppoRt::save_rds(object = nofish_result, filename = "04_nofish_cv.rds", 
                   path = "02_Data/", overwrite = overwrite)
 
 #### Load data ####
 
-nofish_result <- readRDS(file = "02_Data/nofish_calc-variability.rds")
+nofish_result <- readRDS(file = "02_Data/nofish_cv.rds")
 
 #### Pre-process data ####
 
-nofish_result <- dplyr::mutate(nofish_result,
-                               amplitude_label = dplyr::case_when(amplitude == 0 ~ "Low",
-                                                                  amplitude == 0.5 ~ "Medium",
-                                                                  TRUE ~ "High"),
-                               phase_label = dplyr::case_when(phase == 0 ~ "Low",
-                                                              phase == 0.5 ~ "Medium",
-                                                              TRUE ~ "High")) %>%
-  tidyr::unite("input", amplitude_label, phase_label, sep = "_", remove = FALSE) %>% 
-  dplyr::mutate(input = factor(input, levels = input, 
-                               labels = paste0(amplitude_label, " Amplitude\n// ", 
-                                               phase_label, " Phase")), 
-                measure = factor(measure, levels = c("alpha", "beta", "gamma", "synchrony")))
-
 #### Create ggplot ####
 
-parts <- list(c("bg_biomass", "ag_biomass"), c("bg_production", "ag_production"), 
-              c("bg_turnover", "ag_turnover"))
-
-gg_variability <- purrr::map(parts, function(i) { 
-  dplyr::filter(nofish_result, part %in% i) %>% 
-    ggplot() +
-    geom_hline(yintercept = 0, linetype = 2, col = "grey") +
-    geom_boxplot(aes(x = input, y = value, fill = part)) +
-    facet_wrap(. ~ measure, scales = "free_x", ncol = 2) +
-    scale_fill_manual(name = "", values = c("#ED5B66", "#60BAE4")) +
-    labs(x = "Input classification variability", y = "Output variability") +
-    coord_flip() +
-    theme_classic() +
-    theme(legend.position = "bottom")
-  
-})
-
 #### Save ggplot ####
-
-parts <- c("biomas", "production", "turnover")
-
-# save all output figures
-purrr::walk(seq_along(parts), function(i) {
-  
-  part_temp <- stringr::str_replace(string = parts[i], pattern = "_", replacement = "-")
-  
-  name_temp <- paste0("gg_nofish_calc-variability_", part_temp, ".png")
-  
-  suppoRt::save_ggplot(plot = gg_variability[[i]], filename = name_temp, 
-                       path = "04_Figures/", width = height, height = width, dpi = dpi, 
-                       units = units, overwrite = overwrite)
-})
