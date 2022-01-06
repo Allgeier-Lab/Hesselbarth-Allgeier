@@ -145,12 +145,18 @@ df_pe_prod <- readRDS("02_Data/02_PE-Prod_Enrich.rds") %>%
 
 #### Create CV ggplot ####
 
+# create switch for biomass or production
+switch <- "production"
+
+# create parts to loop through
+parts <- paste0(c("ag_", "bg_", "ttl_"), switch)
+
+# create names for plot labelling
+names(parts) <- c("Aboveground", "Belowground", "Total")
+
 # col_palette_part <- c("#586F7E", "#168B98", "#ED5B66")
 # col_palette_enrich <- c("#C7247B", "#A5E100", "#172969")
 # col_palette <- c("#5ABCD6", "#FAD510", "#F22301")
-
-# create some ggplot settings/objects
-parts <- c(Aboveground = "ag_production", Belowground = "bg_production", Total = "ttl_production")
 
 labels_facet <- list(c(low = "Low enrichment", medium = "Medium enrichment", high = "High enrichment"), 
                      c(low = "", medium = "", high = ""), 
@@ -208,10 +214,10 @@ gg_pe_density <- dplyr::mutate(df_pe_prod, enrichment = factor(enrichment,
 
 #### Save ggplot ####
 
-suppoRt::save_ggplot(plot = gg_pe_prod, filename = "02_pe_prod.png",
+suppoRt::save_ggplot(plot = gg_pe_prod, filename = paste0("02_pe_prod_", switch, ".png"),
                      path = "04_Figures", width = height, height = width, dpi = dpi, 
                      units = units, overwrite = overwrite)
 
-suppoRt::save_ggplot(plot = gg_var_density, filename = "02_var_density.png",
+suppoRt::save_ggplot(plot = gg_var_density, filename = paste0("02_var_density_", switch, ".png"),
                      path = "04_Figures", width = height, height = width, dpi = dpi, 
                      units = units, overwrite = overwrite)
