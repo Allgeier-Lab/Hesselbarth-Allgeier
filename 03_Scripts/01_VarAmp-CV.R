@@ -173,8 +173,14 @@ df_var_cv <- readRDS("02_Data/01_VarAmp-CV.rds") %>%
 
 #### Create ggplot ####
 
-# create some ggplot settings/objects
-parts <- c(Aboveground = "ag_production", Belowground = "bg_production", Total = "ttl_production")
+# create switch for biomass or production
+switch <- "biomass"
+
+# create parts to loop through
+parts <- paste0(c("ag_", "bg_", "ttl_"), switch)
+
+# create names for plot labelling
+names(parts) <- c("Aboveground", "Belowground", "Total")
 
 col_palette <- c("#5ABCD6", "#FAD510", "#F22301")
 
@@ -337,24 +343,24 @@ gg_gamma_abs <- cowplot::plot_grid(plotlist = gg_gamma_abs, ncol = 1, nrow = 3,
 #### Save ggplot ####
 
 #### CV ####
-suppoRt::save_ggplot(plot = gg_alpha_cv, filename = "01_VarAmp_CV_alpha.png",
+suppoRt::save_ggplot(plot = gg_alpha_cv, filename = paste0("01_VarAmp_CV_alpha_", switch, ".png"),
                      path = "04_Figures", width = height, height = width, dpi = dpi, 
                      units = units, overwrite = overwrite)
 
-suppoRt::save_ggplot(plot = gg_gamma_cv, filename = "01_VarAmp_CV_gamma.png",
+suppoRt::save_ggplot(plot = gg_gamma_cv, filename = paste0("01_VarAmp_CV_gamma_", switch, ".png"),
                      path = "04_Figures", width = height, height = width, dpi = dpi, 
                      units = units, overwrite = overwrite)
 
-suppoRt::save_ggplot(plot = gg_beta_cv, filename = "01_VarAmp_CV_beta.png",
+suppoRt::save_ggplot(plot = gg_beta_cv, filename = paste0("01_VarAmp_CV_beta_", switch, ".png"),
                      path = "04_Figures", width = height, height = width, dpi = dpi, 
                      units = units, overwrite = overwrite)
 
 #### Abs #### 
-suppoRt::save_ggplot(plot = gg_alpha_abs, filename = "01_VarAmp_abs_alpha.png",
+suppoRt::save_ggplot(plot = gg_alpha_abs, filename = paste0("01_VarAmp_abs_alpha_", switch, ".png"),
                      path = "04_Figures", width = height, height = width, dpi = dpi, 
                      units = units, overwrite = overwrite)
 
-suppoRt::save_ggplot(plot = gg_gamma_abs, filename = "01_VarAmp_abs_gamma.png",
+suppoRt::save_ggplot(plot = gg_gamma_abs, filename = paste0("01_VarAmp_abs_gamma_", switch, ".png"),
                      path = "04_Figures", width = height, height = width, dpi = dpi, 
                      units = units, overwrite = overwrite)
 
