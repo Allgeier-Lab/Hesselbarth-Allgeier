@@ -146,7 +146,7 @@ df_pe_prod <- readRDS("02_Data/02_PE-Prod_Enrich.rds") %>%
 #### Create CV ggplot ####
 
 # create switch for biomass or production
-switch <- "production"
+switch <- "biomass"
 
 # create parts to loop through
 parts <- paste0(c("ag_", "bg_", "ttl_"), switch)
@@ -164,7 +164,7 @@ labels_facet <- list(c(low = "Low enrichment", medium = "Medium enrichment", hig
 
 x_axis <- c(" ", " ", "Portfolio effect (beta)")
 
-y_axis <- c(" ", "Absolute production per sqm", " ")
+y_axis <- c(" ", "Absolute value per sqm", " ")
 
 gg_pe_prod <- purrr::map(seq_along(parts), function(i){
   
@@ -218,6 +218,10 @@ suppoRt::save_ggplot(plot = gg_pe_prod, filename = paste0("02_pe_prod_", switch,
                      path = "04_Figures", width = height, height = width, dpi = dpi, 
                      units = units, overwrite = overwrite)
 
-suppoRt::save_ggplot(plot = gg_var_density, filename = paste0("02_var_density_", switch, ".png"),
+suppoRt::save_ggplot(plot = gg_var_density, filename = "02_var_density.png",
+                     path = "04_Figures", width = height, height = width, dpi = dpi, 
+                     units = units, overwrite = overwrite)
+
+suppoRt::save_ggplot(plot = gg_pe_density, filename = "02_pe_density.png",
                      path = "04_Figures", width = height, height = width, dpi = dpi, 
                      units = units, overwrite = overwrite)
