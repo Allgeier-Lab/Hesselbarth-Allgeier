@@ -28,7 +28,8 @@ default_starting$ag_biomass <- default_parameters$ag_biomass_max
 
 #### Stable values ####
 
-stable_values <- arrR::get_stable_values(starting_values = default_starting,
+stable_values <- arrR::get_stable_values(bg_biomass = default_starting$bg_biomass,
+                                         ag_biomass = default_starting$ag_biomass,
                                          parameters = default_parameters)
 
 default_starting$nutrients_pool <- stable_values$nutrients_pool

@@ -12,7 +12,8 @@ source("05_Various/setup.R")
 
 #### Stable values ####
 
-stable_values <- arrR::get_stable_values(starting_values = default_starting,
+stable_values <- arrR::get_stable_values(bg_biomass = default_starting$bg_biomass,
+                                         ag_biomass = default_starting$ag_biomass,
                                          parameters = default_parameters)
 
 # create variability data.frame with all combinations 
