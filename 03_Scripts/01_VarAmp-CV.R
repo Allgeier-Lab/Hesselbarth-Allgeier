@@ -37,23 +37,9 @@ default_starting$detritus_pool <- stable_values$detritus_pool
 itr <- 50
 
 # set enrichment and amplitude levels
-enrichment_levels <- c(low = 0.5, medium = 0.75, high = 1.0)
+enrichment_levels <- c(low = 0.75, medium = 1, high = 1.25)
 
 amplitude_levels <- c(low = 0.05, medium = 0.5, high = 1.0)
-
-# MH: Instead of creating the names which is really complicated, just add columns
-# with values at the end of foo() function call
-
-# create vector with names
-enrich_names <- rep(enrichment_levels, each = length(amplitude_levels) * (n + 1) * itr)
-
-n_diff_names <- rep(x = seq(from = 0, to = n, by = 1), 
-                    times = length(enrichment_levels) * length(amplitude_levels) * itr)
-
-amplitude_names <- rep(x = rep(x = amplitude_levels, each = (n + 1) * itr), times = length(enrichment_levels))
-
-# paste all names to one vector
-variability_input_names <- paste(enrich_names, n_diff_names, amplitude_names, sep = "_")
 
 # sample amplitude variability for all treatments
 variability_input <- tidyr::expand_grid(enrichment = enrichment_levels,
@@ -64,9 +50,8 @@ variability_input <- tidyr::expand_grid(enrichment = enrichment_levels,
     result_temp <- get_modifier(n = n, local = amplitude, modifier = amplitude_levels,
                                 method = "sample")
     
-    purrr::map(result_temp, function(i) cbind(enrichment = enrichment, i))}) %>% 
-  purrr::flatten() %>% 
-  purrr::set_names(variability_input_names)
+    purrr::map(result_temp, function(i) cbind(enrichment_lvl = enrichment, amplitude_lvl = amplitude, i))}) %>% 
+  purrr::flatten()
 
 #### Setup HPC function ####
 
@@ -86,8 +71,8 @@ foo <- function(nutr_input) {
   
   # simulate input
   input_temp <- meta.arrR::sim_nutr_input(n = globals$n, max_i = globals$max_i,
-                                          amplitude_mod = nutr_input[, 3],
-                                          phase_mod = nutr_input[, 4],
+                                          amplitude_mod = nutr_input[, 4],
+                                          phase_mod = nutr_input[, 5],
                                           input_mn = globals$input_mn * unique(nutr_input[, 1]), 
                                           freq_mn = globals$freq_mn)
 
@@ -130,7 +115,10 @@ foo <- function(nutr_input) {
   result_sum <- dplyr::select(result_sum, type, part, measure, value)
   
   # combine to one df
-  dplyr::arrange(dplyr::bind_rows(cv_temp, result_sum), type, part, measure)
+  dplyr::bind_cols(enrichment_lvl = unique(nutr_input[, 1]),
+                   amplitude_lvl = unique(nutr_input[, 2]), 
+                   n_diff = unique(nutr_input[, 3]), 
+                   dplyr::arrange(dplyr::bind_rows(cv_temp, result_sum), type, part, measure))
   
 }
 
@@ -150,8 +138,7 @@ sbatch_var_cv <- rslurm::slurm_map(f = foo, x = variability_input,
 
 #### Collect results ####
 
-df_var_cv <- rslurm::get_slurm_out(sbatch_var_cv, outtype = "raw") %>% 
-  dplyr::bind_rows(.id = "id")
+df_var_cv <- rslurm::get_slurm_out(sbatch_var_cv, outtype = "table")
 
 suppoRt::save_rds(object = df_var_cv, filename = "01_VarAmp-CV.rds", 
                   path = "02_Data/", overwrite = overwrite)
@@ -161,8 +148,7 @@ rslurm::cleanup_files(sbatch_var_cv)
 #### Load data ####
 
 df_var_cv <- readRDS("02_Data/01_VarAmp-CV.rds") %>% 
-  tidyr::separate(col = id, sep = "_", into = c("enrichment", "variability", "amplitude")) %>% 
-  dplyr::group_by(enrichment, variability, amplitude, type, part, measure) %>%
+  dplyr::group_by(enrichment_lvl, amplitude_lvl, n_diff, type, part, measure) %>%
   dplyr::summarise(value_mn = mean(value), value_sd = sd(value), .groups = "drop") %>% 
   dplyr::mutate(enrichment = factor(enrichment, levels = c(0.5, 0.75, 1.0), labels = c("low", "medium", "high")), 
                 variability = as.numeric(variability),

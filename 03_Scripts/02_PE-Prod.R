@@ -36,7 +36,7 @@ default_starting$detritus_pool <- stable_values$detritus_pool
 itr <- 50
 
 # setup enrichment levels
-enrichment_levels <- rep(c(low = 0.5, medium = 0.75, high = 1.0), each = itr)
+enrichment_levels <- rep(c(low = 0.75, medium = 1.0, high = 1.25), each = itr)
 
 variability <- runif(n = length(enrichment_levels), min = 0.0, max = 1.0)
 
