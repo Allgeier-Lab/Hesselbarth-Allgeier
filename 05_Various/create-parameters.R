@@ -75,8 +75,7 @@ ag <- default_parameters$ag_biomass_min +
   (default_parameters$ag_biomass_max - default_parameters$ag_biomass_min) * 1/3
 
 bg <- default_parameters$bg_biomass_min +
-  (default_parameters$bg_biomass_max - default_parameters$bg_biomass_min) * 0.95
-   # (1 - abs(default_parameters$seagrass_thres))
+  (default_parameters$bg_biomass_max - default_parameters$bg_biomass_min) * 1/3
 
 default_starting <- list(
   
