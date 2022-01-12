@@ -71,17 +71,17 @@ default_parameters <- list(
 
 #### default starting values ####
 
-ag <- default_parameters$ag_biomass_min +
-  (default_parameters$ag_biomass_max - default_parameters$ag_biomass_min) * 1/3
-
-bg <- default_parameters$bg_biomass_min +
-  (default_parameters$bg_biomass_max - default_parameters$bg_biomass_min) * 1/3
+# ag <- default_parameters$ag_biomass_min +
+#   (default_parameters$ag_biomass_max - default_parameters$ag_biomass_min) * 1/3
+# 
+# bg <- default_parameters$bg_biomass_min +
+#   (default_parameters$bg_biomass_max - default_parameters$bg_biomass_min) * 1/3
 
 default_starting <- list(
   
-  # biomass
-  bg_biomass = bg,
-  ag_biomass = ag,
+  # biomass (mean field data)
+  bg_biomass = 547.01948, # bg,
+  ag_biomass = 37.84915, # ag,
   
   # nutrients
   nutrients_pool = 0.0,
@@ -92,6 +92,12 @@ default_starting <- list(
   pop_mean_size = 9.0,
   pop_var_size = 10.0
 )
+
+# ((default_starting$bg_biomass - default_parameters$bg_biomass_min) /
+#   (default_parameters$bg_biomass_max - default_parameters$bg_biomass_min)) * 100
+# 
+# ((default_starting$ag_biomass - default_parameters$ag_biomass_min) /
+#     (default_parameters$ag_biomass_max - default_parameters$ag_biomass_min)) * 100
 
 #### save results ####
 
