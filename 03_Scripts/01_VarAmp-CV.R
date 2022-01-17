@@ -140,6 +140,8 @@ sbatch_var_cv <- rslurm::slurm_map(f = foo, x = variability_input,
 
 #### Collect results ####
 
+# suppoRt::rslurm_missing(x = sbatch_var_cv)
+
 df_var_cv <- rslurm::get_slurm_out(sbatch_var_cv, outtype = "table")
 
 suppoRt::save_rds(object = df_var_cv, filename = "01_VarAmp-CV.rds", 
@@ -152,9 +154,9 @@ rslurm::cleanup_files(sbatch_var_cv)
 df_var_cv <- readRDS("02_Data/01_VarAmp-CV.rds") %>% 
   dplyr::group_by(enrichment_lvl, amplitude_lvl, n_diff, type, part, measure) %>%
   dplyr::summarise(value_mn = mean(value), value_sd = sd(value), .groups = "drop") %>% 
-  dplyr::mutate(enrichment = factor(enrichment, levels = c(0.5, 0.75, 1.0), labels = c("low", "medium", "high")), 
-                variability = as.numeric(variability),
-                amplitude = factor(amplitude, levels = c(0.05, 0.5, 1.0), labels = c("low", "medium", "high")),
+  dplyr::mutate(enrichment_lvl = factor(enrichment_lvl, levels = c(0.75, 1.0, 1.25), labels = c("low", "medium", "high")), 
+                amplitude_lvl = factor(amplitude_lvl, levels = c(0.05, 0.5, 1.0), labels = c("low", "medium", "high")),
+                n_diff = as.integer(n_diff),
                 type = factor(type, levels = c("cv", "absolute")),
                 part = factor(part, levels = c("ag_biomass", "ag_production", "ttl_biomass",
                                                "bg_biomass", "bg_production", "ttl_production")),
@@ -163,7 +165,7 @@ df_var_cv <- readRDS("02_Data/01_VarAmp-CV.rds") %>%
 #### Create ggplot ####
 
 # create switch for biomass or production
-switch <- "biomass"
+switch <- "production"
 
 # create parts to loop through
 parts <- paste0(c("ag_", "bg_", "ttl_"), switch)
@@ -196,12 +198,12 @@ gg_alpha_cv <- purrr::map(seq_along(parts), function(i){
   
   dplyr::filter(df_var_cv, type == "cv", measure == "alpha", part == parts[i]) %>%
     ggplot() +
-    geom_point(aes(x = variability, y = value_mn, col = amplitude)) +
-    geom_line(aes(x = variability, y = value_mn, col = amplitude), alpha = 0.35) +
-    geom_linerange(aes(x = variability, ymin = value_mn - value_sd,
-                       ymax = value_mn + value_sd, col = amplitude)) +
-    facet_wrap(. ~ enrichment, ncol = 3, nrow = 1, 
-               labeller = labeller(enrichment = labels_facet[[i]])) +
+    geom_point(aes(x = n_diff, y = value_mn, col = amplitude_lvl)) +
+    geom_line(aes(x = n_diff, y = value_mn, col = amplitude_lvl), alpha = 0.35) +
+    geom_linerange(aes(x = n_diff, ymin = value_mn - value_sd,
+                       ymax = value_mn + value_sd, col = amplitude_lvl)) +
+    facet_wrap(. ~ enrichment_lvl, ncol = 3, nrow = 1, 
+               labeller = labeller(enrichment_lvl = labels_facet[[i]])) +
     scale_x_continuous(breaks = seq(from = 0, to = 9, by = 1)) +
     scale_y_continuous(labels = y_digits) +
     scale_color_manual(name = "Amplitude treatment", values = col_palette) +
@@ -223,12 +225,12 @@ gg_gamma_cv <- purrr::map(seq_along(parts), function(i){
   
   dplyr::filter(df_var_cv, type == "cv", measure == "gamma", part == parts[i]) %>%
     ggplot() +
-    geom_point(aes(x = variability, y = value_mn, col = amplitude)) +
-    geom_line(aes(x = variability, y = value_mn, col = amplitude), alpha = 0.35) +
-    geom_linerange(aes(x = variability, ymin = value_mn - value_sd,
-                       ymax = value_mn + value_sd, col = amplitude)) +
-    facet_wrap(. ~ enrichment, ncol = 3, nrow = 1, 
-               labeller = labeller(enrichment = labels_facet[[i]])) +
+    geom_point(aes(x = n_diff, y = value_mn, col = amplitude_lvl)) +
+    geom_line(aes(x = n_diff, y = value_mn, col = amplitude_lvl), alpha = 0.35) +
+    geom_linerange(aes(x = n_diff, ymin = value_mn - value_sd,
+                       ymax = value_mn + value_sd, col = amplitude_lvl)) +
+    facet_wrap(. ~ enrichment_lvl, ncol = 3, nrow = 1, 
+               labeller = labeller(enrichment_lvl = labels_facet[[i]])) +
     scale_x_continuous(breaks = seq(from = 0, to = 9, by = 1)) +
     scale_y_continuous(labels = y_digits) +
     scale_color_manual(name = "Amplitude treatment", values = col_palette) +
@@ -250,12 +252,12 @@ gg_beta_cv <- purrr::map(seq_along(parts), function(i){
   
   dplyr::filter(df_var_cv, type == "cv", measure == "beta", part == parts[i]) %>%
     ggplot() +
-    geom_point(aes(x = variability, y = value_mn, col = amplitude)) +
-    geom_line(aes(x = variability, y = value_mn, col = amplitude), alpha = 0.35) +
-    geom_linerange(aes(x = variability, ymin = value_mn - value_sd,
-                       ymax = value_mn + value_sd, col = amplitude)) +
-    facet_wrap(. ~ enrichment, ncol = 3, nrow = 1, 
-               labeller = labeller(enrichment = labels_facet[[i]])) +
+    geom_point(aes(x = n_diff, y = value_mn, col = amplitude_lvl)) +
+    geom_line(aes(x = n_diff, y = value_mn, col = amplitude_lvl), alpha = 0.35) +
+    geom_linerange(aes(x = n_diff, ymin = value_mn - value_sd,
+                       ymax = value_mn + value_sd, col = amplitude_lvl)) +
+    facet_wrap(. ~ enrichment_lvl, ncol = 3, nrow = 1, 
+               labeller = labeller(enrichment_lvl = labels_facet[[i]])) +
     scale_x_continuous(breaks = seq(from = 0, to = 9, by = 1)) +
     scale_color_manual(name = "Amplitude treatment", values = col_palette) +
     labs(y = y_axis[i], x = x_axis[i], subtitle = names(parts)[i]) +
@@ -281,12 +283,12 @@ gg_alpha_abs <- purrr::map(seq_along(parts), function(i){
   dplyr::filter(df_var_cv, type == "absolute", measure == "alpha", part == parts[i]) %>%
     dplyr::mutate(value_mn = value_mn / 10000, value_sd = value_sd / 10000) %>% 
     ggplot() +
-    geom_point(aes(x = variability, y = value_mn, col = amplitude)) +
-    geom_line(aes(x = variability, y = value_mn, col = amplitude), alpha = 0.35) +
-    geom_linerange(aes(x = variability, ymin = value_mn - value_sd,
-                       ymax = value_mn + value_sd, col = amplitude)) +
-    facet_wrap(. ~ enrichment, ncol = 3, nrow = 1, 
-               labeller = labeller(enrichment = labels_facet[[i]])) +
+    geom_point(aes(x = n_diff, y = value_mn, col = amplitude_lvl)) +
+    geom_line(aes(x = n_diff, y = value_mn, col = amplitude_lvl), alpha = 0.35) +
+    geom_linerange(aes(x = n_diff, ymin = value_mn - value_sd,
+                       ymax = value_mn + value_sd, col = amplitude_lvl)) +
+    facet_wrap(. ~ enrichment_lvl, ncol = 3, nrow = 1, 
+               labeller = labeller(enrichment_lvl = labels_facet[[i]])) +
     scale_x_continuous(breaks = seq(from = 0, to = 9, by = 1)) +
     scale_y_continuous(labels = y_digits) +
     scale_color_manual(name = "Amplitude treatment", values = col_palette) +
@@ -309,12 +311,12 @@ gg_gamma_abs <- purrr::map(seq_along(parts), function(i){
   dplyr::filter(df_var_cv, type == "absolute", measure == "gamma", part == parts[i]) %>%
     dplyr::mutate(value_mn = value_mn / 10000, value_sd = value_sd / 10000) %>% 
     ggplot() +
-    geom_point(aes(x = variability, y = value_mn, col = amplitude)) +
-    geom_line(aes(x = variability, y = value_mn, col = amplitude), alpha = 0.35) +
-    geom_linerange(aes(x = variability, ymin = value_mn - value_sd,
-                       ymax = value_mn + value_sd, col = amplitude)) +
-    facet_wrap(. ~ enrichment, ncol = 3, nrow = 1, 
-               labeller = labeller(enrichment = labels_facet[[i]])) +
+    geom_point(aes(x = n_diff, y = value_mn, col = amplitude_lvl)) +
+    geom_line(aes(x = n_diff, y = value_mn, col = amplitude_lvl), alpha = 0.35) +
+    geom_linerange(aes(x = n_diff, ymin = value_mn - value_sd,
+                       ymax = value_mn + value_sd, col = amplitude_lvl)) +
+    facet_wrap(. ~ enrichment_lvl, ncol = 3, nrow = 1, 
+               labeller = labeller(enrichment_lvl = labels_facet[[i]])) +
     scale_x_continuous(breaks = seq(from = 0, to = 9, by = 1)) +
     scale_y_continuous(labels = y_digits) +
     scale_color_manual(name = "Amplitude treatment", values = col_palette) +

@@ -139,7 +139,7 @@ df_pe_prod <- readRDS("02_Data/02_PE-Prod_Enrich.rds") %>%
   dplyr::select(-type) %>%
   tidyr::pivot_wider(names_from = "measure", values_from = value, values_fn = list) %>% 
   tidyr::unnest(cols = tidyselect::everything()) %>% 
-  dplyr::mutate(enrichment = factor(enrichment, levels = c(0.5, 0.75, 1.0), labels = c("low", "medium", "high")),
+  dplyr::mutate(enrichment = factor(enrichment, levels = c(0.75, 1.0, 1.25), labels = c("low", "medium", "high")),
                 variability = as.numeric(variability),
                 part = factor(part, levels = c("ag_biomass", "ag_production", "ttl_biomass",
                                                "bg_biomass", "bg_production", "ttl_production")))
@@ -147,7 +147,7 @@ df_pe_prod <- readRDS("02_Data/02_PE-Prod_Enrich.rds") %>%
 #### Create CV ggplot ####
 
 # create switch for biomass or production
-switch <- "biomass"
+switch <- "production"
 
 # create parts to loop through
 parts <- paste0(c("ag_", "bg_", "ttl_"), switch)
