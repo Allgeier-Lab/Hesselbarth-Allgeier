@@ -103,7 +103,7 @@ metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i,
                                        starting_values = default_starting,
                                        parameters = default_parameters,
                                        dimensions = dimensions, grain = grain,
-                                       reefs = NULL)
+                                       reef = NULL)
 
 # run model
 result_temp <- meta.arrR::run_meta(metasyst = metasyst_temp, nutr_input = input_temp,
@@ -155,8 +155,8 @@ df_input <- dplyr::select(result_sum, meta, timestep, all_of(col_name)) %>%
 
 # df_input <- meta.arrR::get_input_df(x = input_temp, gamma = FALSE)
 
-# mean(apply(X = df_input[, -1], FUN = raster::cv, MARGIN = 2)) /
-#   raster::cv(apply(X = df_input[, -1], FUN = sum, MARGIN = 1))
+# mean(apply(X = df_input[, -1], FUN = terra::cv, MARGIN = 2)) /
+#   terra::cv(apply(X = df_input[, -1], FUN = sum, MARGIN = 1))
 # 
 # calc_variability(result_temp, lag = FALSE)
 

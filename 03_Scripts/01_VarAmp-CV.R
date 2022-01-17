@@ -67,7 +67,7 @@ foo <- function(nutr_input) {
                                          starting_values = globals$default_starting,
                                          parameters = globals$default_parameters,
                                          dimensions = globals$dimensions, grain = globals$grain,
-                                         reefs = NULL, verbose = FALSE)
+                                         reef = NULL, verbose = FALSE)
   
   # simulate input
   input_temp <- meta.arrR::sim_nutr_input(n = globals$n, max_i = globals$max_i,
@@ -82,6 +82,8 @@ foo <- function(nutr_input) {
                                      max_i = globals$max_i, min_per_i = globals$min_per_i,
                                      seagrass_each = globals$seagrass_each,
                                      save_each = globals$save_each, verbose = FALSE)
+  
+  # plot(result_temp, summarize = TRUE)
   
   # filter only second half of timesteps
   result_temp <- meta.arrR::filter_meta(x = result_temp, filter = c(globals$max_i / 2,

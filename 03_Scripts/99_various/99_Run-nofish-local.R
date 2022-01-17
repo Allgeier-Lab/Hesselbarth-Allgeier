@@ -43,7 +43,7 @@ input_mn <- stable_values$nutr_input
 # setup metaecosystems
 metasyst <- meta.arrR::setup_meta(n = n, max_i = max_i, 
                                   starting_values = default_starting, parameters = default_parameters,
-                                  dimensions = dimensions, grain = grain, reefs = NULL)
+                                  dimensions = dimensions, grain = grain, reef = NULL)
 
 # simulate input 
 input_temp <- meta.arrR::sim_nutr_input(n = n, max_i = max_i,

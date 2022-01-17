@@ -116,7 +116,7 @@ metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i,
                                        starting_values = default_starting,
                                        parameters = default_parameters,
                                        dimensions = dimensions, grain = grain,
-                                       reefs = NULL)
+                                       reef = NULL)
 
 # run model
 result_temp <- meta.arrR::run_meta(metasyst = metasyst_temp, nutr_input = input_temp,

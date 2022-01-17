@@ -48,7 +48,7 @@ foo <- function(freq_mn, globals) {
                                          starting_values = globals$default_starting, 
                                          parameters = globals$default_parameters, 
                                          dimensions = globals$dimensions, grain = globals$grain, 
-                                         reefs = NULL, verbose = FALSE)
+                                         reef = NULL, verbose = FALSE)
   
   # simulate input 
   input_temp <- meta.arrR::sim_nutr_input(n = globals$n, max_i = globals$max_i,
