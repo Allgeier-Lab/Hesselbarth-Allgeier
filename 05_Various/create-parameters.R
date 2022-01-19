@@ -30,14 +30,14 @@ default_parameters <- list(
   
   # nutrients
   nutrients_diffusion = 2/3,
-  nutrients_output = 0.01,
+  nutrients_loss = 0.01,
   
   # detritus
   detritus_mineralization = 0.01,
   detritus_diffusion = 1/3,
   detritus_fish_decomp = 0.5,
   detritus_fish_diffusion = 1/3,
-  detritus_output = 0.0,
+  detritus_loss = 0.0,
   
   # fishpop movement
   move_mean = 10.0,
@@ -101,7 +101,7 @@ default_starting <- list(
 
 #### save results ####
 
-overwrite <- TRUE
+overwrite <- FALSE
 
 suppoRt::save_rds(object = default_parameters, filename = "default_parameters.rds", 
                   path = "02_Data/", overwrite = overwrite)

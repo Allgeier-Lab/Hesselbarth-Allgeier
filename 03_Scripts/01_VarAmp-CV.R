@@ -57,7 +57,7 @@ variability_input <- tidyr::expand_grid(enrichment = enrichment_levels,
 
 globals <- list(n = n, max_i = max_i, default_starting = default_starting, 
                 default_parameters = default_parameters, dimensions = dimensions, 
-                grain = grain, input_mn = stable_values$nutr_input, freq_mn = freq_mn,
+                grain = grain, input_mn = stable_values$nutrients_input, freq_mn = freq_mn,
                 min_per_i = min_per_i, seagrass_each = seagrass_each, save_each = save_each) 
 
 foo <- function(nutr_input) {
@@ -71,13 +71,14 @@ foo <- function(nutr_input) {
   
   # simulate input
   input_temp <- meta.arrR::sim_nutr_input(n = globals$n, max_i = globals$max_i,
+                                          seagrass_each = globals$seagrass_each,
                                           amplitude_mod = nutr_input[, 4],
                                           phase_mod = nutr_input[, 5],
                                           input_mn = globals$input_mn * unique(nutr_input[, 1]), 
                                           freq_mn = globals$freq_mn)
 
   # run model
-  result_temp <- meta.arrR::run_meta(metasyst = metasyst_temp, nutr_input = input_temp,
+  result_temp <- meta.arrR::run_meta(metasyst = metasyst_temp, nutrients_input = input_temp,
                                      parameters = globals$default_parameters,
                                      max_i = globals$max_i, min_per_i = globals$min_per_i,
                                      seagrass_each = globals$seagrass_each,
