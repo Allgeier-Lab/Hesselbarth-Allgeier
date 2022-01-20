@@ -19,7 +19,7 @@ default_parameters$nutrients_diffusion <- 0.0
 default_parameters$detritus_diffusion <- 0.0
 default_parameters$detritus_fish_diffusion <- 0.0
 
-# default_parameters$seagrass_thres <- 1/3
+# default_parameters$seagrass_thres <- -0.5
 
 #### Stable values ####
 
@@ -61,7 +61,7 @@ globals <- list(n = n, max_i = max_i, default_starting = default_starting,
                 min_per_i = min_per_i, seagrass_each = seagrass_each, save_each = save_each) 
 
 foo <- function(nutr_input) {
-
+  
   # setup metaecosystems
   metasyst_temp <- meta.arrR::setup_meta(n = globals$n, max_i = globals$max_i,
                                          starting_values = globals$default_starting,
@@ -76,7 +76,9 @@ foo <- function(nutr_input) {
                                           phase_mod = nutr_input[, 5],
                                           input_mn = globals$input_mn * unique(nutr_input[, 1]), 
                                           freq_mn = globals$freq_mn)
-
+  
+  # plot(input_temp, gamma = FALSE)
+  
   # run model
   result_temp <- meta.arrR::run_meta(metasyst = metasyst_temp, nutrients_input = input_temp,
                                      parameters = globals$default_parameters,
@@ -166,13 +168,11 @@ df_var_cv <- readRDS("02_Data/01_VarAmp-CV.rds") %>%
 #### Create ggplot ####
 
 # create switch for biomass or production
-switch <- "production"
+switch <- "combined"
 
-# create parts to loop through
-parts <- paste0(c("ag_", "bg_", "ttl_"), switch)
-
-# create names for plot labelling
-names(parts) <- c("Aboveground", "Belowground", "Total")
+parts <- list(Aboveground = c("ag_biomass", "ag_production"), 
+              Belowground = c("bg_biomass", "bg_production"), 
+              Total = c("ttl_biomass", "ttl_production"))
 
 col_palette <- c("#5ABCD6", "#FAD510", "#F22301")
 
@@ -197,17 +197,21 @@ y_axis <- c(" ", "Coefficient of variation (alpha)", " ")
 
 gg_alpha_cv <- purrr::map(seq_along(parts), function(i){
   
-  dplyr::filter(df_var_cv, type == "cv", measure == "alpha", part == parts[i]) %>%
+  dplyr::filter(df_var_cv, type == "cv", measure == "alpha", part %in% parts[[i]]) %>%
     ggplot() +
-    geom_point(aes(x = n_diff, y = value_mn, col = amplitude_lvl)) +
-    geom_line(aes(x = n_diff, y = value_mn, col = amplitude_lvl), alpha = 0.35) +
-    geom_linerange(aes(x = n_diff, ymin = value_mn - value_sd,
-                       ymax = value_mn + value_sd, col = amplitude_lvl)) +
+    geom_point(aes(x = n_diff, y = value_mn, col = amplitude_lvl, shape = part)) +
+    geom_line(aes(x = n_diff, y = value_mn, col = amplitude_lvl, linetype = part)) +
+    # geom_linerange(aes(x = n_diff, ymin = value_mn - value_sd,
+    #                    ymax = value_mn + value_sd, col = amplitude_lvl, group = part)) +
     facet_wrap(. ~ enrichment_lvl, ncol = 3, nrow = 1, 
                labeller = labeller(enrichment_lvl = labels_facet[[i]])) +
     scale_x_continuous(breaks = seq(from = 0, to = 9, by = 1)) +
     scale_y_continuous(labels = y_digits) +
     scale_color_manual(name = "Amplitude treatment", values = col_palette) +
+    scale_shape_manual(name = "Measure", values = c(1, 19), 
+                       labels = c("biomass", "production")) +
+    scale_linetype_manual(name = "Measure", values = c(2, 1), 
+                          labels = c("biomass", "production")) +
     labs(y = y_axis[i], x = x_axis[i], subtitle = names(parts)[i]) +
     theme_classic(base_size = base_size) + 
     theme(legend.position = legend_position[i], strip.background = element_blank(), 
@@ -224,17 +228,21 @@ y_axis <- c(" ", "Coefficient of variation (gamma)", " ")
 
 gg_gamma_cv <- purrr::map(seq_along(parts), function(i){
   
-  dplyr::filter(df_var_cv, type == "cv", measure == "gamma", part == parts[i]) %>%
+  dplyr::filter(df_var_cv, type == "cv", measure == "gamma", part %in% parts[[i]]) %>%
     ggplot() +
-    geom_point(aes(x = n_diff, y = value_mn, col = amplitude_lvl)) +
-    geom_line(aes(x = n_diff, y = value_mn, col = amplitude_lvl), alpha = 0.35) +
-    geom_linerange(aes(x = n_diff, ymin = value_mn - value_sd,
-                       ymax = value_mn + value_sd, col = amplitude_lvl)) +
+    geom_point(aes(x = n_diff, y = value_mn, col = amplitude_lvl, shape = part)) +
+    geom_line(aes(x = n_diff, y = value_mn, col = amplitude_lvl, linetype = part)) +
+    # geom_linerange(aes(x = n_diff, ymin = value_mn - value_sd,
+    #                    ymax = value_mn + value_sd, col = amplitude_lvl, group = part)) +
     facet_wrap(. ~ enrichment_lvl, ncol = 3, nrow = 1, 
                labeller = labeller(enrichment_lvl = labels_facet[[i]])) +
     scale_x_continuous(breaks = seq(from = 0, to = 9, by = 1)) +
     scale_y_continuous(labels = y_digits) +
     scale_color_manual(name = "Amplitude treatment", values = col_palette) +
+    scale_shape_manual(name = "Measure", values = c(1, 19), 
+                       labels = c("biomass", "production")) +
+    scale_linetype_manual(name = "Measure", values = c(2, 1), 
+                          labels = c("biomass", "production")) +
     labs(y = y_axis[i], x = x_axis[i], subtitle = names(parts)[i]) +
     theme_classic(base_size = base_size) + 
     theme(legend.position = legend_position[i], strip.background = element_blank(), 
@@ -251,16 +259,21 @@ y_axis <- c(" ", "Coefficient of variation (beta)", " ")
 
 gg_beta_cv <- purrr::map(seq_along(parts), function(i){
   
-  dplyr::filter(df_var_cv, type == "cv", measure == "beta", part == parts[i]) %>%
+  dplyr::filter(df_var_cv, type == "cv", measure == "beta", part %in% parts[[i]]) %>%
     ggplot() +
-    geom_point(aes(x = n_diff, y = value_mn, col = amplitude_lvl)) +
-    geom_line(aes(x = n_diff, y = value_mn, col = amplitude_lvl), alpha = 0.35) +
-    geom_linerange(aes(x = n_diff, ymin = value_mn - value_sd,
-                       ymax = value_mn + value_sd, col = amplitude_lvl)) +
+    geom_point(aes(x = n_diff, y = value_mn, col = amplitude_lvl, shape = part)) +
+    geom_line(aes(x = n_diff, y = value_mn, col = amplitude_lvl, linetype = part)) +
+    # geom_linerange(aes(x = n_diff, ymin = value_mn - value_sd,
+    #                    ymax = value_mn + value_sd, col = amplitude_lvl, group = part)) +
     facet_wrap(. ~ enrichment_lvl, ncol = 3, nrow = 1, 
                labeller = labeller(enrichment_lvl = labels_facet[[i]])) +
     scale_x_continuous(breaks = seq(from = 0, to = 9, by = 1)) +
+    scale_y_continuous(labels = y_digits) +
     scale_color_manual(name = "Amplitude treatment", values = col_palette) +
+    scale_shape_manual(name = "Measure", values = c(1, 19), 
+                       labels = c("biomass", "production")) +
+    scale_linetype_manual(name = "Measure", values = c(2, 1), 
+                          labels = c("biomass", "production")) +
     labs(y = y_axis[i], x = x_axis[i], subtitle = names(parts)[i]) +
     theme_classic(base_size = base_size) + 
     theme(legend.position = legend_position[i], strip.background = element_blank(), 
@@ -281,18 +294,21 @@ y_axis <- c(" ", "Absolute values (alpha)", " ")
 
 gg_alpha_abs <- purrr::map(seq_along(parts), function(i){
   
-  dplyr::filter(df_var_cv, type == "absolute", measure == "alpha", part == parts[i]) %>%
-    dplyr::mutate(value_mn = value_mn / 10000, value_sd = value_sd / 10000) %>% 
+  dplyr::filter(df_var_cv, type == "absolute", measure == "alpha", part %in% parts[[i]]) %>%
     ggplot() +
-    geom_point(aes(x = n_diff, y = value_mn, col = amplitude_lvl)) +
-    geom_line(aes(x = n_diff, y = value_mn, col = amplitude_lvl), alpha = 0.35) +
-    geom_linerange(aes(x = n_diff, ymin = value_mn - value_sd,
-                       ymax = value_mn + value_sd, col = amplitude_lvl)) +
+    geom_point(aes(x = n_diff, y = value_mn, col = amplitude_lvl, shape = part)) +
+    geom_line(aes(x = n_diff, y = value_mn, col = amplitude_lvl, linetype = part)) +
+    # geom_linerange(aes(x = n_diff, ymin = value_mn - value_sd,
+    #                    ymax = value_mn + value_sd, col = amplitude_lvl, group = part)) +
     facet_wrap(. ~ enrichment_lvl, ncol = 3, nrow = 1, 
                labeller = labeller(enrichment_lvl = labels_facet[[i]])) +
     scale_x_continuous(breaks = seq(from = 0, to = 9, by = 1)) +
     scale_y_continuous(labels = y_digits) +
     scale_color_manual(name = "Amplitude treatment", values = col_palette) +
+    scale_shape_manual(name = "Measure", values = c(1, 19), 
+                       labels = c("biomass", "production")) +
+    scale_linetype_manual(name = "Measure", values = c(2, 1), 
+                          labels = c("biomass", "production")) +
     labs(y = y_axis[i], x = x_axis[i], subtitle = names(parts)[i]) +
     theme_classic(base_size = base_size) + 
     theme(legend.position = legend_position[i], strip.background = element_blank(), 
@@ -309,18 +325,21 @@ y_axis <- c(" ", "Absolute values (gamma)", " ")
 
 gg_gamma_abs <- purrr::map(seq_along(parts), function(i){
   
-  dplyr::filter(df_var_cv, type == "absolute", measure == "gamma", part == parts[i]) %>%
-    dplyr::mutate(value_mn = value_mn / 10000, value_sd = value_sd / 10000) %>% 
+  dplyr::filter(df_var_cv, type == "absolute", measure == "gamma", part %in% parts[[i]]) %>%
     ggplot() +
-    geom_point(aes(x = n_diff, y = value_mn, col = amplitude_lvl)) +
-    geom_line(aes(x = n_diff, y = value_mn, col = amplitude_lvl), alpha = 0.35) +
-    geom_linerange(aes(x = n_diff, ymin = value_mn - value_sd,
-                       ymax = value_mn + value_sd, col = amplitude_lvl)) +
+    geom_point(aes(x = n_diff, y = value_mn, col = amplitude_lvl, shape = part)) +
+    geom_line(aes(x = n_diff, y = value_mn, col = amplitude_lvl, linetype = part)) +
+    # geom_linerange(aes(x = n_diff, ymin = value_mn - value_sd,
+    #                    ymax = value_mn + value_sd, col = amplitude_lvl, group = part)) +
     facet_wrap(. ~ enrichment_lvl, ncol = 3, nrow = 1, 
                labeller = labeller(enrichment_lvl = labels_facet[[i]])) +
     scale_x_continuous(breaks = seq(from = 0, to = 9, by = 1)) +
     scale_y_continuous(labels = y_digits) +
     scale_color_manual(name = "Amplitude treatment", values = col_palette) +
+    scale_shape_manual(name = "Measure", values = c(1, 19), 
+                       labels = c("biomass", "production")) +
+    scale_linetype_manual(name = "Measure", values = c(2, 1), 
+                          labels = c("biomass", "production")) +
     labs(y = y_axis[i], x = x_axis[i], subtitle = names(parts)[i]) +
     theme_classic(base_size = base_size) + 
     theme(legend.position = legend_position[i], strip.background = element_blank(), 
@@ -355,4 +374,3 @@ suppoRt::save_ggplot(plot = gg_alpha_abs, filename = paste0("01_VarAmp_abs_alpha
 suppoRt::save_ggplot(plot = gg_gamma_abs, filename = paste0("01_VarAmp_abs_gamma_", switch, ".png"),
                      path = "04_Figures", width = height, height = width, dpi = dpi, 
                      units = units, overwrite = overwrite)
-
