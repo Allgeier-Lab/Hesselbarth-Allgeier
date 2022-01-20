@@ -148,10 +148,12 @@ df_pe_prod <- readRDS("02_Data/02_PE-Prod_Enrich.rds") %>%
 #### Create CV ggplot ####
 
 # create switch for biomass or production
-switch <- "production"
+switch <- "combined"
 
 # create parts to loop through
-parts <- paste0(c("ag_", "bg_", "ttl_"), switch)
+parts <- list(Aboveground = c("ag_biomass", "ag_production"), 
+              Belowground = c("bg_biomass", "bg_production"), 
+              Total = c("ttl_biomass", "ttl_production"))
 
 # create names for plot labelling
 names(parts) <- c("Aboveground", "Belowground", "Total")
@@ -170,20 +172,22 @@ y_axis <- c(" ", "Absolute value per sqm", " ")
 
 gg_pe_prod <- purrr::map(seq_along(parts), function(i){
   
-  dplyr::filter(df_pe_prod, part == parts[i]) %>% 
+  dplyr::filter(df_pe_prod, part %in% parts[[i]]) %>% 
     dplyr::mutate(gamma = gamma / 10000) %>% 
     ggplot(aes(x = beta, y = gamma)) +
-    geom_point(pch = 1) + 
-    geom_smooth(method = lm, se = TRUE, linetype = 2, col = "black") + 
+    geom_point(aes(shape = part)) + 
+    geom_smooth(aes(group = part), method = lm, se = TRUE, linetype = 2, col = "black") +
     # stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`;`~")),
     #          p.accuracy = 0.01, r.accuracy = 0.001) +
     facet_wrap(. ~ enrichment, ncol = 3, nrow = 1, scales = "fixed",
                labeller = labeller(enrichment = labels_facet[[i]])) + 
     # expand_limits(x = 1) + 
     # scale_color_manual(name = "", values = col_palette_enrich) +
+    scale_shape_manual(name = "Measure", values = c(1, 19), 
+                       labels = c("biomass", "production")) +
     labs(y = y_axis[[i]], x = x_axis[[i]], subtitle = names(parts)[i]) +
     theme_classic(base_size = base_size) + 
-    theme(legend.position = "none", strip.background = element_blank(), 
+    theme(legend.position = "bottom", strip.background = element_blank(), 
           strip.text = element_text(hjust = 0))
   
 })

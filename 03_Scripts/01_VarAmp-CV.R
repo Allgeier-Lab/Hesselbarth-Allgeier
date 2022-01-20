@@ -170,6 +170,7 @@ df_var_cv <- readRDS("02_Data/01_VarAmp-CV.rds") %>%
 # create switch for biomass or production
 switch <- "combined"
 
+# create parts to loop through
 parts <- list(Aboveground = c("ag_biomass", "ag_production"), 
               Belowground = c("bg_biomass", "bg_production"), 
               Total = c("ttl_biomass", "ttl_production"))
