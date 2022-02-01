@@ -14,11 +14,13 @@ source("05_Various/setup.R")
 
 default_starting$pop_n <- 0
 
-default_parameters$nutrients_diffusion <- 0.0
-default_parameters$detritus_diffusion <- 0.0
-default_parameters$detritus_fish_diffusion <- 0.0
-
+# default_parameters$nutrients_diffusion <- 0.0
+# default_parameters$detritus_diffusion <- 0.0
+# default_parameters$detritus_fish_diffusion <- 0.0
 # default_parameters$seagrass_thres <- 1/3
+
+reef_matrix <- matrix(data = c(-1, 0, 0, 1, 1, 0, 0, -1, 0, 0), 
+                      ncol = 2, byrow = TRUE)
 
 #### Stable values ####
 
@@ -44,7 +46,7 @@ df_experiment <- data.frame(variability = variability, enrichment = enrichment_l
 
 #### Setup HPC function ####
 
-globals <- list(n = n, max_i = max_i, default_starting = default_starting, 
+globals <- list(n = n, reef_matrix = reef_matrix, max_i = max_i, default_starting = default_starting, 
                 default_parameters = default_parameters, dimensions = dimensions, 
                 grain = grain, input_mn = stable_values$nutrients_input, freq_mn = freq_mn,
                 min_per_i = min_per_i, seagrass_each = seagrass_each, save_each = save_each) 
@@ -54,9 +56,12 @@ foo <- function(variability, enrichment) {
   # setup metaecosystems
   metasyst_temp <- meta.arrR::setup_meta(n = globals$n, max_i = globals$max_i,
                                          starting_values = globals$default_starting,
+                                         reef = globals$reef_matrix,
                                          parameters = globals$default_parameters,
                                          dimensions = globals$dimensions, grain = globals$grain,
-                                         reef = NULL, verbose = FALSE)
+                                         verbose = FALSE)
+  
+  # plot(metasyst_temp)
   
   # simulate input
   input_temp <- meta.arrR::sim_nutr_input(n = globals$n, max_i = globals$max_i,
@@ -65,12 +70,16 @@ foo <- function(variability, enrichment) {
                                           input_mn = globals$input_mn * enrichment, 
                                           freq_mn = globals$freq_mn)
   
+  # plot(input_temp, gamma = FALSE)
+  
   # run model
-  result_temp <- meta.arrR::run_meta(metasyst = metasyst_temp, nutrients_input = input_temp,
-                                     parameters = globals$default_parameters,
-                                     max_i = globals$max_i, min_per_i = globals$min_per_i,
-                                     seagrass_each = globals$seagrass_each,
-                                     save_each = globals$save_each, verbose = FALSE)
+  result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, nutrients_input = input_temp,
+                                                parameters = globals$default_parameters,
+                                                max_i = globals$max_i, min_per_i = globals$min_per_i,
+                                                seagrass_each = globals$seagrass_each,
+                                                save_each = globals$save_each, verbose = FALSE)
+  
+  # plot(result_temp, summarize = TRUE)
   
   # filter only second half of timesteps
   result_temp <- meta.arrR::filter_meta(x = result_temp, filter = c(globals$max_i / 2,
@@ -148,10 +157,12 @@ df_pe_prod <- readRDS("02_Data/02_PE-Prod_Enrich.rds") %>%
 #### Create CV ggplot ####
 
 # create switch for biomass or production
-switch <- "production"
+switch <- "combined"
 
 # create parts to loop through
-parts <- paste0(c("ag_", "bg_", "ttl_"), switch)
+parts <- list(Aboveground = c("ag_biomass", "ag_production"), 
+              Belowground = c("bg_biomass", "bg_production"), 
+              Total = c("ttl_biomass", "ttl_production"))
 
 # create names for plot labelling
 names(parts) <- c("Aboveground", "Belowground", "Total")
@@ -170,20 +181,22 @@ y_axis <- c(" ", "Absolute value per sqm", " ")
 
 gg_pe_prod <- purrr::map(seq_along(parts), function(i){
   
-  dplyr::filter(df_pe_prod, part == parts[i]) %>% 
+  dplyr::filter(df_pe_prod, part %in% parts[[i]]) %>% 
     dplyr::mutate(gamma = gamma / 10000) %>% 
     ggplot(aes(x = beta, y = gamma)) +
-    geom_point(pch = 1) + 
-    geom_smooth(method = lm, se = TRUE, linetype = 2, col = "black") + 
+    geom_point(aes(shape = part)) + 
+    geom_smooth(aes(group = part), method = lm, se = TRUE, linetype = 2, col = "black") +
     # stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`;`~")),
     #          p.accuracy = 0.01, r.accuracy = 0.001) +
     facet_wrap(. ~ enrichment, ncol = 3, nrow = 1, scales = "fixed",
                labeller = labeller(enrichment = labels_facet[[i]])) + 
     # expand_limits(x = 1) + 
     # scale_color_manual(name = "", values = col_palette_enrich) +
+    scale_shape_manual(name = "Measure", values = c(1, 19), 
+                       labels = c("biomass", "production")) +
     labs(y = y_axis[[i]], x = x_axis[[i]], subtitle = names(parts)[i]) +
     theme_classic(base_size = base_size) + 
-    theme(legend.position = "none", strip.background = element_blank(), 
+    theme(legend.position = "bottom", strip.background = element_blank(), 
           strip.text = element_text(hjust = 0))
   
 })
