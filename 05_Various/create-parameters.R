@@ -47,6 +47,7 @@ default_parameters <- list(
   move_return = 0.0,
   move_residence = 0.0,
   move_residence_var = 0.0,
+  move_lambda = 1.0,
   
   # fishpop dimensions
   pop_a = 0.0121,

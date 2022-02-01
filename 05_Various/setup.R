@@ -51,7 +51,7 @@ freq_mn <- years * 1/4
 n <- 9
 
 # setup extent and grain
-dimensions <- c(100, 100)
+dimensions <- c(50, 50)
 
 grain <- 1
 

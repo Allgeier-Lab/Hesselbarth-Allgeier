@@ -15,11 +15,13 @@ source("01_Functions/get_modifier.R")
 
 default_starting$pop_n <- 0
 
-default_parameters$nutrients_diffusion <- 0.0
-default_parameters$detritus_diffusion <- 0.0
-default_parameters$detritus_fish_diffusion <- 0.0
-
+# default_parameters$nutrients_diffusion <- 0.0
+# default_parameters$detritus_diffusion <- 0.0
+# default_parameters$detritus_fish_diffusion <- 0.0
 # default_parameters$seagrass_thres <- -0.5
+
+reef_matrix <- matrix(data = c(-1, 0, 0, 1, 1, 0, 0, -1, 0, 0), 
+                      ncol = 2, byrow = TRUE)
 
 #### Stable values ####
 
@@ -55,7 +57,7 @@ variability_input <- tidyr::expand_grid(enrichment = enrichment_levels,
 
 #### Setup HPC function ####
 
-globals <- list(n = n, max_i = max_i, default_starting = default_starting, 
+globals <- list(n = n, reef_matrix = reef_matrix, max_i = max_i, default_starting = default_starting, 
                 default_parameters = default_parameters, dimensions = dimensions, 
                 grain = grain, input_mn = stable_values$nutrients_input, freq_mn = freq_mn,
                 min_per_i = min_per_i, seagrass_each = seagrass_each, save_each = save_each) 
@@ -65,9 +67,12 @@ foo <- function(nutr_input) {
   # setup metaecosystems
   metasyst_temp <- meta.arrR::setup_meta(n = globals$n, max_i = globals$max_i,
                                          starting_values = globals$default_starting,
+                                         reef = globals$reef_matrix,
                                          parameters = globals$default_parameters,
                                          dimensions = globals$dimensions, grain = globals$grain,
-                                         reef = NULL, verbose = FALSE)
+                                         verbose = FALSE)
+  
+  # plot(metasyst_temp)
   
   # simulate input
   input_temp <- meta.arrR::sim_nutr_input(n = globals$n, max_i = globals$max_i,
@@ -80,11 +85,11 @@ foo <- function(nutr_input) {
   # plot(input_temp, gamma = FALSE)
   
   # run model
-  result_temp <- meta.arrR::run_meta(metasyst = metasyst_temp, nutrients_input = input_temp,
-                                     parameters = globals$default_parameters,
-                                     max_i = globals$max_i, min_per_i = globals$min_per_i,
-                                     seagrass_each = globals$seagrass_each,
-                                     save_each = globals$save_each, verbose = FALSE)
+  result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, nutrients_input = input_temp,
+                                                parameters = globals$default_parameters,
+                                                max_i = globals$max_i, min_per_i = globals$min_per_i,
+                                                seagrass_each = globals$seagrass_each,
+                                                save_each = globals$save_each, verbose = FALSE)
   
   # plot(result_temp, summarize = TRUE)
   
