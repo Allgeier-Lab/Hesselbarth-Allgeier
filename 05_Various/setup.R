@@ -27,6 +27,9 @@ default_parameters <- readRDS("02_Data/default_parameters.rds")
 
 #### Basic parameters ####
 
+# number of iterations
+iterations <- 50
+
 # set min_per_i
 min_per_i <- 120
 
@@ -40,7 +43,7 @@ seagrass_each <- (24 / (min_per_i / 60)) * days_seagrass
 
 # save results only every m days
 days_save <- 125 # which(max_i %% ((24 / (min_per_i / 60)) * (1:365)) == 0)
-save_each <-  (24 / (min_per_i / 60)) * days_save
+save_each <- (24 / (min_per_i / 60)) * days_save
 
 # max_i %% save_each
 
@@ -54,6 +57,11 @@ n <- 9
 dimensions <- c(50, 50)
 
 grain <- 1
+
+#### Setup reef cells ####
+
+reef_matrix <- matrix(data = c(-1, 0, 0, 1, 1, 0, 0, -1, 0, 0), 
+                      ncol = 2, byrow = TRUE)
 
 #### Plotting defaults ####
 
