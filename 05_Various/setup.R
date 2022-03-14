@@ -21,9 +21,9 @@ library(viridis)
 
 #### Load data ####
 
-default_starting <- readRDS("02_Data/default_starting.rds")
+default_starting <- readRDS("02_Data/00_default_starting.rds")
 
-default_parameters <- readRDS("02_Data/default_parameters.rds")
+default_parameters <- readRDS("02_Data/00_default_parameters.rds")
 
 #### Basic parameters ####
 
@@ -92,7 +92,7 @@ overwrite <- FALSE
 message("\nUsing R v", stringr::str_split(rscript_path, pattern = "/", simplify = TRUE)[, 9], " on HPC")
 
 # exclude slow nodes
-exclude_nodes <- c("gl[3324-3327]", "gl[3368-3371]")
+exclude_nodes <- c("gl[3324-3327]", "gl[3368-3371]", "gl3383")
 
 #### Remove some basic parameters ####
 
