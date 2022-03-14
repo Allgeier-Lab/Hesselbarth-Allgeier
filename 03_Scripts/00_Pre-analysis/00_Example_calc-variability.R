@@ -13,15 +13,12 @@ source("05_Various/setup.R")
 #### Setup experiment ####
 
 stable_values <- get_stable_values(starting_values = default_starting, 
-                              parameters = default_parameters)
-
-# set number of repetitions
-itr <- 50
+                                   parameters = default_parameters)
 
 # create variability data.frame with all combinations 
-variability_experiment <- expand.grid(amplitude = c(0, 0.5, 1), 
-                                      phase = c(0, 0.5, 1)) %>% 
-  dplyr::slice(rep(1:n(), each = itr))
+variability_experiment <- expand.grid(amplitude = c(0.05, 0.5, 1), 
+                                      phase = c(0.05, 0.5, 1)) %>% 
+  dplyr::slice(rep(1:n(), each = iterations))
 
 #### Create HPC function ####
 
