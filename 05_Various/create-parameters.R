@@ -24,7 +24,7 @@ default_parameters <- list(
   ag_gamma = 0.0144,
   
   # seagrass
-  seagrass_thres = -1/3,
+  seagrass_thres = -1/4,
   seagrass_slope = 2.0,
   seagrass_slough = 0.01,
   
@@ -42,12 +42,12 @@ default_parameters <- list(
   # fishpop movement
   move_mean = 10.0,
   move_var = 5.0,
-  move_border = 0.0,
-  move_reef = 0.0,
-  move_return = 0.0,
+  move_border = 2.0,
+  move_reef = 1.0,
+  move_return = 15.0,
   move_residence = 0.0,
   move_residence_var = 0.0,
-  move_lambda = 1.0,
+  move_lambda = 0.0,
   
   # fishpop dimensions
   pop_a = 0.0121,
@@ -57,10 +57,10 @@ default_parameters <- list(
   pop_n_body = 0.02999,
   
   # fishpop reserves
-  pop_reserves_max = 0.05,
-  pop_reserves_thres_lo = 0.0,
-  pop_reserves_thres_hi = 0.0,
-  pop_reserves_consump = 1.0,
+  pop_reserves_max = 0.25,
+  pop_reserves_thres_mean = 0.05,
+  pop_reserves_thres_var = 0.0,
+  pop_reserves_consump = 0.1,
   
   # fishpop respiration
   resp_intercept = 0.0108,
@@ -94,18 +94,18 @@ default_starting <- list(
   pop_var_size = 10.0
 )
 
-# ((default_starting$bg_biomass - default_parameters$bg_biomass_min) /
-#   (default_parameters$bg_biomass_max - default_parameters$bg_biomass_min)) * 100
-# 
-# ((default_starting$ag_biomass - default_parameters$ag_biomass_min) /
-#     (default_parameters$ag_biomass_max - default_parameters$ag_biomass_min)) * 100
+((default_starting$bg_biomass - default_parameters$bg_biomass_min) /
+  (default_parameters$bg_biomass_max - default_parameters$bg_biomass_min)) * 100
+
+((default_starting$ag_biomass - default_parameters$ag_biomass_min) /
+    (default_parameters$ag_biomass_max - default_parameters$ag_biomass_min)) * 100
 
 #### save results ####
 
-overwrite <- FALSE
+overwrite <- TRUE
 
-suppoRt::save_rds(object = default_parameters, filename = "default_parameters.rds", 
+suppoRt::save_rds(object = default_parameters, filename = "00_default_parameters.rds", 
                   path = "02_Data/", overwrite = overwrite)
 
-suppoRt::save_rds(object = default_starting, filename = "default_starting.rds", 
+suppoRt::save_rds(object = default_starting, filename = "00_default_starting.rds", 
                   path = "02_Data/", overwrite = overwrite)
