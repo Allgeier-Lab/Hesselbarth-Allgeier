@@ -14,14 +14,6 @@ source("05_Various/setup.R")
 
 default_starting$pop_n <- 0
 
-# default_parameters$nutrients_diffusion <- 0.0
-# default_parameters$detritus_diffusion <- 0.0
-# default_parameters$detritus_fish_diffusion <- 0.0
-# default_parameters$seagrass_thres <- 1/3
-
-reef_matrix <- matrix(data = c(-1, 0, 0, 1, 1, 0, 0, -1, 0, 0), 
-                      ncol = 2, byrow = TRUE)
-
 #### Stable values ####
 
 stable_values <- arrR::get_stable_values(bg_biomass = default_starting$bg_biomass,
@@ -34,11 +26,8 @@ default_starting$detritus_pool <- stable_values$detritus_pool
 
 #### Simulate input ####
 
-# number of iterations
-itr <- 50
-
 # setup enrichment levels
-enrichment_levels <- rep(c(low = 0.75, medium = 1.0, high = 1.25), each = itr)
+enrichment_levels <- rep(c(low = 0.75, medium = 1.0, high = 1.25), each = iterations)
 
 variability <- runif(n = length(enrichment_levels), min = 0.0, max = 1.0)
 
@@ -54,9 +43,8 @@ globals <- list(n = n, reef_matrix = reef_matrix, max_i = max_i, default_startin
 foo <- function(variability, enrichment) {
   
   # setup metaecosystems
-  metasyst_temp <- meta.arrR::setup_meta(n = globals$n, max_i = globals$max_i,
+  metasyst_temp <- meta.arrR::setup_meta(n = globals$n, max_i = globals$max_i, reef = globals$reef_matrix,
                                          starting_values = globals$default_starting,
-                                         reef = globals$reef_matrix,
                                          parameters = globals$default_parameters,
                                          dimensions = globals$dimensions, grain = globals$grain,
                                          verbose = FALSE)
@@ -73,8 +61,8 @@ foo <- function(variability, enrichment) {
   # plot(input_temp, gamma = FALSE)
   
   # run model
-  result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, nutrients_input = input_temp,
-                                                parameters = globals$default_parameters,
+  result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = globals$default_parameters,
+                                                nutrients_input = input_temp, movement = "rand",
                                                 max_i = globals$max_i, min_per_i = globals$min_per_i,
                                                 seagrass_each = globals$seagrass_each,
                                                 save_each = globals$save_each, verbose = FALSE)
