@@ -15,24 +15,28 @@ get_modifier <- function(n, local, modifier, df = FALSE, method = "runif") {
       # sample others
       ampl_mod <- runif(n = n - i)
       
+      phase_mod <- runif(n = n - i)
+      
     } else if (method == "sample") {
       
       ampl_mod <- sample(x = modifier, size = n - i, replace = TRUE)
+      
+      phase_mod <- sample(x = modifier, size = n - i, replace = TRUE)
+      
       # ampl_mod <- sample(x = modifier[modifier != local], size = n - i, replace = TRUE) 
+      
+      # phase_mod <- sample(x = modifier[modifier != local], size = n - i, replace = TRUE) 
       
     } else{
       
       stop("Wrong method.", call. = FALSE)
       
     }
-    
-    # sample random phase modifier
-    phase_mod <- c(rep(x = 0, times = i), runif(n = n - i))
-    # phase_mod <- runif(n = n)
-    
+  
     # combine to one data.frame
-    result_temp <- data.frame(n_diff = n - i, amplitude = c(local_mod, ampl_mod), 
-                              phase = phase_mod)
+    result_temp <- data.frame(n_diff = n - i, 
+                              amplitude = c(local_mod, ampl_mod), 
+                              phase = c(local_mod, phase_mod))
     
     if (nrow(result_temp) != n) {
       
