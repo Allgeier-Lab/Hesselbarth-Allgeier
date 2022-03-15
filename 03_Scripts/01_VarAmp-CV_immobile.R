@@ -122,7 +122,7 @@ foo <- function(nutr_input) {
 #### Submit to HPC #### 
 
 sbatch_var_cv <- rslurm::slurm_map(f = foo, x = variability_input, 
-                                   global_objects = "globals", jobname = "VarAmp_CV",
+                                   global_objects = "globals", jobname = "VarAmp_CV_immob",
                                    nodes = length(variability_input), cpus_per_node = 1, 
                                    slurm_options = list("account" = account, 
                                                         "partition" = "standard",
@@ -135,18 +135,18 @@ sbatch_var_cv <- rslurm::slurm_map(f = foo, x = variability_input,
 
 #### Collect results ####
 
-# suppoRt::rslurm_missing(x = sbatch_var_cv)
+suppoRt::rslurm_missing(x = sbatch_var_cv)
 
 df_var_cv <- rslurm::get_slurm_out(sbatch_var_cv, outtype = "table")
 
-suppoRt::save_rds(object = df_var_cv, filename = "01_VarAmp-CV.rds",
+suppoRt::save_rds(object = df_var_cv, filename = "01_VarAmp-CV-immob.rds",
                   path = "02_Data/", overwrite = overwrite)
 
 rslurm::cleanup_files(sbatch_var_cv)
 
 #### Load data ####
 
-df_var_cv <- readRDS("02_Data/01_VarAmp-CV.rds") %>% 
+df_var_cv <- readRDS("02_Data/01_VarAmp-CV-immob.rds") %>% 
   dplyr::group_by(enrichment_lvl, amplitude_lvl, n_diff, type, part, measure) %>%
   dplyr::summarise(value_mn = mean(value), value_sd = sd(value), .groups = "drop") %>% 
   dplyr::mutate(enrichment_lvl = factor(enrichment_lvl, levels = c(0.75, 1.0, 1.25), labels = c("low", "medium", "high")), 
@@ -238,7 +238,7 @@ purrr::walk(seq_along(gg_results), function(i) {
     
     # create file name
     filename_temp <- paste0("01_VarAmp_CV_", names(gg_results)[[i]], "_", 
-                            names(gg_results[[i]])[[j]], "_immobile.png")
+                            names(gg_results[[i]])[[j]], "_immob.png")
     
     # save ggplot
     suppoRt::save_ggplot(plot = gg_results[[i]][[j]], filename = filename_temp,

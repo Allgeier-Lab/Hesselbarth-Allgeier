@@ -62,11 +62,9 @@ foo <- function(nutr_input) {
   
   # simulate input
   input_temp <- meta.arrR::sim_nutr_input(n = globals$n, max_i = globals$max_i,
-                                          seagrass_each = globals$seagrass_each,
-                                          amplitude_mod = nutr_input[, 4],
-                                          phase_mod = nutr_input[, 5],
+                                          amplitude_mod = nutr_input[, 4], phase_mod = nutr_input[, 5],
                                           input_mn = globals$input_mn * unique(nutr_input[, 1]), 
-                                          freq_mn = globals$freq_mn)
+                                          freq_mn = globals$freq_mn, verbose = FALSE)
   
   # run model
   result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = globals$default_parameters,
@@ -119,7 +117,7 @@ foo <- function(nutr_input) {
 #### Submit to HPC #### 
 
 sbatch_var_cv <- rslurm::slurm_map(f = foo, x = variability_input, 
-                                   global_objects = "globals", jobname = "VarAmp_CV",
+                                   global_objects = "globals", jobname = "VarAmp_CV_nofish",
                                    nodes = length(variability_input), cpus_per_node = 1, 
                                    slurm_options = list("account" = account, 
                                                         "partition" = "standard",
@@ -136,14 +134,14 @@ sbatch_var_cv <- rslurm::slurm_map(f = foo, x = variability_input,
 
 df_var_cv <- rslurm::get_slurm_out(sbatch_var_cv, outtype = "table")
 
-suppoRt::save_rds(object = df_var_cv, filename = "01_VarAmp-CV.rds",
+suppoRt::save_rds(object = df_var_cv, filename = "01_VarAmp-CV-nofish.rds",
                   path = "02_Data/", overwrite = overwrite)
 
 rslurm::cleanup_files(sbatch_var_cv)
 
 #### Load data ####
 
-df_var_cv <- readRDS("02_Data/01_VarAmp-CV.rds") %>% 
+df_var_cv <- readRDS("02_Data/01_VarAmp-CV-nofish.rds") %>% 
   dplyr::group_by(enrichment_lvl, amplitude_lvl, n_diff, type, part, measure) %>%
   dplyr::summarise(value_mn = mean(value), value_sd = sd(value), .groups = "drop") %>% 
   dplyr::mutate(enrichment_lvl = factor(enrichment_lvl, levels = c(0.75, 1.0, 1.25), labels = c("low", "medium", "high")), 
