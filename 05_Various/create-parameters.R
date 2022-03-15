@@ -57,10 +57,10 @@ default_parameters <- list(
   pop_n_body = 0.02999,
   
   # fishpop reserves
-  pop_reserves_max = 0.25,
-  pop_reserves_thres_mean = 0.05,
+  pop_reserves_max = 0.01,
+  pop_reserves_thres_mean = 0.01,
   pop_reserves_thres_var = 0.0,
-  pop_reserves_consump = 0.1,
+  pop_reserves_consump = 0.20,
   
   # fishpop respiration
   resp_intercept = 0.0108,
@@ -102,10 +102,8 @@ default_starting <- list(
 
 #### save results ####
 
-overwrite <- TRUE
-
 suppoRt::save_rds(object = default_parameters, filename = "00_default_parameters.rds", 
-                  path = "02_Data/", overwrite = overwrite)
+                  path = "02_Data/", overwrite = TRUE)
 
 suppoRt::save_rds(object = default_starting, filename = "00_default_starting.rds", 
-                  path = "02_Data/", overwrite = overwrite)
+                  path = "02_Data/", overwrite = TRUE)
