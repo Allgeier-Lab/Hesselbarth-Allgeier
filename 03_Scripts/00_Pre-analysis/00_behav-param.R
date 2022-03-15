@@ -12,12 +12,7 @@ source("05_Various/setup.R")
 
 #### Change parameters and starting values 
 
-# default_starting$pop_mean_size <- default_parameters$pop_linf * 1/2
-
 default_parameters$nutrients_loss <- 0.0 
-
-default_parameters$seagrass_slough <- 0.01
-default_parameters$detritus_mineralization <- 0.01
 
 # check if all parameters are present and meaningful
 check_parameters(starting_values = default_starting, parameters = default_parameters)
@@ -55,7 +50,7 @@ values <- c(0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2)
 input_df <- expand.grid(pop_reserves_max = values, 
                         pop_reserves_consump = values, 
                         pop_reserves_thres_mean = values) %>% 
-  dplyr::slice(rep(1:dplyr::n(), each = 3))  
+  dplyr::slice(rep(1:dplyr::n(), each = 5))  
 
 foo <- function(pop_reserves_max, pop_reserves_consump, pop_reserves_thres_mean) {
   
@@ -87,7 +82,7 @@ foo <- function(pop_reserves_max, pop_reserves_consump, pop_reserves_thres_mean)
 
     counts_temp <- dplyr::pull(counts_temp, behavior)
 
-    counts_temp <-  rle(counts_temp)
+    counts_temp <- rle(counts_temp)
 
     data.frame(pop_reserves_max = pop_reserves_max, pop_reserves_consump = pop_reserves_consump,
                pop_reserves_thres_mean = pop_reserves_thres_mean, id = i,
@@ -109,11 +104,10 @@ globals <- c("reef_matrix", "default_starting",  "default_parameters",
 sbatch_behav <- rslurm::slurm_apply(f = foo, params = input_df,
                                     global_objects = globals, jobname = "move_behav",
                                     nodes = nrow(input_df), cpus_per_node = 1, 
-                                    slurm_options = list("account" = "jeallg1", 
+                                    slurm_options = list("account" = account, 
                                                          "partition" = "standard",
                                                          "time" = "00:30:00", ## hh:mm::ss
-                                                         "mem-per-cpu" = "7G", 
-                                                         "exclude" = exclude_nodes),
+                                                         "mem-per-cpu" = "7G"),
                                     pkgs = c("arrR", "purrr", "dplyr"),
                                     rscript_path = rscript_path, sh_template = sh_template, 
                                     submit = FALSE)
@@ -126,16 +120,16 @@ behavior_states <- rslurm::get_slurm_out(sbatch_behav, outtype = "table")
 
 # save results to disk
 suppoRt::save_rds(object = behavior_states, file = "02_Data/00_behavior_states.rds", 
-                  overwrite = FALSE)
+                  overwrite = overwrite)
 
 # delete .sh scripts
 rslurm::cleanup_files(sbatch_behav)
 
 #### Results parameter space ####
 
-cutoff <- 3.5
-
 behavior_states <- readr::read_rds("02_Data/00_behavior_states.rds")
+
+cutoff <- 3.5
 
 (behavior_states_mn <- dplyr::group_by(behavior_states, pop_reserves_max, pop_reserves_consump, 
                                       pop_reserves_thres_mean) %>% 
@@ -148,7 +142,7 @@ behavior_states <- readr::read_rds("02_Data/00_behavior_states.rds")
 
 default_parameters$pop_reserves_max <- 0.01
 
-default_parameters$pop_reserves_consump <- 0.15
+default_parameters$pop_reserves_consump <- 0.20
 
 default_parameters$pop_reserves_thres_mean <- 0.01
 
@@ -165,7 +159,7 @@ input_fishpop <- arrR::setup_fishpop(seafloor = input_seafloor,
 min_per_i <- 120
 
 # run the model for ten years
-years <- 50
+years <- 100
 max_i <- (60 * 24 * 365 * years) / min_per_i
 
 # run seagrass once each day
@@ -188,21 +182,21 @@ plot(result, summarize = TRUE)
 dplyr::filter(result$seafloor, timestep == max_i) %>% 
   dplyr::select(x, y, consumption, excretion) %>% 
   tidyr::pivot_longer(-c(x, y)) %>% 
+  dplyr::mutate(value = log(value)) %>% 
   ggplot(aes(x = x, y = y)) +
   geom_raster(aes(fill = value)) + 
   facet_wrap(. ~ name) + 
-  scale_fill_gradientn(name = "log(nutr)", colours = c("#368AC0", "#F4B5BD", "#EC747F"), 
+  scale_fill_gradientn(name = "nutr", colours = c("#368AC0", "#F4B5BD", "#EC747F"), 
                        na.value = "#9B964A") +
   coord_equal() + 
   theme_classic()
 
 dplyr::filter(result$seafloor, timestep == max_i) %>% 
   dplyr::select(x, y, consumption, excretion) %>% 
-  dplyr::mutate(net = excretion - consumption, 
-                net_log = log(net + abs(min(net)))) %>% 
-  dplyr::select(x, y, net_log) %>% 
+  dplyr::mutate(net = excretion - consumption) %>% 
+  dplyr::mutate(net = log(net + abs(min(net)))) %>%
   ggplot(aes(x = x, y = y)) +
-  geom_raster(aes(fill = net_log)) + 
+  geom_raster(aes(fill = net)) + 
   scale_fill_gradientn(name = "net(nutr)", colours = c("#368AC0", "#F4B5BD", "#EC747F"), 
                        na.value = "#9B964A") +
   coord_equal() + 
