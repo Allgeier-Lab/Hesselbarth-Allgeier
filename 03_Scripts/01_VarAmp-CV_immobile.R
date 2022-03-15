@@ -124,7 +124,7 @@ foo <- function(nutr_input) {
 sbatch_var_cv <- rslurm::slurm_map(f = foo, x = variability_input, 
                                    global_objects = "globals", jobname = "VarAmp_CV",
                                    nodes = length(variability_input), cpus_per_node = 1, 
-                                   slurm_options = list("account" = "jeallg1", 
+                                   slurm_options = list("account" = account, 
                                                         "partition" = "standard",
                                                         "time" = "02:00:00", ## hh:mm::ss
                                                         "mem-per-cpu" = "7G", 

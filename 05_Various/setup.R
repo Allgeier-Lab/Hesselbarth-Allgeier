@@ -80,6 +80,8 @@ base_size <- 12
 
 #### HPC settings ####
 
+account <- "jeallg0"
+
 # path for rslurm
 # run file.path(R.home("bin"), "Rscript") on HPC
 rscript_path <- "/sw/arcts/centos7/stacks/gcc/8.2.0/R/4.1.0/lib64/R/bin/Rscript"

@@ -48,7 +48,7 @@ variability_sbatch <- rslurm::slurm_apply(f = foo, params = variability_experime
                                           global_objects = c("n", "max_i", "input_mn", "freq_mn"),
                                           jobname = "example_cont_vari",
                                           nodes = nrow(variability_experiment), cpus_per_node = 1, 
-                                          slurm_options = list("account" = "jeallg1", 
+                                          slurm_options = list("account" = account, 
                                                                "partition" = "standard",
                                                                "time" = "00:05:00"), ## hh:mm::ss
                                           pkgs = "meta.arrR",

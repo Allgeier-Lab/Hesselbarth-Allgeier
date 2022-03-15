@@ -71,7 +71,7 @@ foo <- function(freq_mn, globals) {
 nofish_sbatch <- rslurm::slurm_apply(f = foo, params = freq_mn_df, 
                                      globals = globals, jobname = "nofish_freq",
                                      nodes = nrow(freq_mn_df), cpus_per_node = 1, 
-                                     slurm_options = list("account" = "jeallg1", 
+                                     slurm_options = list("account" = account, 
                                                           "partition" = "standard",
                                                           "time" = "00:30:00", ## hh:mm::ss
                                                           "mem-per-cpu" = "7G", 

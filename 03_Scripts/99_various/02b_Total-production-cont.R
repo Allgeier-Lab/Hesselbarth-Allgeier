@@ -95,7 +95,7 @@ foo <- function(amplitude_mod, freq_mn) {
 ttlprodcont_sbatch <- rslurm::slurm_apply(f = foo, params = sim_experiment, 
                                           global_objects = "globals", jobname = "ttlprodcont",
                                           nodes = nrow(sim_experiment), cpus_per_node = 1, 
-                                          slurm_options = list("account" = "jeallg1", 
+                                          slurm_options = list("account" = account, 
                                                                "partition" = "standard",
                                                                "time" = "00:30:00", ## hh:mm::ss
                                                                "mem-per-cpu" = "5G"),

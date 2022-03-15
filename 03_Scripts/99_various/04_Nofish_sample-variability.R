@@ -97,7 +97,7 @@ foo <- function(amplitude, phase) {
 nofish_sbatch <- rslurm::slurm_apply(f = foo, params = variability_experiment, 
                                      global_objects = "globals", jobname = "nofish_sample_vari",
                                      nodes = nrow(variability_experiment), cpus_per_node = 1, 
-                                     slurm_options = list("account" = "jeallg1", 
+                                     slurm_options = list("account" = account, 
                                                           "partition" = "standard",
                                                           "time" = "01:00:00", ## hh:mm::ss
                                                           "mem-per-cpu" = "3G"),

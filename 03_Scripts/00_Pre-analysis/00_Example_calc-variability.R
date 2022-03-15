@@ -43,9 +43,10 @@ variability_sbatch <- rslurm::slurm_apply(f = foo, params = variability_experime
                                           global_objects = c("n", "max_i", "stable_values", "freq_mn"),
                                           jobname = "example_calc_vari",
                                           nodes = nrow(variability_experiment), cpus_per_node = 1, 
-                                          slurm_options = list("account" = "jeallg1", 
+                                          slurm_options = list("account" = account, 
                                                                "partition" = "standard",
-                                                               "time" = "00:10:00"), ## hh:mm::ss
+                                                               "time" = "00:15:00", ## hh:mm::ss
+                                                               "mem-per-cpu" = "7G"),
                                           pkgs = "meta.arrR",
                                           rscript_path = rscript_path, sh_template = sh_template, 
                                           submit = FALSE)

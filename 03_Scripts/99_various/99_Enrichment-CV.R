@@ -114,7 +114,7 @@ foo <- function(amplitude, enrichment) {
 variability_sbatch <- rslurm::slurm_apply(f = foo, params = sim_experiment, 
                                           global_objects = "globals", jobname = "var_enrich",
                                           nodes = nrow(sim_experiment), cpus_per_node = 1, 
-                                          slurm_options = list("account" = "jeallg1", 
+                                          slurm_options = list("account" = account, 
                                                                "partition" = "standard",
                                                                "time" = "02:00:00", ## hh:mm::ss
                                                                "mem-per-cpu" = "7G", 
