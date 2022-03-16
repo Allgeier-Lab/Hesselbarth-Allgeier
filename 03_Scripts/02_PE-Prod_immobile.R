@@ -14,6 +14,10 @@ source("05_Various/setup.R")
 
 default_starting$pop_n <- 8
 
+default_parameters$move_residence <- 0.0
+
+default_parameters$move_residence_var <- 0.0
+
 #### Stable values ####
 
 stable_values <- arrR::get_stable_values(bg_biomass = default_starting$bg_biomass,
@@ -53,16 +57,12 @@ foo <- function(variability, enrichment) {
   
   # simulate input
   input_temp <- meta.arrR::sim_nutr_input(n = globals$n, max_i = globals$max_i,
-                                          seagrass_each = globals$seagrass_each,
-                                          variability = variability,
-                                          input_mn = globals$input_mn * enrichment, 
+                                          variability = variability, input_mn = globals$input_mn * enrichment, 
                                           freq_mn = globals$freq_mn)
-  
-  # plot(input_temp, gamma = FALSE)
   
   # run model
   result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = globals$default_parameters,
-                                                nutrients_input = input_temp, movement = "attr",
+                                                nutrients_input = input_temp, movement = "behav",
                                                 max_i = globals$max_i, min_per_i = globals$min_per_i,
                                                 seagrass_each = globals$seagrass_each,
                                                 save_each = globals$save_each, verbose = FALSE)
@@ -110,7 +110,7 @@ foo <- function(variability, enrichment) {
 #### Submit to HPC #### 
 
 sbatch_pe_prod <- rslurm::slurm_apply(f = foo, params = df_experiment, 
-                                      global_objects = "globals", jobname = "PE_Prod",
+                                      global_objects = "globals", jobname = "PE_Prod_immob",
                                       nodes = nrow(df_experiment), cpus_per_node = 1, 
                                       slurm_options = list("account" = account, 
                                                            "partition" = "standard",
@@ -123,16 +123,18 @@ sbatch_pe_prod <- rslurm::slurm_apply(f = foo, params = df_experiment,
 
 #### Collect results ####
 
+suppoRt::rslurm_missing(sbatch_pe_prod)
+
 df_pe_prod <- rslurm::get_slurm_out(sbatch_pe_prod, outtype = "table")
 
-suppoRt::save_rds(object = df_pe_prod, filename = "02_PE-Prod_Enrich.rds", 
+suppoRt::save_rds(object = df_pe_prod, filename = "02_PE-Prod_Enrich-immob.rds", 
                   path = "02_Data/", overwrite = overwrite)
 
 rslurm::cleanup_files(sbatch_pe_prod)
 
 #### Load data ####
 
-df_pe_prod <- readRDS("02_Data/02_PE-Prod_Enrich.rds") %>% 
+df_pe_prod <- readRDS("02_Data/02_PE-Prod_Enrich-immob.rds") %>% 
   dplyr::filter(c(type == "cv" & measure == "beta") | c(type == "absolute" & measure == "gamma")) %>% 
   dplyr::select(-type) %>%
   tidyr::pivot_wider(names_from = "measure", values_from = value, values_fn = list) %>% 
@@ -144,87 +146,59 @@ df_pe_prod <- readRDS("02_Data/02_PE-Prod_Enrich.rds") %>%
 
 #### Create CV ggplot ####
 
-# create switch for biomass or production
-switch <- "combined"
-
-# create parts to loop through
-parts <- list(Aboveground = c("ag_biomass", "ag_production"), 
-              Belowground = c("bg_biomass", "bg_production"), 
-              Total = c("ttl_biomass", "ttl_production"))
-
-# create names for plot labelling
-names(parts) <- c("Aboveground", "Belowground", "Total")
-
-# col_palette_part <- c("#586F7E", "#168B98", "#ED5B66")
-# col_palette_enrich <- c("#C7247B", "#A5E100", "#172969")
-# col_palette <- c("#5ABCD6", "#FAD510", "#F22301")
-
 labels_facet <- list(c(low = "Low enrichment", medium = "Medium enrichment", high = "High enrichment"), 
                      c(low = "", medium = "", high = ""), 
                      c(low = "", medium = "", high = ""))
 
 x_axis <- c(" ", " ", "Portfolio effect (beta)")
 
-y_axis <- c(" ", "Absolute value per sqm", " ")
+y_axis <- c(" ", "log Abs value per sqm", " ")
 
-gg_pe_prod <- purrr::map(seq_along(parts), function(i){
+gg_results <- purrr::map(c("production", "biomass"), function(i) { 
   
-  dplyr::filter(df_pe_prod, part %in% parts[[i]]) %>% 
-    dplyr::mutate(gamma = gamma / 10000) %>% 
-    ggplot(aes(x = beta, y = gamma)) +
-    geom_point(aes(shape = part)) + 
-    geom_smooth(aes(group = part), method = lm, se = TRUE, linetype = 2, col = "black") +
-    # stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`;`~")),
-    #          p.accuracy = 0.01, r.accuracy = 0.001) +
-    facet_wrap(. ~ enrichment, ncol = 3, nrow = 1, scales = "fixed",
-               labeller = labeller(enrichment = labels_facet[[i]])) + 
-    # expand_limits(x = 1) + 
-    # scale_color_manual(name = "", values = col_palette_enrich) +
-    scale_shape_manual(name = "Measure", values = c(1, 19), 
-                       labels = c("biomass", "production")) +
-    labs(y = y_axis[[i]], x = x_axis[[i]], subtitle = names(parts)[i]) +
-    theme_classic(base_size = base_size) + 
-    theme(legend.position = "bottom", strip.background = element_blank(), 
-          strip.text = element_text(hjust = 0))
+  # create parts to loop through
+  parts <- paste0(c("ag_", "bg_", "ttl_"), i)
   
+  # create names for plot labelling
+  names(parts) <- paste(c("Aboveground", "Belowground", "Total"), i)
+  
+  gg_temp <- purrr::map(seq_along(parts), function(i){
+    
+    dplyr::filter(df_pe_prod, part %in% parts[[i]]) %>% 
+      dplyr::mutate(gamma = log(gamma / prod(dimensions))) %>% 
+      ggplot(aes(x = beta, y = gamma)) +
+      geom_point(shape = 1) + 
+      geom_smooth(method = lm, se = TRUE, linetype = 2, col = "black", formula = 'y ~ x') +
+      stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`;`~")),
+               p.accuracy = 0.01, r.accuracy = 0.001) +
+      facet_wrap(. ~ enrichment, ncol = 3, nrow = 1, scales = "fixed",
+                 labeller = labeller(enrichment = labels_facet[[i]])) + 
+      labs(y = y_axis[[i]], x = x_axis[[i]], subtitle = names(parts)[i]) +
+      theme_classic(base_size = base_size) + 
+      theme(legend.position = "bottom", strip.background = element_blank(), 
+            strip.text = element_text(hjust = 0))
+    
+  })
+  
+  cowplot::plot_grid(plotlist = gg_temp, ncol = 1, nrow = 3)
+
 })
-
-gg_pe_prod <- cowplot::plot_grid(plotlist = gg_pe_prod, ncol = 1, nrow = 3)
-
-gg_var_density <- dplyr::mutate(df_pe_prod, enrichment = factor(enrichment,
-                                                                labels = c("Low enrichment", 
-                                                                           "Medium enrichment", 
-                                                                           "High enrichment"))) %>% 
-  ggplot() +
-  geom_density(aes(x = variability, fill = enrichment, col = enrichment), alpha = 0.25) + 
-  labs(x = "Input variability", y = "Density") +
-  scale_color_manual(name = "", values = c("#C7247B", "#A5E100", "#172969")) +
-  scale_fill_manual(name = "", values = c("#C7247B", "#A5E100", "#172969")) +
-  theme_classic(base_size = base_size) + 
-  theme(legend.position = "bottom")
-
-gg_pe_density <- dplyr::mutate(df_pe_prod, enrichment = factor(enrichment,
-                                                               labels = c("Low enrichment", 
-                                                                          "Medium enrichment", 
-                                                                          "High enrichment"))) %>% 
-  ggplot() +
-  geom_density(aes(x = beta, fill = enrichment, col = enrichment), alpha = 0.25) + 
-  labs(x = "Portfolio effect (beta)", y = "Density") +
-  scale_color_manual(name = "", values = c("#C7247B", "#A5E100", "#172969")) +
-  scale_fill_manual(name = "", values = c("#C7247B", "#A5E100", "#172969")) +
-  theme_classic(base_size = base_size) + 
-  theme(legend.position = "bottom")
 
 #### Save ggplot ####
 
-suppoRt::save_ggplot(plot = gg_pe_prod, filename = paste0("02_pe_prod_", switch, ".png"),
-                     path = "04_Figures", width = height, height = width, dpi = dpi, 
-                     units = units, overwrite = overwrite)
+# set name of output level
+names(gg_results) <- c("production", "biomass")
 
-suppoRt::save_ggplot(plot = gg_var_density, filename = "02_var_density.png",
-                     path = "04_Figures", width = height, height = width, dpi = dpi, 
-                     units = units, overwrite = overwrite)
+#### Save ggplot ####
 
-suppoRt::save_ggplot(plot = gg_pe_density, filename = "02_pe_density.png",
-                     path = "04_Figures", width = height, height = width, dpi = dpi, 
-                     units = units, overwrite = overwrite)
+# loop through output level
+purrr::walk(seq_along(gg_results), function(i) {
+  
+  # create file name
+  filename_temp <- paste0("02_pe_prod_", names(gg_results)[[i]], "_immob.png")
+    
+  # save ggplot
+  suppoRt::save_ggplot(plot = gg_results[[i]], filename = filename_temp,
+                       path = "04_Figures", width = height, height = width, dpi = dpi, 
+                       units = units, overwrite = overwrite)
+})
