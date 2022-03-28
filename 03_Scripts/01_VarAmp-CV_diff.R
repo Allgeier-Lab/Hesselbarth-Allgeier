@@ -12,7 +12,7 @@ source("05_Various/setup.R")
 
 #### Load data ####
 
-paths <- list(nofish = "02_Data/01_VarAmp-CV-nofish.rds", immob = "02_Data/01_VarAmp-CV-immob.rds")
+paths <- list(nofish = "02_Data/01_VarAmp-CV-nofish.rds", local = "02_Data/01_VarAmp-CV-local.rds")
 
 #### Combine to one data.frame ####
 

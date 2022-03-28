@@ -104,7 +104,7 @@ foo <- function(variability, enrichment) {
 #### Submit to HPC #### 
 
 sbatch_pe_prod <- rslurm::slurm_apply(f = foo, params = df_experiment, 
-                                      global_objects = "globals", jobname = "PE_Prod_immob",
+                                      global_objects = "globals", jobname = "PE_Prod_local",
                                       nodes = nrow(df_experiment), cpus_per_node = 1, 
                                       slurm_options = list("account" = account, 
                                                            "partition" = "standard",
@@ -121,14 +121,14 @@ suppoRt::rslurm_missing(sbatch_pe_prod)
 
 df_pe_prod <- rslurm::get_slurm_out(sbatch_pe_prod, outtype = "table")
 
-suppoRt::save_rds(object = df_pe_prod, filename = "02_PE-Prod_Enrich-immob.rds", 
+suppoRt::save_rds(object = df_pe_prod, filename = "02_PE-Prod_Enrich-local.rds", 
                   path = "02_Data/", overwrite = overwrite)
 
 rslurm::cleanup_files(sbatch_pe_prod)
 
 #### Load data ####
 
-df_pe_prod <- readRDS("02_Data/02_PE-Prod_Enrich-immob.rds") %>% 
+df_pe_prod <- readRDS("02_Data/02_PE-Prod_Enrich-local.rds") %>% 
   dplyr::filter(c(type == "cv" & measure == "beta") | c(type == "absolute" & measure == "gamma")) %>% 
   dplyr::select(-type) %>%
   tidyr::pivot_wider(names_from = "measure", values_from = value, values_fn = list) %>% 
@@ -189,7 +189,7 @@ names(gg_results) <- c("production", "biomass")
 purrr::walk(seq_along(gg_results), function(i) {
   
   # create file name
-  filename_temp <- paste0("02_pe_prod_", names(gg_results)[[i]], "_immob.png")
+  filename_temp <- paste0("02_pe_prod_", names(gg_results)[[i]], "_local.png")
     
   # save ggplot
   suppoRt::save_ggplot(plot = gg_results[[i]], filename = filename_temp,
