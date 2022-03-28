@@ -58,12 +58,19 @@ dimensions <- c(50, 50)
 
 grain <- 1
 
+# use log size distribution (or not)
 use_log <- FALSE
 
 #### Setup reef cells ####
 
 reef_matrix <- matrix(data = c(-1, 0, 0, 1, 1, 0, 0, -1, 0, 0), 
                       ncol = 2, byrow = TRUE)
+
+#### Setup treatment levels ####
+
+amplitude_mod <- c(0.05, 0.5, 1.0)
+
+enrichment_levels <- c(0.75, 1.0, 1.25)
 
 #### Plotting defaults ####
 
