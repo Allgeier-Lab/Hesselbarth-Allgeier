@@ -170,11 +170,13 @@ pp_nofish_local <- readr::read_rds("02_Data/00_pp_nofish_local.rds") %>%
 
 dplyr::filter(pp_nofish_local, fun == "sum") %>% 
   ggplot() +
-  geom_boxplot(aes(x = enrichment, y = reldiff, col = amplitude), 
-               position = position_dodge(width = 0.8)) + 
+  geom_boxplot(aes(x = enrichment, y = reldiff, fill = amplitude),
+               position = position_dodge(), alpha = 0.75) +
+  geom_point(aes(x = enrichment, y = reldiff, fill = amplitude, col = amplitude), 
+             position = position_jitterdodge(), alpha = 0.25) + 
   facet_wrap(. ~ name, scales = "free_y") + 
   labs(x = "Enrichment treatment", y = expression(paste(Delta, "no fish, local fish [%]"))) +
-  scale_color_viridis_d(name = "Amplitude treatment") +
+  scale_fill_viridis_d(name = "Amplitude treatment") +
   theme_classic() + theme(legend.position = "bottom")
 
 dplyr::group_by(pp_nofish_local, fun, name, enrichment, amplitude) %>%
