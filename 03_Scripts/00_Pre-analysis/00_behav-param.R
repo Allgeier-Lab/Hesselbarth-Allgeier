@@ -96,10 +96,10 @@ foo <- function(pop_reserves_max, pop_reserves_consump, pop_reserves_thres_mean)
 
 }
 
-globals <- c("reef_matrix", "starting_list",  "parameters_list", 
-             "max_i", "min_per_i", "seagrass_each")
-
 #### Submit to HPC model #### 
+
+globals <- c("reef_matrix", "starting_list", "parameters_list", 
+             "max_i", "min_per_i", "seagrass_each", "use_log")
 
 # create .sh script
 sbatch_behav <- rslurm::slurm_apply(f = foo, params = input_df,
@@ -154,7 +154,8 @@ input_seafloor <- arrR::setup_seafloor(dimensions = c(50, 50), grain = 1,
 # create fishpop
 input_fishpop <- arrR::setup_fishpop(seafloor = input_seafloor, 
                                      starting_values = starting_list, 
-                                     parameters = parameters_list)
+                                     parameters = parameters_list, 
+                                     use_log = use_log)
 
 # one iterations equals 120 minutes
 min_per_i <- 120
@@ -217,3 +218,4 @@ dplyr::select(result$fishpop, id, x, y, behavior) %>%
   theme(legend.position = "none")
 
 table(result$fishpop$behavior)
+
