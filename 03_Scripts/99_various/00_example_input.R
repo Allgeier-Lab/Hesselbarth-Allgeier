@@ -21,9 +21,9 @@ freq_mn <- years * 1/2
 
 #### Stable values ####
 
-stable_values <- arrR::get_stable_values(bg_biomass = default_starting$bg_biomass,
-                                         ag_biomass = default_starting$ag_biomass,
-                                         parameters = default_parameters)
+stable_values <- arrR::get_stable_values(bg_biomass = starting_list$bg_biomass,
+                                         ag_biomass = starting_list$ag_biomass,
+                                         parameters = parameters_list)
 
 # create variability data.frame with all combinations 
 variability_input <- expand.grid(amplitude = c(0.05, 0.5, 1.0), 

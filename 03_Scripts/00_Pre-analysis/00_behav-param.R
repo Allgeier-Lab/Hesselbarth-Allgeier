@@ -12,10 +12,10 @@ source("05_Various/setup.R")
 
 #### Change parameters and starting values 
 
-default_parameters$nutrients_loss <- 0.0 
+parameters_list$nutrients_loss <- 0.0 
 
 # check if all parameters are present and meaningful
-check_parameters(starting_values = default_starting, parameters = default_parameters)
+check_parameters(starting_values = starting_list, parameters = parameters_list)
 
 #### Setup environment #### 
 
@@ -24,13 +24,13 @@ reef_matrix <- matrix(data = c(-1, 0, 0, 1, 1, 0, 0, -1, 0, 0),
                       ncol = 2, byrow = TRUE)
 
 # get stable nutrient/detritus values
-stable_values <- get_stable_values(bg_biomass = default_starting$bg_biomass,
-                                   ag_biomass = default_starting$ag_biomass,
-                                   parameters = default_parameters)
+stable_values <- arrR::get_stable_values(bg_biomass = starting_list$bg_biomass,
+                                         ag_biomass = starting_list$ag_biomass,
+                                         parameters = parameters_list)
 
-default_starting$nutrients_pool <- stable_values$nutrients_pool
+starting_list$nutrients_pool <- stable_values$nutrients_pool
 
-default_starting$detritus_pool <- stable_values$detritus_pool
+starting_list$detritus_pool <- stable_values$detritus_pool
 
 #### Setup experiment #### 
 
@@ -54,21 +54,22 @@ input_df <- expand.grid(pop_reserves_max = values,
 
 foo <- function(pop_reserves_max, pop_reserves_consump, pop_reserves_thres_mean) {
   
-  default_parameters$pop_reserves_max <- pop_reserves_max
-  default_parameters$pop_reserves_consump <- pop_reserves_consump
-  default_parameters$pop_reserves_thres_mean <- pop_reserves_thres_mean
+  parameters_list$pop_reserves_max <- pop_reserves_max
+  parameters_list$pop_reserves_consump <- pop_reserves_consump
+  parameters_list$pop_reserves_thres_mean <- pop_reserves_thres_mean
   
   # create seafloor
   input_seafloor <- arrR::setup_seafloor(dimensions = c(50, 50), grain = 1, 
-                                         reef = reef_matrix, starting_values = default_starting)
+                                         reef = reef_matrix, starting_values = starting_list)
   
   # create fishpop
   input_fishpop <- arrR::setup_fishpop(seafloor = input_seafloor, 
-                                       starting_values = default_starting, 
-                                       parameters = default_parameters)
+                                       starting_values = starting_list, 
+                                       parameters = parameters_list,
+                                       use_log = use_log)
   
   result <- arrR::run_simulation(seafloor = input_seafloor, fishpop = input_fishpop,
-                                 parameters = default_parameters, movement = "behav",
+                                 parameters = parameters_list, movement = "behav",
                                  max_i = max_i, min_per_i = min_per_i,
                                  seagrass_each = seagrass_each, save_each = 1)
 
@@ -95,7 +96,7 @@ foo <- function(pop_reserves_max, pop_reserves_consump, pop_reserves_thres_mean)
 
 }
 
-globals <- c("reef_matrix", "default_starting",  "default_parameters", 
+globals <- c("reef_matrix", "starting_list",  "parameters_list", 
              "max_i", "min_per_i", "seagrass_each")
 
 #### Submit to HPC model #### 
@@ -140,20 +141,20 @@ cutoff <- 3.5
 
 #### Run model for longer time with parametrization ####
 
-default_parameters$pop_reserves_max <- 0.01
+parameters_list$pop_reserves_max <- 0.01
 
-default_parameters$pop_reserves_consump <- 0.20
+parameters_list$pop_reserves_consump <- 0.20
 
-default_parameters$pop_reserves_thres_mean <- 0.01
+parameters_list$pop_reserves_thres_mean <- 0.01
 
 # create seafloor
 input_seafloor <- arrR::setup_seafloor(dimensions = c(50, 50), grain = 1, 
-                                       reef = reef_matrix, starting_values = default_starting)
+                                       reef = reef_matrix, starting_values = starting_list)
 
 # create fishpop
 input_fishpop <- arrR::setup_fishpop(seafloor = input_seafloor, 
-                                     starting_values = default_starting, 
-                                     parameters = default_parameters)
+                                     starting_values = starting_list, 
+                                     parameters = parameters_list)
 
 # one iterations equals 120 minutes
 min_per_i <- 120
@@ -171,7 +172,7 @@ days_save <- 365 # which(max_i %% ((24 / (min_per_i / 60)) * (1:365)) == 0)
 save_each <- (24 / (min_per_i / 60)) * days_save
 
 (result <- arrR::run_simulation(seafloor = input_seafloor, fishpop = input_fishpop,
-                               parameters = default_parameters, movement = "behav",
+                               parameters = parameters_list, movement = "behav",
                                max_i = max_i, min_per_i = min_per_i,
                                seagrass_each = seagrass_each, save_each = save_each))
 

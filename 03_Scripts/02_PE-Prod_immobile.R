@@ -12,21 +12,19 @@ source("05_Various/setup.R")
 
 #### Adapt parameters ####
 
-default_starting$pop_n <- 8
+starting_list$pop_n <- 8
 
-default_parameters$move_residence <- 0.0
-
-default_parameters$move_residence_var <- 0.0
+parameters_list$move_residence <- 0.0
+parameters_list$move_residence_var <- 0.0
 
 #### Stable values ####
 
-stable_values <- arrR::get_stable_values(bg_biomass = default_starting$bg_biomass,
-                                         ag_biomass = default_starting$ag_biomass,
-                                         parameters = default_parameters)
+stable_values <- arrR::get_stable_values(bg_biomass = starting_list$bg_biomass,
+                                         ag_biomass = starting_list$ag_biomass,
+                                         parameters = parameters_list)
 
-default_starting$nutrients_pool <- stable_values$nutrients_pool
-
-default_starting$detritus_pool <- stable_values$detritus_pool
+starting_list$nutrients_pool <- stable_values$nutrients_pool
+starting_list$detritus_pool <- stable_values$detritus_pool
 
 #### Simulate input ####
 
@@ -39,8 +37,8 @@ df_experiment <- data.frame(variability = variability, enrichment = enrichment_l
 
 #### Setup HPC function ####
 
-globals <- list(n = n, reef_matrix = reef_matrix, max_i = max_i, default_starting = default_starting, 
-                default_parameters = default_parameters, dimensions = dimensions, 
+globals <- list(n = n, reef_matrix = reef_matrix, max_i = max_i, starting_list = starting_list, 
+                parameters_list = parameters_list, dimensions = dimensions, 
                 grain = grain, input_mn = stable_values$nutrients_input, freq_mn = freq_mn,
                 min_per_i = min_per_i, seagrass_each = seagrass_each, save_each = save_each) 
 
@@ -48,12 +46,10 @@ foo <- function(variability, enrichment) {
   
   # setup metaecosystems
   metasyst_temp <- meta.arrR::setup_meta(n = globals$n, max_i = globals$max_i, reef = globals$reef_matrix,
-                                         starting_values = globals$default_starting,
-                                         parameters = globals$default_parameters,
+                                         starting_values = globals$starting_list,
+                                         parameters = globals$parameters_list,
                                          dimensions = globals$dimensions, grain = globals$grain,
                                          verbose = FALSE)
-  
-  # plot(metasyst_temp)
   
   # simulate input
   input_temp <- meta.arrR::sim_nutr_input(n = globals$n, max_i = globals$max_i,
@@ -61,13 +57,11 @@ foo <- function(variability, enrichment) {
                                           freq_mn = globals$freq_mn)
   
   # run model
-  result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = globals$default_parameters,
+  result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = globals$parameters_list,
                                                 nutrients_input = input_temp, movement = "behav",
                                                 max_i = globals$max_i, min_per_i = globals$min_per_i,
                                                 seagrass_each = globals$seagrass_each,
                                                 save_each = globals$save_each, verbose = FALSE)
-  
-  # plot(result_temp, summarize = TRUE)
   
   # filter only second half of timesteps
   result_temp <- meta.arrR::filter_meta(x = result_temp, filter = c(globals$max_i / 2,

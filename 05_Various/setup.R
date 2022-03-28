@@ -21,9 +21,9 @@ library(viridis)
 
 #### Load data ####
 
-default_starting <- readRDS("02_Data/00_default_starting.rds")
+starting_list <- readRDS("02_Data/00_starting_list.rds")
 
-default_parameters <- readRDS("02_Data/00_default_parameters.rds")
+parameters_list <- readRDS("02_Data/00_parameters_list.rds")
 
 #### Basic parameters ####
 
@@ -57,6 +57,8 @@ n <- 9
 dimensions <- c(50, 50)
 
 grain <- 1
+
+use_log <- FALSE
 
 #### Setup reef cells ####
 
