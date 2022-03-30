@@ -12,111 +12,68 @@ source("05_Various/setup.R")
 
 #### Load data ####
 
-paths <- list(nofish = "02_Data/01_VarAmp-CV-nofish.rds", local = "02_Data/01_VarAmp-CV-local.rds")
+paths <- list(nofish =  "02_Data/01_VarAmp-CV-nofish.rds", 
+              local = "02_Data/01_VarAmp-CV-local.rds", 
+              mobile = "02_Data/01_VarAmp-CV-mobile.rds")
 
 #### Combine to one data.frame ####
 
-df_results <- purrr::map(paths, function(i) {
-  
-  readr::read_rds(i) %>% 
-    dplyr::group_by(enrichment_lvl, amplitude_lvl, n_diff, type, part, measure) %>%
-    dplyr::summarise(value_mn = mean(value), value_sd = sd(value), .groups = "drop") %>% 
-    dplyr::mutate(enrichment_lvl = factor(enrichment_lvl, levels = c(0.75, 1.0, 1.25), labels = c("low", "medium", "high")), 
-                  amplitude_lvl = factor(amplitude_lvl, levels = c(0.05, 0.5, 1.0), labels = c("low", "medium", "high")),
-                  n_diff = as.integer(n_diff),
-                  type = factor(type, levels = c("cv", "absolute")),
-                  part = factor(part, levels = c("ag_biomass", "ag_production", "ttl_biomass",
-                                                 "bg_biomass", "bg_production", "ttl_production")),
-                  measure = factor(measure, levels = c("alpha", "beta", "gamma", "synchrony")))}) %>% 
-  purrr::reduce(dplyr::left_join, by = c("enrichment_lvl", "amplitude_lvl", "n_diff", 
-                                         "type", "part", "measure"), suffix = c(".nf", ".im")) %>% 
-  dplyr::mutate(mn_diff = (value_mn.im - value_mn.nf) / value_mn.nf * 100,
-                sd_diff = (value_sd.im - value_sd.nf) / value_sd.nf * 100)
+result_rmse <- purrr::map_dfr(paths, readr::read_rds, .id = "run") %>%
+  tidyr::pivot_wider(names_from = run, values_from = value, values_fn = list) %>% 
+  tidyr::unnest(cols = c(nofish, local, mobile)) %>% 
+  dplyr::mutate(nofish_local = (local - nofish) / nofish * 100, 
+                nofish_mobile = (mobile - nofish) / nofish * 100, 
+                local_mobile = (mobile - local) / local * 100) %>% 
+  dplyr::group_by(enrichment_lvl, amplitude_lvl, n_diff, type, part, measure) %>%
+  dplyr::summarise(nofish_local_mn = mean(nofish_local), nofish_local_sd = sd(nofish_local), 
+                   nofish_mobile_mn = mean(nofish_mobile), nofish_mobile_sd = sd(nofish_mobile), 
+                   local_mobile_mn = mean(local_mobile), local_mobile_sd = sd(local_mobile), 
+                   .groups = "drop") %>% 
+  dplyr::mutate(enrichment_lvl = factor(enrichment_lvl, levels = c(0.75, 1.0, 1.25), labels = c("low", "medium", "high")), 
+                amplitude_lvl = factor(amplitude_lvl, levels = c(0.05, 0.5, 1.0), labels = c("low", "medium", "high")),
+                n_diff = as.integer(n_diff),
+                type = factor(type, levels = c("cv", "absolute")),
+                part = factor(part, levels = c("ag_biomass", "ag_production", "ttl_biomass",
+                                               "bg_biomass", "bg_production", "ttl_production")),
+                measure = factor(measure, levels = c("alpha", "beta", "gamma", "synchrony")))
 
 #### Create ggplot ####
 
 col_palette <- c("#5ABCD6", "#FAD510", "#F22301")
 
-legend_position <- c("none", "none", "bottom")
+comparison <- c("nofish_local", "nofish_mobile", "local_mobile")
 
-x_axis <- c(" ", " ", "Variability of amplitude")
+labels_col <- c(low = "Low enrichment", medium = "Medium enrichment", high = "High enrichment")
 
-x_labels <- list(element_blank(), element_blank(), NULL)
+labels_row <- c(ag_production = "Aboveground production", bg_production = "Belowground production", 
+                ttl_production = "Total production")
 
-labels_facet <- list(c(low = "Low enrichment", medium = "Medium enrichment", high = "High enrichment"), 
-                     c(low = "", medium = "", high = ""), 
-                     c(low = "", medium = "", high = ""))
-
-rel_heights <- c(1, 1, 1.25)
-
-# loop through production and biomass output
-gg_results <- purrr::map(c("production", "biomass"), function(i) {
+gg_diff <- purrr::map(comparison, function(i) {
   
-  # create parts to loop through
-  parts <- paste0(c("ag_", "bg_", "ttl_"), i)
+  comparison_temp <- paste0(i, c("_mn", "_sd"))
   
-  # create names for plot labelling
-  names(parts) <- paste(c("Aboveground", "Belowground", "Total"), i)
+  y_lab <- paste("Diff CV", stringr::str_replace(i, pattern = "_", replacement = "-"), "[%]")
   
-  gg_scale <- purrr::map(c("gamma", "beta"), function(j) {
-    
-    # y_axis <- c("", expression(paste("Coefficient of variation ", gamma)), "")
-    y_axis <- c(" ", paste0("Difference CV [%] (", j, ")"), " ")
-    
-    gg_temp <- purrr::map(seq_along(parts), function(k) {
-    
-      df_temp <- dplyr::filter(df_results, type == "cv", measure == j, part == parts[[k]], 
-                               is.finite(mn_diff), is.finite(sd_diff))
-    
-        ggplot(data = df_temp) +
-        geom_point(aes(x = n_diff, y = mn_diff, col = amplitude_lvl)) +
-        geom_line(aes(x = n_diff, y = mn_diff, col = amplitude_lvl)) +
-        # geom_linerange(aes(x = n_diff, ymin = mn_diff - sd_diff,
-        #                    ymax = mn_diff + sd_diff, col = amplitude_lvl, group = part)) +
-        geom_hline(yintercept = 0, linetype = 2, col = "grey") +
-        facet_wrap(. ~ enrichment_lvl, ncol = 3, nrow = 1, 
-                   labeller = labeller(enrichment_lvl = labels_facet[[k]])) +
-        scale_x_continuous(breaks = seq(from = 0, to = 9, by = 1)) +
-        scale_y_continuous(limits = c(-max(abs(df_temp$mn_diff)), max(abs(df_temp$mn_diff)))) +
-        scale_color_manual(name = "Amplitude treatment", values = col_palette) +
-        labs(y = y_axis[k], x = x_axis[k], subtitle = names(parts)[k]) +
-        theme_classic(base_size = base_size) + 
-        theme(legend.position = legend_position[k], strip.background = element_blank(), 
-              strip.text = element_text(hjust = 0), 
-              axis.text.x = x_labels[[k]])
-      
-    })
-    
-    # combine to one ggplot
-    gg_temp <- cowplot::plot_grid(plotlist = gg_temp, ncol = 1, nrow = 3, 
-                                  rel_heights = rel_heights)
-    
-  })
-  
-  # set names of scale level
-  names(gg_scale) <- c("gamma", "beta")
-  
-  return(gg_scale)
-  
+  dplyr::filter(result_rmse, type == "cv", measure == "gamma", 
+                part %in% c("ag_production", "bg_production", "ttl_production")) %>% 
+    dplyr::select(enrichment_lvl, amplitude_lvl, n_diff, part, comparison_temp) %>% 
+    ggplot() +
+    geom_hline(yintercept = 0, linetype = 2, col = "grey") +
+    geom_point(aes(x = n_diff, y = get(comparison_temp[1]), col = amplitude_lvl)) +
+    geom_line(aes(x = n_diff, y = get(comparison_temp[1]), col = amplitude_lvl), 
+              alpha = 0.2) +
+    geom_errorbar(aes(x = n_diff, ymin = get(comparison_temp[1]) - get(comparison_temp[2]),
+                      ymax = get(comparison_temp[1]) + get(comparison_temp[2]), 
+                      col = amplitude_lvl, group = part), width = 0.2) +
+    facet_grid(rows = vars(part), cols = vars(enrichment_lvl), scales = "free_y", 
+               labeller = labeller(enrichment_lvl = labels_col, part = labels_row)) +
+    scale_x_continuous(breaks = seq(from = 0, to = 9, by = 1)) +
+    scale_color_manual(name = "Amplitude treatment", values = col_palette) +
+    labs(y = y_lab, x = "Variability of amplitude") +
+    theme_classic(base_size = base_size) +
+    theme(legend.position = "bottom")
 })
 
-names(gg_results) <- c("production", "biomass")
+names(gg_diff) <- comparison
+gg_diff$local_mobile
 
-# loop through output level
-purrr::walk(seq_along(gg_results), function(i) {
-  
-  # loop through scale level
-  purrr::walk(seq_along(gg_results[[i]]), function(j) {
-    
-    # create file name
-    filename_temp <- paste0("01_VarAmp_CV_", names(gg_results)[[i]], "_", 
-                            names(gg_results[[i]])[[j]], "_diff.png")
-    
-    # save ggplot
-    suppoRt::save_ggplot(plot = gg_results[[i]][[j]], filename = filename_temp,
-                         path = "04_Figures", width = height, height = width, dpi = dpi, 
-                         units = units, overwrite = overwrite)
-    
-  })
-})
- 

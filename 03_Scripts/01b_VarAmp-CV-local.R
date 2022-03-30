@@ -9,13 +9,13 @@
 #### Load setup ####
 
 source("05_Various/setup.R")
+
 source("01_Functions/get_modifier.R")
 
 #### Adapt parameters ####
 
-starting_list$pop_n <- 8
-
 parameters_list$move_residence <- 0.0
+
 parameters_list$move_residence_var <- 0.0
 
 #### Stable values ####
@@ -225,20 +225,20 @@ names(gg_results) <- c("production", "biomass")
 
 #### Save ggplot ####
 
-# loop through output level
-purrr::walk(seq_along(gg_results), function(i) {
-  
-  # loop through scale level
-  purrr::walk(seq_along(gg_results[[i]]), function(j) {
-    
-    # create file name
-    filename_temp <- paste0("01_VarAmp_CV_", names(gg_results)[[i]], "_", 
-                            names(gg_results[[i]])[[j]], "_local.png")
-    
-    # save ggplot
-    suppoRt::save_ggplot(plot = gg_results[[i]][[j]], filename = filename_temp,
-                         path = "04_Figures", width = height, height = width, dpi = dpi, 
-                         units = units, overwrite = overwrite)
-    
-  })
-})
+# # loop through output level
+# purrr::walk(seq_along(gg_results), function(i) {
+#   
+#   # loop through scale level
+#   purrr::walk(seq_along(gg_results[[i]]), function(j) {
+#     
+#     # create file name
+#     filename_temp <- paste0("01_VarAmp_CV_", names(gg_results)[[i]], "_", 
+#                             names(gg_results[[i]])[[j]], "_local.png")
+#     
+#     # save ggplot
+#     suppoRt::save_ggplot(plot = gg_results[[i]][[j]], filename = filename_temp,
+#                          path = "04_Figures", width = height, height = width, dpi = dpi, 
+#                          units = units, overwrite = overwrite)
+#     
+#   })
+# })

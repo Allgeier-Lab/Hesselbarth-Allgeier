@@ -9,14 +9,12 @@
 #### Load setup ####
 
 source("05_Various/setup.R")
+
 source("01_Functions/get_modifier.R")
 
 #### Adapt parameters ####
 
-starting_list$pop_n <- 8
 
-parameters_list$move_residence <- 0.0
-parameters_list$move_residence_var <- 0.0
 
 #### Stable values ####
 
@@ -25,6 +23,7 @@ stable_values <- arrR::get_stable_values(bg_biomass = starting_list$bg_biomass,
                                          parameters = parameters_list)
 
 starting_list$nutrients_pool <- stable_values$nutrients_pool
+
 starting_list$detritus_pool <- stable_values$detritus_pool
 
 #### Simulate input ####
@@ -50,8 +49,9 @@ variability_input <- tidyr::expand_grid(enrichment = enrichment_levels,
 
 globals <- list(n = n, reef_matrix = reef_matrix, max_i = max_i, starting_list = starting_list, 
                 parameters_list = parameters_list, dimensions = dimensions, 
-                grain = grain, input_mn = stable_values$nutrients_input, freq_mn = freq_mn,
-                min_per_i = min_per_i, seagrass_each = seagrass_each, save_each = save_each) 
+                grain = grain, use_log = use_log, input_mn = stable_values$nutrients_input, 
+                freq_mn = freq_mn, min_per_i = min_per_i, seagrass_each = seagrass_each, 
+                save_each = save_each) 
 
 foo <- function(nutr_input) {
   
@@ -60,7 +60,7 @@ foo <- function(nutr_input) {
                                          starting_values = globals$starting_list,
                                          parameters = globals$parameters_list,
                                          dimensions = globals$dimensions, grain = globals$grain,
-                                         verbose = FALSE)
+                                         use_log = globals$use_log, verbose = FALSE)
   
   # simulate input
   input_temp <- meta.arrR::sim_nutr_input(n = globals$n, max_i = globals$max_i,
@@ -120,7 +120,7 @@ foo <- function(nutr_input) {
 #### Submit to HPC #### 
 
 sbatch_var_cv <- rslurm::slurm_map(f = foo, x = variability_input, 
-                                   global_objects = "globals", jobname = "VarAmp_CV_local",
+                                   global_objects = "globals", jobname = "VarAmp_CV_mobile",
                                    nodes = length(variability_input), cpus_per_node = 1, 
                                    slurm_options = list("account" = account, 
                                                         "partition" = "standard",
@@ -137,14 +137,14 @@ suppoRt::rslurm_missing(x = sbatch_var_cv)
 
 df_var_cv <- rslurm::get_slurm_out(sbatch_var_cv, outtype = "table")
 
-suppoRt::save_rds(object = df_var_cv, filename = "01_VarAmp-CV-local.rds",
+suppoRt::save_rds(object = df_var_cv, filename = "01_VarAmp-CV-mobile.rds",
                   path = "02_Data/", overwrite = overwrite)
 
 rslurm::cleanup_files(sbatch_var_cv)
 
 #### Load data ####
 
-df_var_cv <- readRDS("02_Data/01_VarAmp-CV-local.rds") %>% 
+df_var_cv <- readRDS("02_Data/01_VarAmp-CV-mobile.rds") %>% 
   dplyr::group_by(enrichment_lvl, amplitude_lvl, n_diff, type, part, measure) %>%
   dplyr::summarise(value_mn = mean(value), value_sd = sd(value), .groups = "drop") %>% 
   dplyr::mutate(enrichment_lvl = factor(enrichment_lvl, levels = c(0.75, 1.0, 1.25), labels = c("low", "medium", "high")), 
@@ -228,20 +228,20 @@ names(gg_results) <- c("production", "biomass")
 
 #### Save ggplot ####
 
-# loop through output level
-purrr::walk(seq_along(gg_results), function(i) {
-  
-  # loop through scale level
-  purrr::walk(seq_along(gg_results[[i]]), function(j) {
-    
-    # create file name
-    filename_temp <- paste0("01_VarAmp_CV_", names(gg_results)[[i]], "_", 
-                            names(gg_results[[i]])[[j]], "_local.png")
-    
-    # save ggplot
-    suppoRt::save_ggplot(plot = gg_results[[i]][[j]], filename = filename_temp,
-                         path = "04_Figures", width = height, height = width, dpi = dpi, 
-                         units = units, overwrite = overwrite)
-    
-  })
-})
+# # loop through output level
+# purrr::walk(seq_along(gg_results), function(i) {
+#   
+#   # loop through scale level
+#   purrr::walk(seq_along(gg_results[[i]]), function(j) {
+#     
+#     # create file name
+#     filename_temp <- paste0("01_VarAmp_CV_", names(gg_results)[[i]], "_", 
+#                             names(gg_results[[i]])[[j]], "_mobile.png")
+#     
+#     # save ggplot
+#     suppoRt::save_ggplot(plot = gg_results[[i]][[j]], filename = filename_temp,
+#                          path = "04_Figures", width = height, height = width, dpi = dpi, 
+#                          units = units, overwrite = overwrite)
+#     
+#   })
+# })

@@ -9,6 +9,7 @@
 #### Load setup ####
 
 source("05_Various/setup.R")
+
 source("01_Functions/get_modifier.R")
 
 #### Adapt parameters ####
@@ -22,6 +23,7 @@ stable_values <- arrR::get_stable_values(bg_biomass = starting_list$bg_biomass,
                                          parameters = parameters_list)
 
 starting_list$nutrients_pool <- stable_values$nutrients_pool
+
 starting_list$detritus_pool <- stable_values$detritus_pool
 
 #### Simulate input ####
@@ -224,20 +226,20 @@ names(gg_results) <- c("production", "biomass")
 
 #### Save ggplot ####
 
-# loop through output level
-purrr::walk(seq_along(gg_results), function(i) {
-  
-  # loop through scale level
-  purrr::walk(seq_along(gg_results[[i]]), function(j) {
-    
-    # create file name
-    filename_temp <- paste0("01_VarAmp_CV_", names(gg_results)[[i]], "_", 
-                            names(gg_results[[i]])[[j]], "_nofish.png")
-    
-    # save ggplot
-    suppoRt::save_ggplot(plot = gg_results[[i]][[j]], filename = filename_temp,
-                         path = "04_Figures", width = height, height = width, dpi = dpi, 
-                         units = units, overwrite = overwrite)
-    
-  })
-})
+# # loop through output level
+# purrr::walk(seq_along(gg_results), function(i) {
+#   
+#   # loop through scale level
+#   purrr::walk(seq_along(gg_results[[i]]), function(j) {
+#     
+#     # create file name
+#     filename_temp <- paste0("01_VarAmp_CV_", names(gg_results)[[i]], "_", 
+#                             names(gg_results[[i]])[[j]], "_nofish.png")
+#     
+#     # save ggplot
+#     suppoRt::save_ggplot(plot = gg_results[[i]][[j]], filename = filename_temp,
+#                          path = "04_Figures", width = height, height = width, dpi = dpi, 
+#                          units = units, overwrite = overwrite)
+#     
+#   })
+# })
