@@ -68,7 +68,7 @@ reef_matrix <- matrix(data = c(-1, 0, 0, 1, 1, 0, 0, -1, 0, 0),
 
 #### Setup treatment levels ####
 
-amplitude_mod <- c(0.05, 0.5, 1.0)
+amplitude_levels <- c(0.05, 0.5, 1.0)
 
 enrichment_levels <- c(0.75, 1.0, 1.25)
 

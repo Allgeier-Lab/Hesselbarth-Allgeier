@@ -45,7 +45,7 @@ parameters_list <- list(
   move_border = 2.0,
   move_reef = 1.0,
   move_return = 15.0,
-  move_residence = 0.0,
+  move_residence = 48.0,
   move_residence_var = 0.0,
   move_lambda = 0.0,
   

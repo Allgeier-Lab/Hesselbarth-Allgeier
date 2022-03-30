@@ -172,7 +172,7 @@ dplyr::filter(pp_nofish_local, fun == "sum") %>%
   ggplot() +
   geom_boxplot(aes(x = enrichment, y = reldiff, fill = amplitude),
                position = position_dodge(), alpha = 0.75) +
-  geom_point(aes(x = enrichment, y = reldiff, fill = amplitude, col = amplitude), 
+  geom_point(aes(x = enrichment, y = reldiff, col = amplitude), 
              position = position_jitterdodge(), alpha = 0.25) + 
   facet_wrap(. ~ name, scales = "free_y") + 
   labs(x = "Enrichment treatment", y = expression(paste(Delta, "no fish, local fish [%]"))) +
