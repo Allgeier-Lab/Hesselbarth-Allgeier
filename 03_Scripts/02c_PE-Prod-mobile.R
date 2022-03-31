@@ -12,7 +12,7 @@ source("05_Various/setup.R")
 
 #### Adapt parameters ####
 
-starting_list$pop_n <- 0
+
 
 #### Stable values ####
 
@@ -36,8 +36,9 @@ df_experiment <- data.frame(variability = variability, enrichment = enrichment_l
 
 globals <- list(n = n, reef_matrix = reef_matrix, max_i = max_i, starting_list = starting_list, 
                 parameters_list = parameters_list, dimensions = dimensions, 
-                grain = grain, input_mn = stable_values$nutrients_input, freq_mn = freq_mn,
-                min_per_i = min_per_i, seagrass_each = seagrass_each, save_each = save_each) 
+                grain = grain, use_log = use_log, input_mn = stable_values$nutrients_input, 
+                freq_mn = freq_mn, min_per_i = min_per_i, seagrass_each = seagrass_each, 
+                save_each = save_each) 
 
 foo <- function(variability, enrichment) {
   
@@ -46,22 +47,19 @@ foo <- function(variability, enrichment) {
                                          starting_values = globals$starting_list,
                                          parameters = globals$parameters_list,
                                          dimensions = globals$dimensions, grain = globals$grain,
-                                         verbose = FALSE)
+                                         use_log = globals$use_log, verbose = FALSE)
   
   # simulate input
   input_temp <- meta.arrR::sim_nutr_input(n = globals$n, max_i = globals$max_i,
-                                          variability = variability,
-                                          input_mn = globals$input_mn * enrichment, 
+                                          variability = variability, input_mn = globals$input_mn * enrichment, 
                                           freq_mn = globals$freq_mn)
   
   # run model
   result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = globals$parameters_list,
-                                                nutrients_input = input_temp, movement = "rand",
+                                                nutrients_input = input_temp, movement = "behav",
                                                 max_i = globals$max_i, min_per_i = globals$min_per_i,
                                                 seagrass_each = globals$seagrass_each,
                                                 save_each = globals$save_each, verbose = FALSE)
-  
-  # plot(result_temp, summarize = TRUE)
   
   # filter only second half of timesteps
   result_temp <- meta.arrR::filter_meta(x = result_temp, filter = c(globals$max_i / 2,
@@ -104,7 +102,7 @@ foo <- function(variability, enrichment) {
 #### Submit to HPC #### 
 
 sbatch_pe_prod <- rslurm::slurm_apply(f = foo, params = df_experiment, 
-                                      global_objects = "globals", jobname = "PE_Prod_nofish",
+                                      global_objects = "globals", jobname = "PE_Prod_mobile",
                                       nodes = nrow(df_experiment), cpus_per_node = 1, 
                                       slurm_options = list("account" = account, 
                                                            "partition" = "standard",
@@ -121,14 +119,14 @@ suppoRt::rslurm_missing(sbatch_pe_prod)
 
 df_pe_prod <- rslurm::get_slurm_out(sbatch_pe_prod, outtype = "table")
 
-suppoRt::save_rds(object = df_pe_prod, filename = "02_PE-Prod_Enrich-nofish.rds", 
+suppoRt::save_rds(object = df_pe_prod, filename = "02_PE-Prod_Enrich-mobile.rds", 
                   path = "02_Data/", overwrite = overwrite)
 
 rslurm::cleanup_files(sbatch_pe_prod)
 
 #### Load data ####
 
-df_pe_prod <- readRDS("02_Data/02_PE-Prod_Enrich-nofish.rds") %>% 
+df_pe_prod <- readRDS("02_Data/02_PE-Prod_Enrich-local.rds") %>% 
   dplyr::filter(c(type == "cv" & measure == "beta") | c(type == "absolute" & measure == "gamma")) %>% 
   dplyr::select(-type) %>%
   tidyr::pivot_wider(names_from = "measure", values_from = value, values_fn = list) %>% 
@@ -175,7 +173,7 @@ gg_results <- purrr::map(c("production", "biomass"), function(i) {
   })
   
   cowplot::plot_grid(plotlist = gg_temp, ncol = 1, nrow = 3)
-  
+
 })
 
 #### Save ggplot ####
@@ -185,14 +183,14 @@ names(gg_results) <- c("production", "biomass")
 
 #### Save ggplot ####
 
-# loop through output level
-purrr::walk(seq_along(gg_results), function(i) {
-  
-  # create file name
-  filename_temp <- paste0("02_pe_prod_", names(gg_results)[[i]], "_nofish.png")
-  
-  # save ggplot
-  suppoRt::save_ggplot(plot = gg_results[[i]], filename = filename_temp,
-                       path = "04_Figures", width = height, height = width, dpi = dpi, 
-                       units = units, overwrite = overwrite)
-})
+# # loop through output level
+# purrr::walk(seq_along(gg_results), function(i) {
+#   
+#   # create file name
+#   filename_temp <- paste0("02_pe_prod_", names(gg_results)[[i]], "_mobile.png")
+#     
+#   # save ggplot
+#   suppoRt::save_ggplot(plot = gg_results[[i]], filename = filename_temp,
+#                        path = "04_Figures", width = height, height = width, dpi = dpi, 
+#                        units = units, overwrite = overwrite)
+# })

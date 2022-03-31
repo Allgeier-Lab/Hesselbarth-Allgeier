@@ -12,9 +12,8 @@ source("05_Various/setup.R")
 
 #### Adapt parameters ####
 
-starting_list$pop_n <- 8
-
 parameters_list$move_residence <- 0.0
+
 parameters_list$move_residence_var <- 0.0
 
 #### Stable values ####
@@ -24,6 +23,7 @@ stable_values <- arrR::get_stable_values(bg_biomass = starting_list$bg_biomass,
                                          parameters = parameters_list)
 
 starting_list$nutrients_pool <- stable_values$nutrients_pool
+
 starting_list$detritus_pool <- stable_values$detritus_pool
 
 #### Simulate input ####
@@ -39,8 +39,9 @@ df_experiment <- data.frame(variability = variability, enrichment = enrichment_l
 
 globals <- list(n = n, reef_matrix = reef_matrix, max_i = max_i, starting_list = starting_list, 
                 parameters_list = parameters_list, dimensions = dimensions, 
-                grain = grain, input_mn = stable_values$nutrients_input, freq_mn = freq_mn,
-                min_per_i = min_per_i, seagrass_each = seagrass_each, save_each = save_each) 
+                grain = grain, use_log = use_log, input_mn = stable_values$nutrients_input, 
+                freq_mn = freq_mn, min_per_i = min_per_i, seagrass_each = seagrass_each, 
+                save_each = save_each) 
 
 foo <- function(variability, enrichment) {
   
@@ -49,7 +50,7 @@ foo <- function(variability, enrichment) {
                                          starting_values = globals$starting_list,
                                          parameters = globals$parameters_list,
                                          dimensions = globals$dimensions, grain = globals$grain,
-                                         verbose = FALSE)
+                                         use_log = globals$use_log, verbose = FALSE)
   
   # simulate input
   input_temp <- meta.arrR::sim_nutr_input(n = globals$n, max_i = globals$max_i,
@@ -185,14 +186,14 @@ names(gg_results) <- c("production", "biomass")
 
 #### Save ggplot ####
 
-# loop through output level
-purrr::walk(seq_along(gg_results), function(i) {
-  
-  # create file name
-  filename_temp <- paste0("02_pe_prod_", names(gg_results)[[i]], "_local.png")
-    
-  # save ggplot
-  suppoRt::save_ggplot(plot = gg_results[[i]], filename = filename_temp,
-                       path = "04_Figures", width = height, height = width, dpi = dpi, 
-                       units = units, overwrite = overwrite)
-})
+# # loop through output level
+# purrr::walk(seq_along(gg_results), function(i) {
+#   
+#   # create file name
+#   filename_temp <- paste0("02_pe_prod_", names(gg_results)[[i]], "_local.png")
+#     
+#   # save ggplot
+#   suppoRt::save_ggplot(plot = gg_results[[i]], filename = filename_temp,
+#                        path = "04_Figures", width = height, height = width, dpi = dpi, 
+#                        units = units, overwrite = overwrite)
+# })
