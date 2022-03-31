@@ -39,41 +39,74 @@ result_rmse <- purrr::map_dfr(paths, readr::read_rds, .id = "run") %>%
 
 #### Create ggplot ####
 
+# specify what to plot
+comparisons <- c("nofish_local", "nofish_mobile", "local_mobile")
+
+parts <- c(rep(x = "ag_production", times = 3), rep(x = "bg_production", times = 3))
+
+enrichments <- rep(x = c("low", "medium", "high"), times = 2)
+
+# setup some plot options
 col_palette <- c("#5ABCD6", "#FAD510", "#F22301")
 
-comparison <- c("nofish_local", "nofish_mobile", "local_mobile")
+# setup labels
+label_parts <- c("Aboveground production", "" , "", 
+                 "Belowground production", "", "")
 
-labels_col <- c(low = "Low enrichment", medium = "Medium enrichment", high = "High enrichment")
+label_enrich <- c("Low enrichment", "Medium enrichment" , "High enrichment",
+                  "", "", "")
 
-labels_row <- c(ag_production = "Aboveground production", bg_production = "Belowground production", 
-                ttl_production = "Total production")
-
-gg_diff <- purrr::map(comparison, function(i) {
+# create plots in loop
+gg_comparisons <- purrr::map(comparisons, function(i) {
   
+  # get mean and sd of current comparison
   comparison_temp <- paste0(i, c("_mn", "_sd"))
-  
-  y_lab <- paste("Diff CV", stringr::str_replace(i, pattern = "_", replacement = "-"), "[%]")
-  
-  dplyr::filter(result_rmse, type == "cv", measure == "gamma", 
-                part %in% c("ag_production", "bg_production", "ttl_production")) %>% 
-    dplyr::select(enrichment_lvl, amplitude_lvl, n_diff, part, comparison_temp) %>% 
-    ggplot() +
-    geom_hline(yintercept = 0, linetype = 2, col = "grey") +
-    geom_point(aes(x = n_diff, y = get(comparison_temp[1]), col = amplitude_lvl)) +
-    geom_line(aes(x = n_diff, y = get(comparison_temp[1]), col = amplitude_lvl), 
-              alpha = 0.2) +
-    geom_errorbar(aes(x = n_diff, ymin = get(comparison_temp[1]) - get(comparison_temp[2]),
-                      ymax = get(comparison_temp[1]) + get(comparison_temp[2]), 
-                      col = amplitude_lvl, group = part), width = 0.2) +
-    facet_grid(rows = vars(part), cols = vars(enrichment_lvl), scales = "free_y", 
-               labeller = labeller(enrichment_lvl = labels_col, part = labels_row)) +
-    scale_x_continuous(breaks = seq(from = 0, to = 9, by = 1)) +
-    scale_color_manual(name = "Amplitude treatment", values = col_palette) +
-    labs(y = y_lab, x = "Variability of amplitude") +
-    theme_classic(base_size = base_size) +
-    theme(legend.position = "bottom")
-})
 
-names(gg_diff) <- comparison
-gg_diff$local_mobile
+  # loop through all parts and treatments
+  gg_treatments <- purrr::map(seq_along(parts), function(j) {
+    
+    dplyr::filter(result_rmse, enrichment_lvl == enrichments[j], type == "cv", 
+                  measure == "gamma", part == parts[j]) %>% 
+      ggplot() +
+      geom_hline(yintercept = 0, linetype = 2, col = "grey") +
+      geom_point(aes(x = n_diff, y = get(comparison_temp[1]), col = amplitude_lvl)) +
+      geom_line(aes(x = n_diff, y = get(comparison_temp[1]), col = amplitude_lvl), 
+                alpha = 0.2) +
+      geom_errorbar(aes(x = n_diff, ymin = get(comparison_temp[1]) - get(comparison_temp[2]),
+                        ymax = get(comparison_temp[1]) + get(comparison_temp[2]), 
+                        col = amplitude_lvl, group = part), width = 0.2) +
+      scale_x_continuous(breaks = seq(from = 0, to = 9, by = 1)) +
+      scale_color_manual(values = col_palette) +
+      labs(y = "", x = "", subtitle = label_parts[j], title = label_enrich[j]) +
+      theme_classic(base_size = base_size) +
+      theme(legend.position = "none")
+    
+    })
+  
+  # create dummy plot to grab legend
+  gg_dummy <- ggplot(data = result_rmse) + 
+    geom_point(aes(x = 1, y = 1, col = amplitude_lvl)) +
+    scale_color_manual(name = "Amplitude treatment", values = col_palette) + 
+    theme(legend.position = "bottom")
+  
+  # grab legend
+  legend <- cowplot::get_legend(gg_dummy)
+  
+  # create x/y labs
+  x_lab <- "Variability of amplitude"
+  
+  y_lab <- stringr::str_replace(i, pattern = "_", replacement = " - ")
+  y_lab <- expr(paste(Delta, "CV ", !!y_lab, " [%]"))
+  
+  # add axsis labels
+  gg_temp <- cowplot::plot_grid(plotlist = gg_treatments, nrow = 2, ncol = 3) + 
+    cowplot::draw_label(label = x_lab, x = 0.5, y = 0, vjust = -0.5, angle = 0) + 
+    cowplot::draw_label(label = y_lab, x = 0, y = 0.5, vjust = 1.5, angle = 90)
+  
+  # add legend
+  plot_grid(gg_temp, legend, rel_heights = c(0.9, 0.1), nrow = 2)
+  
+})
+    
+names(gg_comparisons) <- comparisons
 
