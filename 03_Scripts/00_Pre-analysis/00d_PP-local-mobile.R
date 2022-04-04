@@ -12,9 +12,7 @@ source("05_Various/setup.R")
 
 #### Adapt parameters ####
 
-parameters_list$move_residence <- NULL
-parameters_list$move_residence_var <- NULL
-parameters_list$move_lambda <- NULL
+
 
 # check if all parameters are present and meaningful
 check_parameters(starting_values = starting_list, parameters = parameters_list)
@@ -24,53 +22,19 @@ check_parameters(starting_values = starting_list, parameters = parameters_list)
 reef_matrix <- matrix(data = c(-1, 0, 0, 1, 1, 0, 0, -1, 0, 0),
                       ncol = 2, byrow = TRUE)
 
-# get stable nutrient/detritus values
-stable_values <- arrR::get_stable_values(bg_biomass = starting_list$bg_biomass,
-                                         ag_biomass = starting_list$ag_biomass,
-                                         parameters = parameters_list)
-
-starting_list$nutrients_pool <- stable_values$nutrients_pool
-
-starting_list$detritus_pool <- stable_values$detritus_pool
-
-# create seafloor
-input_seafloor <- arrR::setup_seafloor(dimensions = c(50, 50), grain = 1, 
-                                       reef = reef_matrix, starting_values = starting_list)
-
-# create fishpop
-input_fishpop <- arrR::setup_fishpop(seafloor = input_seafloor, 
-                                     starting_values = starting_list, 
-                                     parameters = parameters_list, 
-                                     use_log = use_log)
-
-#### run_sim ####
-
-# one iterations equals 120 minutes
-min_per_i <- 120
-
-# run the model for ten years
-years <- 50
-max_i <- (60 * 24 * 365 * years) / min_per_i
-
-# run seagrass once each day
-days <- 1
-seagrass_each <- (24 / (min_per_i / 60)) * days
-
-# save results only every 365 days
-days <- 365 # which(max_i %% ((24 / (min_per_i / 60)) * (1:365)) == 0)
-save_each <- (24 / (min_per_i / 60)) * days
+#### setup experiment ####
 
 df_experiment <- expand.grid(enrichment_levels = enrichment_levels, 
-                             amplitude_mod = amplitude_mod) %>% 
+                             amplitude_levels = amplitude_levels) %>% 
   dplyr::slice(rep(1:dplyr::n(), each = iterations))
 
 #### Setup function ####
 
-foo <- function(enrichment_levels, amplitude_mod) {
+foo <- function(enrichment_levels, amplitude_levels) {
   
   # simulate input
   input_nutrients <- meta.arrR::sim_nutr_input(n = 1, max_i = max_i,
-                                               amplitude_mod = amplitude_mod, phase_mod = 0,
+                                               amplitude_mod = amplitude_levels, phase_mod = 0.0,
                                                input_mn = stable_values$nutrients_input * enrichment_levels,
                                                freq_mn = freq_mn, verbose = FALSE)
   
@@ -79,10 +43,8 @@ foo <- function(enrichment_levels, amplitude_mod) {
                                          reef = reef_matrix, starting_values = starting_list)
   
   # create fishpop
-  input_fishpop <- arrR::setup_fishpop(seafloor = input_seafloor, 
-                                       starting_values = starting_list, 
-                                       parameters = parameters_list,
-                                       use_log = use_log)
+  input_fishpop <- arrR::setup_fishpop(seafloor = input_seafloor, starting_values = starting_list, 
+                                       parameters = parameters_list, use_log = use_log)
   
   # create list with no fishpop and fishpop
   input_list <- list(NULL, input_fishpop)
@@ -118,7 +80,7 @@ foo <- function(enrichment_levels, amplitude_mod) {
     seafloor_temp <- tidyr::pivot_longer(seafloor_temp, -fun) 
     
     # add treatment levels
-    dplyr::mutate(seafloor_temp, enrichment = enrichment_levels, amplitude = amplitude_mod, 
+    dplyr::mutate(seafloor_temp, enrichment = enrichment_levels, amplitude = amplitude_levels, 
                   fishpop = ifelse(test = nrow(j$fishpop) == 0, yes = "nofish", no = "local"))
     
   })
