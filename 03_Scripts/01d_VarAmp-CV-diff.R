@@ -42,19 +42,29 @@ result_rmse <- purrr::map_dfr(paths, readr::read_rds, .id = "run") %>%
 # specify what to plot
 comparisons <- c("nofish_local", "nofish_mobile", "local_mobile")
 
-parts <- c(rep(x = "ag_production", times = 3), rep(x = "bg_production", times = 3))
+parts <- c(rep(x = "ag_production", times = 3), rep(x = "bg_production", times = 3), 
+           rep(x = "ttl_production", times = 3))
 
-enrichments <- rep(x = c("low", "medium", "high"), times = 2)
+enrichments <- rep(x = c("low", "medium", "high"), times = 3)
 
 # setup some plot options
 col_palette <- c("#5ABCD6", "#FAD510", "#F22301")
 
 # setup labels
 label_parts <- c("Aboveground production", "" , "", 
-                 "Belowground production", "", "")
+                 "Belowground production", "", "", 
+                 "Total production", "", "")
 
 label_enrich <- c("Low enrichment", "Medium enrichment" , "High enrichment",
+                  "", "", "", 
                   "", "", "")
+
+label_y <- list(NULL, element_blank(), element_blank()) %>% 
+  rep(times = 3)
+
+label_x <- list(element_blank(), element_blank(), element_blank(),
+                element_blank(), element_blank(), element_blank(), 
+                NULL, NULL, NULL)
 
 # create plots in loop
 gg_comparisons <- purrr::map(comparisons, function(i) {
@@ -65,21 +75,33 @@ gg_comparisons <- purrr::map(comparisons, function(i) {
   # loop through all parts and treatments
   gg_treatments <- purrr::map(seq_along(parts), function(j) {
     
-    dplyr::filter(result_rmse, enrichment_lvl == enrichments[j], type == "cv", 
-                  measure == "gamma", part == parts[j]) %>% 
-      ggplot() +
+    df_temp <- dplyr::filter(result_rmse, enrichment_lvl == enrichments[j], type == "cv", 
+                             measure == "gamma", part == parts[j])
+    
+    y_range <- dplyr::filter(result_rmse, type == "cv", measure == "gamma", part == parts[j]) %>%
+      dplyr::mutate(value_min = get(comparison_temp[1]) - get(comparison_temp[2]), 
+                    value_max = get(comparison_temp[1]) + get(comparison_temp[2])) %>% 
+      dplyr::select(value_min, value_max) %>% 
+      range()
+    
+    y_range[1] <- ifelse(test = y_range[1] > 0, yes = 0, no = y_range[1])
+    
+    y_range[2] <- ifelse(test = y_range[2] < 0, yes = 0, no = y_range[2])
+    
+    ggplot(data = df_temp) +
       geom_hline(yintercept = 0, linetype = 2, col = "grey") +
       geom_point(aes(x = n_diff, y = get(comparison_temp[1]), col = amplitude_lvl)) +
       geom_line(aes(x = n_diff, y = get(comparison_temp[1]), col = amplitude_lvl), 
-                alpha = 0.2) +
+                alpha = 0.5) +
       geom_errorbar(aes(x = n_diff, ymin = get(comparison_temp[1]) - get(comparison_temp[2]),
-                        ymax = get(comparison_temp[1]) + get(comparison_temp[2]), 
+                        ymax = get(comparison_temp[1]) + get(comparison_temp[2]),
                         col = amplitude_lvl, group = part), width = 0.2) +
       scale_x_continuous(breaks = seq(from = 0, to = 9, by = 1)) +
+      scale_y_continuous(limits = y_range) +
       scale_color_manual(values = col_palette) +
       labs(y = "", x = "", subtitle = label_parts[j], title = label_enrich[j]) +
       theme_classic(base_size = base_size) +
-      theme(legend.position = "none")
+      theme(legend.position = "none", axis.text.y = label_y[[j]], axis.text.x = label_x[[j]])
     
     })
   
@@ -99,7 +121,7 @@ gg_comparisons <- purrr::map(comparisons, function(i) {
   y_lab <- expr(paste(Delta, "CV ", !!y_lab, " [%]"))
   
   # add axsis labels
-  gg_temp <- cowplot::plot_grid(plotlist = gg_treatments, nrow = 2, ncol = 3) + 
+  gg_temp <- cowplot::plot_grid(plotlist = gg_treatments, nrow = 3, ncol = 3) + 
     cowplot::draw_label(label = x_lab, x = 0.5, y = 0, vjust = -0.5, angle = 0) + 
     cowplot::draw_label(label = y_lab, x = 0, y = 0.5, vjust = 1.5, angle = 90)
   
