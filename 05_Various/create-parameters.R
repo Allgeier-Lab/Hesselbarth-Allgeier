@@ -30,7 +30,7 @@ parameters_list <- list(
   
   # nutrients
   nutrients_diffusion = 2/3,
-  nutrients_loss = 0.001,
+  nutrients_loss = 0.02344663886736086597096, # see 00_input-nutr-fish.R
   
   # detritus
   detritus_mineralization = 0.001,
@@ -102,8 +102,8 @@ starting_list <- list(
 
 #### save results ####
 
-suppoRt::save_rds(object = parameters_list, filename = "00_parameters_list.rds", 
+suppoRt::save_rds(object = parameters_list, filename = "parameters_list.rds", 
                   path = "02_Data/", overwrite = TRUE)
 
-suppoRt::save_rds(object = starting_list, filename = "00_starting_list.rds", 
+suppoRt::save_rds(object = starting_list, filename = "starting_list.rds", 
                   path = "02_Data/", overwrite = TRUE)

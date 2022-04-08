@@ -22,9 +22,9 @@ library(viridis)
 
 #### Load data ####
 
-starting_list <- readRDS("02_Data/00_starting_list.rds")
+starting_list <- readRDS("02_Data/starting_list.rds")
 
-parameters_list <- readRDS("02_Data/00_parameters_list.rds")
+parameters_list <- readRDS("02_Data/parameters_list.rds")
 
 #### Basic parameters ####
 
@@ -61,6 +61,8 @@ grain <- 1
 
 # use log size distribution (or not)
 use_log <- FALSE
+
+nutrient_input <- 4.540375e-05 # see 00_input-nutr-fish.R
 
 #### Setup reef cells ####
 
@@ -103,8 +105,8 @@ overwrite <- FALSE
 
 message("\nUsing R v", stringr::str_split(rscript_path, pattern = "/", simplify = TRUE)[, 9], " on HPC")
 
-# exclude slow nodes
-exclude_nodes <- c("gl[3324-3327]", "gl[3368-3371]", "gl3383")
+# # exclude slow nodes
+# exclude_nodes <- c("gl[3324-3327]", "gl[3368-3371]", "gl3383")
 
 #### Remove some basic parameters ####
 
