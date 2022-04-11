@@ -102,3 +102,29 @@ result <- readr::read_rds("02_Data/00_nutr_input_fish.rds")
 # nutrients_loss = nutrients_input / nutrients_pool
 # 0.001936472 / 0.001936472 = 0.02344663886736086597096
 (mean(result$excretion_mn) / prod(dimensions)) / stable_values$nutrients_pool
+
+#### Run model with paramerization ####
+
+# create seafloor
+input_seafloor <- arrR::setup_seafloor(dimensions = dimensions, grain = grain, 
+                                       reef = reef_matrix, starting_values = starting_list)
+
+input_fishpop <- arrR::setup_fishpop(seafloor = input_seafloor, starting_values = starting_list, 
+                                     parameters = parameters_list, use_log = use_log)
+
+result <- purrr::map2(c(0.0, nutrient_input), c(0.0, 0.02344663886736086597096), function(i, j) {
+
+  input_nutrients <- meta.arrR::sim_nutr_input(n = 1, max_i = max_i, input_mn = i, 
+                                               freq_mn = freq_mn, amplitude_mod = 0.05)
+  
+  parameters_list$nutrients_loss <- j
+  
+  arrR::run_simulation(seafloor = input_seafloor, fishpop = input_fishpop,
+                       nutrients_input = input_nutrients$values$meta_1$input, 
+                       parameters = parameters_list, movement = "behav", max_i = max_i, 
+                       min_per_i = min_per_i, seagrass_each = seagrass_each, save_each = save_each)
+  
+})
+
+plot(result[[1]], summarize = FALSE)
+plot(result[[2]], summarize = FALSE)

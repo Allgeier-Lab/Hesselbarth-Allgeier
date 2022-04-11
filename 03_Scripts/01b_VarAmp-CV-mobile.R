@@ -14,11 +14,11 @@ source("01_Functions/get_modifier.R")
 
 #### Adapt parameters ####
 
-
+# Nothing to change
 
 #### Stable values ####
 
-stable_values <- arrR::get_stable_values(bg_biomass = starting_list$bg_biomass,
+stable_values <- arrR::get_req_nutrients(bg_biomass = starting_list$bg_biomass,
                                          ag_biomass = starting_list$ag_biomass,
                                          parameters = parameters_list)
 
@@ -47,40 +47,32 @@ variability_input <- tidyr::expand_grid(enrichment = enrichment_levels,
 
 #### Setup HPC function ####
 
-globals <- list(n = n, reef_matrix = reef_matrix, max_i = max_i, starting_list = starting_list, 
-                parameters_list = parameters_list, dimensions = dimensions, 
-                grain = grain, use_log = use_log, input_mn = stable_values$nutrients_input, 
-                freq_mn = freq_mn, min_per_i = min_per_i, seagrass_each = seagrass_each, 
-                save_each = save_each) 
+globals <- c("n", "reef_matrix", "max_i", "starting_list", "parameters_list", "dimensions", 
+             "grain", "use_log", "nutrient_input", "freq_mn", "min_per_i", "seagrass_each", 
+             "save_each") 
 
 foo <- function(nutr_input) {
   
   # setup metaecosystems
-  metasyst_temp <- meta.arrR::setup_meta(n = globals$n, max_i = globals$max_i, reef = globals$reef_matrix,
-                                         starting_values = globals$starting_list,
-                                         parameters = globals$parameters_list,
-                                         dimensions = globals$dimensions, grain = globals$grain,
-                                         use_log = globals$use_log, verbose = FALSE)
+  metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = reef_matrix,
+                                         starting_values = starting_list, parameters = parameters_list,
+                                         dimensions = dimensions, grain = grain,
+                                         use_log = use_log, verbose = FALSE)
   
   # simulate input
-  input_temp <- meta.arrR::sim_nutr_input(n = globals$n, max_i = globals$max_i,
-                                          amplitude_mod = nutr_input[, 4],
-                                          phase_mod = nutr_input[, 5],
-                                          input_mn = globals$input_mn * unique(nutr_input[, 1]), 
-                                          freq_mn = globals$freq_mn)
+  input_temp <- meta.arrR::sim_nutr_input(n = n, max_i = max_i, freq_mn = freq_mn,
+                                          amplitude_mod = nutr_input[, 4], phase_mod = nutr_input[, 5], 
+                                          input_mn = nutrient_input * unique(nutr_input[, 1]))
   
   # run model
-  result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = globals$parameters_list,
+  result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = parameters_list,
                                                 nutrients_input = input_temp, movement = "behav",
-                                                max_i = globals$max_i, min_per_i = globals$min_per_i,
-                                                seagrass_each = globals$seagrass_each,
-                                                save_each = globals$save_each, verbose = FALSE)
-  
-  # plot(result_temp, summarize = TRUE)
+                                                max_i = max_i, min_per_i = min_per_i,
+                                                seagrass_each = seagrass_each,
+                                                save_each = save_each, verbose = FALSE)
   
   # filter only second half of timesteps
-  result_temp <- meta.arrR::filter_meta(x = result_temp, filter = c(globals$max_i / 2,
-                                                                    globals$max_i), 
+  result_temp <- meta.arrR::filter_meta(x = result_temp, filter = c(max_i / 2, max_i), 
                                         reset = TRUE, verbose = FALSE)
   
   # calc CV
@@ -120,13 +112,12 @@ foo <- function(nutr_input) {
 #### Submit to HPC #### 
 
 sbatch_var_cv <- rslurm::slurm_map(f = foo, x = variability_input, 
-                                   global_objects = "globals", jobname = "VarAmp_CV_mobile",
+                                   global_objects = globals, jobname = "VarAmp_CV_mobile",
                                    nodes = length(variability_input), cpus_per_node = 1, 
                                    slurm_options = list("account" = account, 
                                                         "partition" = "standard",
                                                         "time" = "02:00:00", ## hh:mm::ss
-                                                        "mem-per-cpu" = "7G", 
-                                                        "exclude" = exclude_nodes),
+                                                        "mem-per-cpu" = "7G"),
                                    pkgs = c("dplyr", "meta.arrR", "tidyr"),
                                    rscript_path = rscript_path, sh_template = sh_template, 
                                    submit = FALSE)
