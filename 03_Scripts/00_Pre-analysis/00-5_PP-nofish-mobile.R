@@ -126,6 +126,8 @@ x_labels <- list("", "", "Enrichment treatment")
 
 x_axis <- list(element_blank(), element_blank(), NULL)
 
+col_palette <- c("#5ABCD6", "#FAD510", "#F22301")
+
 #### Results treatments (Rel difference)  ####
 
 pp_nofish_mobile <- readr::read_rds("02_Data/00_pp_nofish_mobile.rds") %>%
@@ -147,8 +149,8 @@ gg_list <- map(seq_along(parts_list), function(i) {
                position = position_jitterdodge(), alpha = 0.25) +
     facet_wrap(. ~ name, nrow = 1) +
     labs(x = x_labels[[i]], y = y_labels[[i]]) +
-    scale_fill_viridis_d(name = "Amplitude treatment") +
-    scale_color_viridis_d(name = "Amplitude treatment") +
+    scale_fill_manual(name = "Amplitude treatment", values = col_palette) +
+    scale_color_manual(name = "Amplitude treatment", values = col_palette) +
     theme_classic() + theme(legend.position = legend_postion[[i]], 
                             axis.text.x = x_axis[[i]])
   
@@ -195,8 +197,8 @@ gg_list <- map(seq_along(parts_list), function(i) {
                   position = position_dodge(width = 0.5), width = 0.25) +
     facet_wrap(. ~ name, ncol = 2) +
     labs(x = x_labels[[i]], y = y_labels[[i]]) +
-    scale_fill_viridis_d(name = "Amplitude treatment") +
-    scale_color_viridis_d(name = "Amplitude treatment") +
+    scale_fill_manual(name = "Amplitude treatment", values = col_palette) +
+    scale_color_manual(name = "Amplitude treatment", values = col_palette) +
     theme_classic() + theme(legend.position = legend_postion[[i]], 
                             axis.text.x = x_axis[[i]])
   
