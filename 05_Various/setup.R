@@ -18,7 +18,6 @@ library(rslurm)
 library(suppoRt) # remotes::install_github("mhesselbarth/suppoRt")
 library(terra)
 library(tidyverse)
-library(viridis)
 
 #### Load data ####
 
@@ -43,7 +42,7 @@ days_seagrass <- 1
 seagrass_each <- (24 / (min_per_i / 60)) * days_seagrass
 
 # save results only every m days
-days_save <- 125 # which(max_i %% ((24 / (min_per_i / 60)) * (1:365)) == 0)
+days_save <- 25 # which(max_i %% ((24 / (min_per_i / 60)) * (1:365)) == 0)
 save_each <- (24 / (min_per_i / 60)) * days_save
 
 # max_i %% save_each
@@ -110,4 +109,4 @@ message("\nUsing R v", stringr::str_split(rscript_path, pattern = "/", simplify 
 
 #### Remove some basic parameters ####
 
-rm(days_save, days_seagrass)
+# rm(days_save, days_seagrass)
