@@ -68,8 +68,6 @@ foo <- function(nutr_input) {
                                                 seagrass_each = seagrass_each,
                                                 save_each = save_each, verbose = FALSE)
   
-  # plot(result_temp, summarize = TRUE)
-  
   # filter only second half of timesteps
   result_temp <- meta.arrR::filter_meta(x = result_temp, filter = c(max_i / 2, max_i), 
                                         reset = TRUE, verbose = FALSE)
