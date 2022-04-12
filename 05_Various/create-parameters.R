@@ -30,7 +30,7 @@ parameters_list <- list(
   
   # nutrients
   nutrients_diffusion = 2/3,
-  nutrients_loss = 0.02344663886736086597096, # see 00_input-nutr-fish.R
+  nutrients_loss = 0.02367659, # see 00_input-nutr-fish.R
   
   # detritus
   detritus_mineralization = 0.001,

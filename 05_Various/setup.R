@@ -61,7 +61,7 @@ grain <- 1
 # use log size distribution (or not)
 use_log <- FALSE
 
-nutrient_input <- 4.540375e-05 # see 00_input-nutr-fish.R
+nutrient_input <- 4.584905e-05 # see 00_input-nutr-fish.R
 
 #### Setup reef cells ####
 

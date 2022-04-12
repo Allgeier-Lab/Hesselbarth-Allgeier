@@ -53,11 +53,10 @@ foo <- function(itr) {
   dplyr::select(result_temp$fishpop, timestep, id, age, weight, excretion) %>% 
     dplyr::group_by(id) %>% 
     dplyr::mutate(excretion_last = dplyr::lag(excretion), 
-                  excretion_diff = (excretion - excretion_last) / save_each) %>% 
-    dplyr::group_by(timestep) %>% 
-    dplyr::summarise(excretion_ttl = sum(excretion_diff)) %>% 
-    dplyr::summarise(excretion_mn = mean(excretion_ttl, na.rm = TRUE), 
-                     excretion_sd = sd(excretion_ttl, na.rm = TRUE)) %>% 
+                  excretion_diff = (excretion - excretion_last) / save_each) %>%
+    dplyr::ungroup() %>% 
+    dplyr::summarise(excretion_mn = mean(excretion_diff, na.rm = TRUE), 
+                     excretion_sd = sd(excretion_diff, na.rm = TRUE)) %>% 
     dplyr::mutate(i = itr)
   
 }
@@ -66,7 +65,7 @@ globals <- c("dimensions", "grain", "reef_matrix", "starting_list",
              "parameters_list", "use_log",
              "max_i", "min_per_i", "seagrass_each", "save_each")
 
-input_df <- data.frame(itr = 1:50)
+input_df <- data.frame(itr = 1:iterations)
 
 #### Submit to HPC ####
 
@@ -99,9 +98,16 @@ rslurm::cleanup_files(sbatch_fish)
 
 result <- readr::read_rds("02_Data/00_nutr_input_fish.rds")
 
-# nutrients_loss = nutrients_input / nutrients_pool
-# 0.001936472 / 0.001936472 = 0.02344663886736086597096
-(mean(result$excretion_mn) / prod(dimensions)) / stable_values$nutrients_pool
+# calculate mean total input of fish population each timestep
+total_excretion <- mean(result$excretion_mn) * starting_list$pop_n
+
+# calculate nutrient input each cell so that total input equals total excretion
+(nutrient_input_cell <- total_excretion / prod(dimensions))
+# 4.584905e-05
+
+# calculate nutrients loss parameter: nutrients_loss = nutrients_input / nutrients_pool
+(nutrients_loss <- nutrient_input_cell / stable_values$nutrients_pool)
+# 0.02367659
 
 #### Run model with paramerization ####
 
@@ -112,7 +118,7 @@ input_seafloor <- arrR::setup_seafloor(dimensions = dimensions, grain = grain,
 input_fishpop <- arrR::setup_fishpop(seafloor = input_seafloor, starting_values = starting_list, 
                                      parameters = parameters_list, use_log = use_log)
 
-result <- purrr::map2(c(0.0, nutrient_input), c(0.0, 0.02344663886736086597096), function(i, j) {
+result <- purrr::map2(c(0.0, nutrient_input_cell), c(0.0, nutrients_loss), function(i, j) {
 
   input_nutrients <- meta.arrR::sim_nutr_input(n = 1, max_i = max_i, input_mn = i, 
                                                freq_mn = freq_mn, amplitude_mod = 0.05)
@@ -122,9 +128,12 @@ result <- purrr::map2(c(0.0, nutrient_input), c(0.0, 0.02344663886736086597096),
   arrR::run_simulation(seafloor = input_seafloor, fishpop = input_fishpop,
                        nutrients_input = input_nutrients$values$meta_1$input, 
                        parameters = parameters_list, movement = "behav", max_i = max_i, 
-                       min_per_i = min_per_i, seagrass_each = seagrass_each, save_each = save_each)
-  
-})
+                       min_per_i = min_per_i, seagrass_each = seagrass_each, 
+                       save_each = save_each, verbose = TRUE)}) %>% 
+  purrr::set_names(c("no_input", "input"))
 
-plot(result[[1]], summarize = FALSE)
-plot(result[[2]], summarize = FALSE)
+summarize <- FALSE
+
+plot(result$no_input, summarize = summarize)
+
+plot(result$input, summarize = summarize)
