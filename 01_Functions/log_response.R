@@ -1,10 +1,16 @@
-log_response <- function(data, indices) {
+log_response <- function(data, indices, relative = FALSE) {
   
-  x <- data[indices, ] 
+  if (!all(names(data) == c("ctrl", "trtm"))) stop("Columns must be named 'ctrl' and 'trtm'.")
   
-  f <- mean(log(x$trtm)) - mean(log(x$ctrl))
+  df_boot <- data[indices, ] 
   
-  # f <- (exp(f) - 1) * 100
+  rr <- log(mean(df_boot$trtm) / mean(df_boot$ctrl))
   
-  return(f)
-} 
+  if (relative) {
+    
+    rr <- 100 * (exp(rr) - 1)
+    
+  }
+  
+  return(rr)
+}
