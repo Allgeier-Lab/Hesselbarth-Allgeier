@@ -12,10 +12,24 @@ source("05_Various/setup.R")
 
 source("01_Functions/log_response.R")
 
-#### setup_inputs ####
+#### Change parameters and starting values ####
+
+# Nothing to change
+
+#### Setup environment #### 
+
 # create 5 reef cells in center of seafloor
 reef_matrix <- matrix(data = c(-1, 0, 0, 1, 1, 0, 0, -1, 0, 0),
                       ncol = 2, byrow = TRUE)
+
+# get stable nutrient/detritus values
+stable_values <- arrR::get_req_nutrients(bg_biomass = starting_list$bg_biomass,
+                                         ag_biomass = starting_list$ag_biomass,
+                                         parameters = parameters_list)
+
+starting_list$nutrients_pool <- stable_values$nutrients_pool
+
+starting_list$detritus_pool <- stable_values$detritus_pool
 
 #### setup experiment ####
 
@@ -34,7 +48,7 @@ foo <- function(enrichment_levels, amplitude_levels) {
                                           freq_mn = freq_mn, verbose = FALSE)
   
   # create list with no fishpop and fishpop
-  input_list <- list(0, parameters_list$move_residence)
+  input_list <- list(0.0, parameters_list$move_residence)
   
   # run model
   result_temp <- purrr::map_dfr(input_list, function(i) {
@@ -65,10 +79,10 @@ foo <- function(enrichment_levels, amplitude_levels) {
                                                              function(x) c(mean = mean(x), sum = sum(x))))
     
     # add function column
-    result_sum <- tibble::add_column(result_sum, fun = c("mean", "sum"), .before = "ag_biomass") 
+    result_sum <- tibble::add_column(result_sum, scale = c("alpha", "gamma"), .before = "ag_biomass") 
     
     # reshape to longer format
-    seafloor_temp <- tidyr::pivot_longer(result_sum, -fun) 
+    seafloor_temp <- tidyr::pivot_longer(result_sum, -scale) 
     
     # add treatment levels
     dplyr::mutate(seafloor_temp, enrichment = enrichment_levels, amplitude = amplitude_levels, 
@@ -115,6 +129,34 @@ suppoRt::save_rds(object = pp_local_mobile, file = "02_Data/00_pp_local_mobile.r
 # delete .sh scripts
 rslurm::cleanup_files(sbatch_pp)
 
+#### Results treatments (Rel difference)  ####
+
+# use rel difference
+pp_local_mobile <- readr::read_rds("02_Data/00_pp_local_mobile.rds") %>%
+  dplyr::mutate(reldiff = ((mobile - local) / local) * 100) %>%
+  dplyr::mutate(scale = factor(scale), name = factor(name),
+                enrichment = factor(enrichment, ordered = TRUE),
+                amplitude = factor(amplitude, ordered = TRUE))
+
+# # use response ratios
+# pp_local_mobile <- readr::read_rds("02_Data/00_pp_local_mobile.rds") %>%
+#   dplyr::group_by(scale, name, enrichment, amplitude) %>%
+#   dplyr::group_split() %>%
+#   purrr::map_dfr(function(df_temp) {
+# 
+#     bootstrap <- boot::boot(data = data.frame(ctrl = df_temp$local,
+#                                               trtm = df_temp$mobile),
+#                             statistic = log_response, R = 1000)
+# 
+#     bootstrap_ci <- boot::boot.ci(bootstrap, type = "norm", conf = 0.95)
+# 
+#     tibble(scale = unique(df_temp$scale), name = unique(df_temp$name),
+#            enrichment = unique(df_temp$enrichment), amplitude = unique(df_temp$amplitude),
+#            mean = mean(bootstrap$t[, 1]), lo = bootstrap_ci$normal[2], hi = bootstrap_ci$normal[3])}) %>%
+#   dplyr::mutate(fun = factor(fun), name = factor(name),
+#                 enrichment = factor(enrichment, ordered = TRUE),
+#                 amplitude = factor(amplitude, ordered = TRUE))
+
 #### Settings ggplot ####
 
 parts_list <- list(ag = c("ag_biomass", "ag_production"), bg = c("bg_biomass", "bg_production"), 
@@ -126,21 +168,16 @@ x_labels <- list("", "", "Enrichment treatment")
 
 x_axis <- list(element_blank(), element_blank(), NULL)
 
+y_labels <- list("", expression(paste(Delta, "local fish, mobile fish [%]")), "")
+# y_labels <- list("", "log(RR) local fish, mobile fish", "")
+
 col_palette <- c("#5ABCD6", "#FAD510", "#F22301")
 
-#### Results treatments (Rel difference)  ####
-
-pp_local_mobile <- readr::read_rds("02_Data/00_pp_local_mobile.rds") %>%
-  dplyr::mutate(reldiff = ((mobile - local) / local) * 100) %>%
-  dplyr::mutate(fun = factor(fun), name = factor(name),
-                enrichment = factor(enrichment, ordered = TRUE),
-                amplitude = factor(amplitude, ordered = TRUE))
-
-y_labels <- list("", expression(paste(Delta, "local fish, mobile fish [%]")), "")
+#### Create ggplot ####
 
 gg_list <- map(seq_along(parts_list), function(i) {
-  
-  dplyr::filter(pp_local_mobile, fun == "sum", name %in% parts_list[[i]]) %>% 
+
+  dplyr::filter(pp_local_mobile, scale == "gamma", name %in% parts_list[[i]]) %>%
     ggplot() +
     geom_hline(yintercept = 0, linetype = 2, color = "grey") +
     geom_boxplot(aes(x = enrichment, y = reldiff, fill = amplitude),
@@ -151,57 +188,28 @@ gg_list <- map(seq_along(parts_list), function(i) {
     labs(x = x_labels[[i]], y = y_labels[[i]]) +
     scale_fill_manual(name = "Amplitude treatment", values = col_palette) +
     scale_color_manual(name = "Amplitude treatment", values = col_palette) +
-    theme_classic() + theme(legend.position = legend_postion[[i]], 
+    theme_classic() + theme(legend.position = legend_postion[[i]],
                             axis.text.x = x_axis[[i]])
-  
+
 })
+
+# gg_list <- map(seq_along(parts_list), function(i) {
+# 
+#   dplyr::filter(pp_local_mobile, scale == "gamma", name %in% parts_list[[i]]) %>%
+#     ggplot() +
+#     geom_hline(yintercept = 0, linetype = 2, color = "grey") +
+#     geom_point(aes(x = enrichment, y = mean, col = amplitude),
+#                position = position_dodge(width = 0.5), size = 2) +
+#     geom_errorbar(aes(x = enrichment, ymin = lo, ymax = hi, col = amplitude),
+#                   position = position_dodge(width = 0.5), width = 0.25) +
+#     facet_wrap(. ~ name, ncol = 2) +
+#     labs(x = x_labels[[i]], y = y_labels[[i]]) +
+#     scale_fill_manual(name = "Amplitude treatment", values = col_palette) +
+#     scale_color_manual(name = "Amplitude treatment", values = col_palette) +
+#     theme_classic() + theme(legend.position = legend_postion[[i]],
+#                             axis.text.x = x_axis[[i]])
+# 
+# })
 
 cowplot::plot_grid(plotlist = gg_list, nrow = 3, rel_heights = c(0.75, 0.75, 1))
 
-# dplyr::group_by(pp_local_mobile, fun, name, enrichment, amplitude) %>%
-#   dplyr::summarise(reldiff_mn = mean(reldiff), reldiff_sd = sd(reldiff),
-#                    .groups = "drop") %>%
-#   dplyr::arrange(desc(fun), name, enrichment, amplitude) %>%
-#   dplyr::filter(fun == "sum")
-
-#### Results treatments (Response ratios)  ####
-
-pp_local_mobile <- readr::read_rds("02_Data/00_pp_local_mobile.rds") %>% 
-  dplyr::group_by(fun, name, enrichment, amplitude) %>% 
-  dplyr::group_split() %>% 
-  purrr::map_dfr(function(i) {
-    
-    bootstrap <- boot::boot(data = tibble::tibble(ctrl = i$local, 
-                                                  trtm = i$mobile),
-                            statistic = log_response, R = 10000)
-    
-    bootstrap_ci <- boot::boot.ci(bootstrap, type = "norm", conf = 0.95)
-    
-    tibble(fun = unique(i$fun), name = unique(i$name), 
-           enrichment = unique(i$enrichment), amplitude = unique(i$amplitude),
-           mean = mean(bootstrap$t[, 1]), lo = bootstrap_ci$normal[2], hi = bootstrap_ci$normal[3])}) %>% 
-  dplyr::mutate(fun = factor(fun), name = factor(name),
-                enrichment = factor(enrichment, ordered = TRUE),
-                amplitude = factor(amplitude, ordered = TRUE))
-
-y_labels <- list("", "log(RR) local fish, mobile fish", "")
-
-gg_list <- map(seq_along(parts_list), function(i) {
-  
-  dplyr::filter(pp_local_mobile, fun == "sum", name %in% parts_list[[i]]) %>% 
-    ggplot() +
-    geom_hline(yintercept = 0, linetype = 2, color = "grey") +
-    geom_point(aes(x = enrichment, y = mean, col = amplitude), 
-               position = position_dodge(width = 0.5)) + 
-    geom_errorbar(aes(x = enrichment, ymin = lo, ymax = hi, col = amplitude),  
-                  position = position_dodge(width = 0.5), width = 0.25) +
-    facet_wrap(. ~ name, ncol = 2) +
-    labs(x = x_labels[[i]], y = y_labels[[i]]) +
-    scale_fill_manual(name = "Amplitude treatment", values = col_palette) +
-    scale_color_manual(name = "Amplitude treatment", values = col_palette) +
-    theme_classic() + theme(legend.position = legend_postion[[i]], 
-                            axis.text.x = x_axis[[i]])
-  
-})
-
-cowplot::plot_grid(plotlist = gg_list, nrow = 3, rel_heights = c(0.75, 0.75, 1))
