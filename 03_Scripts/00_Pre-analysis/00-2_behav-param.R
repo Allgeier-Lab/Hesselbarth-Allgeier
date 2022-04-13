@@ -10,6 +10,10 @@
 
 source("05_Various/setup.R")
 
+#### Change parameters and starting values ####
+
+# Nothing to change
+
 #### Setup environment #### 
 
 # create 5 reef cells in center of seafloor

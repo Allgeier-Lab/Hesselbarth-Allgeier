@@ -39,7 +39,7 @@ response_ratios <- purrr::map_dfr(seq_along(treatments_list), function(i) {
   
   message("\r> Progres: i = ", i , "/", length(treatments_list), "\t\t", appendLF = FALSE)
       
-  if (any(df_temp$value.ctrl == 0) || any(df_temp$value.trtm == 0)) {
+  if (all(df_temp$value.ctrl == 0) || all(df_temp$value.trtm == 0)) {
     
     tibble(enrichment_lvl = unique(df_temp$enrichment_lvl), amplitude_lvl = unique(df_temp$amplitude_lvl), 
            n_diff = unique(df_temp$n_diff), part = unique(df_temp$part), mean = as.numeric(NA), 
@@ -47,9 +47,9 @@ response_ratios <- purrr::map_dfr(seq_along(treatments_list), function(i) {
     
   } else {
         
-    bootstrap <- boot::boot(data = tibble::tibble(ctrl = df_temp$value.ctrl, 
-                                                  trtm = df_temp$value.trtm),
-                            statistic = log_response, R = 10000)
+    bootstrap <- boot::boot(data = data.frame(ctrl = df_temp$value.ctrl, 
+                                              trtm = df_temp$value.trtm),
+                            statistic = log_response, R = 10000, relative = TRUE)
       
     bootstrap_ci <- boot::boot.ci(bootstrap, type = "norm", conf = 0.95)
       
