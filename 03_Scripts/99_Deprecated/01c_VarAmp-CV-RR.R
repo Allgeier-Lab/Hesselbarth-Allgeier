@@ -12,11 +12,6 @@ source("05_Various/setup.R")
 
 source("01_Functions/log_response.R")
 
-#### Load data ####
-
-paths <- list(local = "02_Data/01_VarAmp-CV-local.rds", 
-              mobile = "02_Data/01_VarAmp-CV-mobile.rds")
-
 #### Bootstrap RR ####
 
 control <- readr::read_rds("02_Data/01_VarAmp-CV-local.rds") %>% 
@@ -29,8 +24,8 @@ treatments_list <- dplyr::inner_join(x = control, y = treatment,
                                      by = c("id_row", "enrichment_lvl", "amplitude_lvl", "n_diff", 
                                             "type", "part", "measure"), 
                                      suffix = c(".ctrl", ".trtm")) %>% 
-  dplyr::filter(type == "cv", measure == "gamma") %>% 
-  dplyr::group_by(enrichment_lvl, amplitude_lvl, n_diff, part) %>% 
+  dplyr::filter(type == "cv") %>% 
+  dplyr::group_by(enrichment_lvl, amplitude_lvl, n_diff, part, measure) %>% 
   dplyr::group_split()
   
 response_ratios <- purrr::map_dfr(seq_along(treatments_list), function(i) {
@@ -49,12 +44,12 @@ response_ratios <- purrr::map_dfr(seq_along(treatments_list), function(i) {
         
     bootstrap <- boot::boot(data = data.frame(ctrl = df_temp$value.ctrl, 
                                               trtm = df_temp$value.trtm),
-                            statistic = log_response, R = 10000, relative = TRUE)
+                            statistic = log_response, R = 1000)
       
     bootstrap_ci <- boot::boot.ci(bootstrap, type = "norm", conf = 0.95)
       
     tibble(enrichment_lvl = unique(df_temp$enrichment_lvl), amplitude_lvl = unique(df_temp$amplitude_lvl), 
-           n_diff = unique(df_temp$n_diff), part = unique(df_temp$part),
+           n_diff = unique(df_temp$n_diff), part = unique(df_temp$part), measure = unique(df_temp$measure), 
            mean = mean(bootstrap$t[, 1]), lo = bootstrap_ci$normal[2], hi = bootstrap_ci$normal[3])
       
   }}) %>% 
@@ -64,9 +59,12 @@ response_ratios <- purrr::map_dfr(seq_along(treatments_list), function(i) {
                                        labels = c("low", "medium", "high")),
                 n_diff = as.integer(n_diff), 
                 part = factor(part, levels = c("ag_biomass", "ag_production", "ttl_biomass",
-                                               "bg_biomass", "bg_production", "ttl_production")))
-
+                                               "bg_biomass", "bg_production", "ttl_production")), 
+                signif = dplyr::case_when(lo < 0.0 & hi < 0.0 ~ "-", hi > 0.0 & lo > 0.0 ~ "+", 
+                                          TRUE ~ " "))
 #### Create ggplot ####
+
+scale <- "gamma"
 
 parts <- rep(x = c("ag_production", "bg_production", "ttl_production"), each = 3)
 
@@ -97,9 +95,10 @@ col_palette <- c("#5ABCD6", "#FAD510", "#F22301")
 # loop through all parts and treatments
 gg_treatments <- purrr::map(seq_along(parts), function(i) {
   
-  df_temp <- dplyr::filter(response_ratios, enrichment_lvl == enrichments[i], part == parts[i])
+  df_temp <- dplyr::filter(response_ratios, enrichment_lvl == enrichments[i], part == parts[i], 
+                           measure == scale)
   
-  y_range <- dplyr::filter(response_ratios, part == parts[i]) %>%
+  y_range <- dplyr::filter(response_ratios, part == parts[i], measure == scale) %>%
     dplyr::select(lo, hi) %>% 
     range()
   
@@ -114,9 +113,14 @@ gg_treatments <- purrr::map(seq_along(parts), function(i) {
               alpha = 0.5) +
     geom_errorbar(aes(x = n_diff, ymin = lo, ymax = hi,
                       col = amplitude_lvl, group = part), width = 0.2) +
+    # geom_label(aes(x = n_diff, y = y_range[2] * 0.8, label = signif, fill = amplitude_lvl),
+    #            position = position_dodge(width = 0.75), alpha = 0.5) +
+    geom_text(aes(x = n_diff, y = y_range[2] * 0.8, label = signif, color = amplitude_lvl),
+              position = position_dodge(width = 0.75), size = 5) +
     scale_x_continuous(breaks = seq(from = 0, to = 9, by = 1)) +
     scale_y_continuous(limits = y_range) +
     scale_color_manual(values = col_palette) +
+    scale_fill_manual(values = col_palette) +
     labs(y = "", x = "", subtitle = label_parts[i], title = label_enrich[i]) +
     theme_classic(base_size = base_size) +
     theme(legend.position = "none", axis.text.y = label_y[[i]], axis.text.x = label_x[[i]], 
@@ -136,7 +140,7 @@ gg_legend <- cowplot::get_legend(gg_dummy)
 # create x/y labs
 x_lab <- "Variability of amplitude"
 
-y_lab <- expr(paste("log(response ratios) CV", gamma, " local vs. mobile"))
+y_lab <- expr(paste("log(RR) CV", gamma, " local vs. mobile"))
 
 # add axsis labels
 gg_treatments <- cowplot::plot_grid(plotlist = gg_treatments, nrow = 3, ncol = 3) + 
@@ -145,3 +149,6 @@ gg_treatments <- cowplot::plot_grid(plotlist = gg_treatments, nrow = 3, ncol = 3
 
 # add legend
 gg_treatments <- plot_grid(gg_treatments, gg_legend, rel_heights = c(0.9, 0.1), nrow = 2)
+ 
+# suppoRt::save_ggplot(plot = gg_treatments, file = "gg.png", path = "~/Desktop/", 
+#                      width = height * 2/3, height = width * 2/3, units = units, overwrite = TRUE)

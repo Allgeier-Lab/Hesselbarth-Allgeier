@@ -41,12 +41,12 @@ parameters_list <- list(
   
   # fishpop movement
   move_mean = 10.0,
-  move_var = 5.0,
+  move_sd = 5.0,
   move_border = 2.0,
   move_reef = 1.0,
   move_return = 15.0,
-  move_residence = 48.0,
-  move_residence_var = 0.0,
+  move_residence_mean = 8.0,
+  move_residence_sd = 0.0,
   move_lambda = 0.0,
   
   # fishpop dimensions
@@ -59,7 +59,7 @@ parameters_list <- list(
   # fishpop reserves
   pop_reserves_max = 0.01,
   pop_reserves_thres_mean = 0.01,
-  pop_reserves_thres_var = 0.0,
+  pop_reserves_thres_sd = 0.0,
   pop_reserves_consump = 0.20,
   
   # fishpop respiration
@@ -91,7 +91,7 @@ starting_list <- list(
   # fishpop related
   pop_n = 8,
   pop_mean_size = 9.0,
-  pop_var_size = 10.0
+  pop_sd_size = 10.0
 )
 
 ((starting_list$bg_biomass - parameters_list$bg_biomass_min) /
