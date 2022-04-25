@@ -27,13 +27,21 @@ starting_list$detritus_pool <- stable_values$detritus_pool
 #### Setup experiment ####
 
 # create random sd for each iteration of amplitude levels and stochastic treatments
-rndm_sd <- runif(n = iterations * length(amplitude_levels), min = 0.0, max = 1.0)
+rndm_sd <- runif(n = iterations * length(amplitude_levels) * 3, min = 0.0, max = 1.0)
 
 # create data.frame with all combinations
-experiment_df <- tibble::tibble(ampl_mn = rep(x = amplitude_levels, each = iterations), 
-                                rndm_sd = rndm_sd)
+experiment_df <- tibble::tibble(ampl_mn = rep(x = amplitude_levels, each = iterations * 3), 
+                                rndm_sd = rndm_sd, 
+                                stochastic = rep(x = rep(x = c("amplitude", "phase", "both"), 
+                                                         each = iterations), times = 3))
 
-foo_hpc <- function(ampl_mn, rndm_sd) {
+# setup HPC function
+foo_hpc <- function(ampl_mn, rndm_sd, stochastic) {
+  
+  # get sd values depending on what to vary
+  amplitude_sd <- ifelse(test = stochastic == "phase", yes = 0, no = rndm_sd)
+  
+  phase_sd <- ifelse(test = stochastic == "amplitude", yes = 0, no = rndm_sd)
   
   # update biotic variability
   parameters_list$move_residence_sd <- parameters_list$move_residence_mean * rndm_sd
@@ -47,7 +55,9 @@ foo_hpc <- function(ampl_mn, rndm_sd) {
   # simulate nutrient input
   input_temp <-  meta.arrR::simulate_nutr_input(n = n, max_i = max_i, frequency = freq_mn, 
                                                 input_mn = nutrient_input, 
-                                                amplitude_mn = ampl_mn, verbose = FALSE)
+                                                amplitude_mn = ampl_mn, amplitude_sd = amplitude_sd, 
+                                                phase_mn = 0.0, phase_sd = phase_sd, 
+                                                verbose = FALSE)
   
   # run model
   result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = parameters_list,
@@ -60,7 +70,7 @@ foo_hpc <- function(ampl_mn, rndm_sd) {
   cv <- meta.arrR::calc_variability(x = result_temp, lag = c(FALSE, TRUE))
   
   # combine to result data.frame
-  dplyr::mutate(dplyr::bind_rows(cv), ampl_mn = ampl_mn, rndm_sd = rndm_sd)
+  dplyr::mutate(dplyr::bind_rows(cv), ampl_mn = ampl_mn, rndm_sd = rndm_sd, stochastic = stochastic)
   
 }
 
@@ -71,7 +81,7 @@ globals <- c("n", "max_i", "reef_matrix", "starting_list", "parameters_list", "d
              "save_each") 
 
 sbatch_cv <- rslurm::slurm_apply(f = foo_hpc, params = experiment_df, 
-                                 global_objects = globals, jobname = "pp_abiotic_cv",
+                                 global_objects = globals, jobname = "pp_both_cv",
                                  nodes = nrow(experiment_df), cpus_per_node = 1, 
                                  slurm_options = list("account" = account, 
                                                       "partition" = "standard",
@@ -87,19 +97,19 @@ suppoRt::rslurm_missing(x = sbatch_cv)
 
 cv_result <- rslurm::get_slurm_out(sbatch_cv, outtype = "table")
 
-suppoRt::save_rds(object = cv_result, filename = "01-biotic-variability.rds",
+suppoRt::save_rds(object = cv_result, filename = "01-both-variability.rds",
                   path = "02_Data/", overwrite = overwrite)
 
 rslurm::cleanup_files(sbatch_cv)
 
 #### Load results ####
 
-cv_result <- readr::read_rds("02_Data/01-biotic-variability.rds") %>% 
+cv_result <- readr::read_rds("02_Data/01-both-variability.rds") %>% 
   dplyr::mutate(part = factor(part, levels = c("ag_biomass", "bg_biomass", "ttl_biomass", 
                                                "ag_production", "bg_production", "ttl_production")), 
                 measure = factor(measure, levels = c("alpha", "gamma", "beta", "synchrony")), 
                 ampl_mn = factor(ampl_mn, labels = c("Low mean", "Medium mean", "High mean"), ordered = TRUE),
-                stochastic = "residence") %>% 
+                stochastic = factor(stochastic, levels = c("amplitude", "phase", "both"))) %>% 
   tibble::tibble()
 
 #### Create ggplots ####
@@ -108,11 +118,12 @@ cv_result <- readr::read_rds("02_Data/01-biotic-variability.rds") %>%
 label_part <- c(ag_production = "ag production", bg_production = "bg production",
                 ttl_production = "ttl production")
 
-label_stochastic <- c(residence = "Residence time variability")
+label_stochastic <- c(amplitude = "Amplitude variability", phase = "Phase variability", 
+                      both = "Simultaneously variability")
 
 # create ggplot variability vs cv
-gg_cv_biotic <- dplyr::filter(cv_result, measure %in% c("alpha", "gamma"), 
-                              part %in% c("ag_production", "bg_production", "ttl_production")) %>% 
+gg_cv_both <- dplyr::filter(cv_result, measure %in% c("alpha", "gamma"), 
+                            part %in% c("ag_production", "bg_production", "ttl_production")) %>% 
   ggplot(aes(x = rndm_sd, y = value, linetype = measure, color = ampl_mn)) + 
   geom_hline(yintercept = 0.0, linetype = 2, color = "grey") +
   geom_point(alpha = 0.15, shape = 19, size = 1.5) + 
@@ -124,7 +135,7 @@ gg_cv_biotic <- dplyr::filter(cv_result, measure %in% c("alpha", "gamma"),
   scale_color_manual(name = "Amplitude base level", values = c("#007c2aff", "#ffcc00ff", "#2f62a7ff")) +
   scale_linetype_manual(name = "Scale", values = c(1, 2), labels = c(expression(paste(alpha, " scale")), 
                                                                      expression(paste(gamma, " scale")))) +
-  labs(x = "Biotic variability", y = expression("CV"["primary production"])) + 
+  labs(x = "Abiotic & biotic variability", y = expression("CV"["primary production"])) + 
   guides(linetype = guide_legend(order = 1, nrow = 2, keywidth = unit(10, "mm"), 
                                  override.aes = list(color = "black"), title.position = "top"), 
          color = guide_legend(order = 2, nrow = 3, title.position = "top")) +
@@ -132,8 +143,8 @@ gg_cv_biotic <- dplyr::filter(cv_result, measure %in% c("alpha", "gamma"),
                      panel.grid = element_blank())
 
 # create ggplot alpha vs gamma
-gg_pe_biotic <- dplyr::filter(cv_result, measure %in% c("alpha", "gamma"), 
-                              part %in% c("ag_production", "bg_production", "ttl_production")) %>% 
+gg_pe_both <- dplyr::filter(cv_result, measure %in% c("alpha", "gamma"), 
+                            part %in% c("ag_production", "bg_production", "ttl_production")) %>% 
   tidyr::pivot_wider(names_from = measure, values_from = value) %>% 
   ggplot(aes(x = alpha, y = gamma, color = ampl_mn)) + 
   geom_abline(slope = 1, linetype = 2, color = "grey") +
