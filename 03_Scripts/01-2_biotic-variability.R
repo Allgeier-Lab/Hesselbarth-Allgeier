@@ -27,16 +27,16 @@ starting_list$detritus_pool <- stable_values$detritus_pool
 #### Setup experiment ####
 
 # create random sd for each iteration of amplitude levels and stochastic treatments
-rndm_sd <- runif(n = iterations * length(amplitude_levels), min = 0.0, max = 1.0)
+residence_sd <- runif(n = iterations * length(amplitude_levels), min = 0.0, max = 1.0)
 
 # create data.frame with all combinations
-experiment_df <- tibble::tibble(ampl_mn = rep(x = amplitude_levels, each = iterations), 
-                                rndm_sd = rndm_sd)
+experiment_df <- tibble::tibble(amplitude_mean = rep(x = amplitude_levels, each = iterations), 
+                                residence_sd = residence_sd)
 
-foo_hpc <- function(ampl_mn, rndm_sd) {
+foo_hpc <- function(amplitude_mean, residence_sd) {
   
   # update biotic variability
-  parameters_list$move_residence_sd <- parameters_list$move_residence_mean * rndm_sd
+  parameters_list$move_residence_sd <- parameters_list$move_residence_mean * residence_sd
   
   # setup metaecosystems
   metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = reef_matrix,
@@ -46,8 +46,8 @@ foo_hpc <- function(ampl_mn, rndm_sd) {
   
   # simulate nutrient input
   input_temp <-  meta.arrR::simulate_nutr_input(n = n, max_i = max_i, frequency = freq_mn, 
-                                                input_mn = nutrient_input, 
-                                                amplitude_mn = ampl_mn, verbose = FALSE)
+                                                input_mn = nutrient_input, amplitude_mn = amplitude_mean, 
+                                                verbose = FALSE)
   
   # run model
   result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = parameters_list,
@@ -60,7 +60,8 @@ foo_hpc <- function(ampl_mn, rndm_sd) {
   cv <- meta.arrR::calc_variability(x = result_temp, lag = c(FALSE, TRUE))
   
   # combine to result data.frame
-  dplyr::mutate(dplyr::bind_rows(cv), ampl_mn = ampl_mn, rndm_sd = rndm_sd)
+  dplyr::mutate(dplyr::bind_rows(cv), amplitude_mean = amplitude_mean, amplitude_sd = 0.0, 
+                phase_sd = 0.0, residence_sd = residence_sd, stochastic = "residence")
   
 }
 
@@ -71,7 +72,7 @@ globals <- c("n", "max_i", "reef_matrix", "starting_list", "parameters_list", "d
              "save_each") 
 
 sbatch_cv <- rslurm::slurm_apply(f = foo_hpc, params = experiment_df, 
-                                 global_objects = globals, jobname = "pp_abiotic_cv",
+                                 global_objects = globals, jobname = "pp_biotic_cv",
                                  nodes = nrow(experiment_df), cpus_per_node = 1, 
                                  slurm_options = list("account" = account, 
                                                       "partition" = "standard",
@@ -98,8 +99,9 @@ cv_result <- readr::read_rds("02_Data/01-biotic-variability.rds") %>%
   dplyr::mutate(part = factor(part, levels = c("ag_biomass", "bg_biomass", "ttl_biomass", 
                                                "ag_production", "bg_production", "ttl_production")), 
                 measure = factor(measure, levels = c("alpha", "gamma", "beta", "synchrony")), 
-                ampl_mn = factor(ampl_mn, labels = c("Low mean", "Medium mean", "High mean"), ordered = TRUE),
-                stochastic = "residence") %>% 
+                amplitude_mean = factor(amplitude_mean, labels = c("Low mean", "Medium mean", "High mean"), 
+                                        ordered = TRUE),
+                stochastic = factor(stochastic, levels = c("amplitude", "phase", "both", "residence"))) %>% 
   tibble::tibble()
 
 #### Create ggplots ####
@@ -113,20 +115,20 @@ label_stochastic <- c(residence = "Residence time variability")
 # create ggplot variability vs cv
 gg_cv_biotic <- dplyr::filter(cv_result, measure %in% c("alpha", "gamma"), 
                               part %in% c("ag_production", "bg_production", "ttl_production")) %>% 
-  ggplot(aes(x = rndm_sd, y = value, linetype = measure, color = ampl_mn)) + 
+  ggplot(aes(x = residence_sd, y = value, linetype = measure, color = amplitude_mean)) + 
   geom_hline(yintercept = 0.0, linetype = 2, color = "grey") +
-  geom_point(alpha = 0.15, shape = 19, size = 1.5) + 
+  geom_point(alpha = 0.25, shape = 19, size = 1.5) +
   geom_smooth(method = "loess", se = FALSE, size = 0.5, formula = 'y ~ x') +
-  facet_grid(rows = vars(part), cols = vars(stochastic), scales = "free_y", 
+  facet_grid(rows = vars(part), cols = vars(stochastic), scales = "free", 
              labeller = labeller(part = label_part, stochastic = label_stochastic)) + 
   scale_x_continuous(breaks = seq(from = 0, to = 1.0, length.out = 5), limits = c(0, 1)) +
-  # scale_y_continuous(breaks = seq(from = 0, to = 0.5, by = 0.1), limits = c(0, 0.5)) +
+  scale_y_continuous(breaks = seq(from = 0, to = 0.5, by = 0.1), limits = c(0, 0.5)) +
   scale_color_manual(name = "Amplitude base level", values = c("#007c2aff", "#ffcc00ff", "#2f62a7ff")) +
-  scale_linetype_manual(name = "Scale", values = c(1, 2), labels = c(expression(paste(alpha, " scale")), 
+  scale_linetype_manual(name = "Scale", values = c(1, 2), labels = c(expression(paste(alpha, " scale")),
                                                                      expression(paste(gamma, " scale")))) +
-  labs(x = "Biotic variability", y = expression("CV"["primary production"])) + 
-  guides(linetype = guide_legend(order = 1, nrow = 2, keywidth = unit(10, "mm"), 
-                                 override.aes = list(color = "black"), title.position = "top"), 
+  labs(x = "Biotic variability", y = expression("CV"["primary production"])) +
+  guides(linetype = guide_legend(order = 1, nrow = 2, keywidth = unit(10, "mm"),
+                                 override.aes = list(color = "black"), title.position = "top"),
          color = guide_legend(order = 2, nrow = 3, title.position = "top")) +
   theme_bw() + theme(legend.position = "bottom", text = element_text(family = "Georgia"), 
                      panel.grid = element_blank())
@@ -135,12 +137,12 @@ gg_cv_biotic <- dplyr::filter(cv_result, measure %in% c("alpha", "gamma"),
 gg_pe_biotic <- dplyr::filter(cv_result, measure %in% c("alpha", "gamma"), 
                               part %in% c("ag_production", "bg_production", "ttl_production")) %>% 
   tidyr::pivot_wider(names_from = measure, values_from = value) %>% 
-  ggplot(aes(x = alpha, y = gamma, color = ampl_mn)) + 
+  ggplot(aes(x = alpha, y = gamma, color = amplitude_mean, alpha = residence_sd)) + 
   geom_abline(slope = 1, linetype = 2, color = "grey") +
   geom_hline(yintercept = 0.0, linetype = 2, color = "grey") +
-  annotate(geom = "text", x = 0.25, y = 0.3, angle = 25, 
+  annotate(geom = "text", x = 0.25, y = 0.3, angle = 10, 
            color = "darkgrey", label = "paste(beta, '=1')", parse = TRUE) +
-  geom_point(shape = 19, alpha = 0.5) +
+  geom_point(shape = 19) +
   facet_grid(rows = vars(part), cols = vars(stochastic), scales = "free",
              labeller = labeller(part = label_part, stochastic = label_stochastic)) + 
   scale_x_continuous(breaks = seq(from = 0, to = 0.5, by = 0.1), limits = c(0, 0.5)) +
@@ -148,7 +150,7 @@ gg_pe_biotic <- dplyr::filter(cv_result, measure %in% c("alpha", "gamma"),
   scale_color_manual(name = "Amplitude base level", values = c("#007c2a", "#ffcc00", "#2f62a7")) + 
   labs(x = expression(paste(alpha, " CV"["primary production"])),
        y = expression(paste(gamma, " CV"["primary production"]))) +
-  guides(size = "none", color = guide_legend(nrow = 1, title.position = "top")) +
+  guides(alpha = "none", color = guide_legend(nrow = 1, title.position = "top")) +
   # coord_equal() +
   theme_bw() + theme(legend.position = "bottom", text = element_text(family = "Georgia"), 
                      panel.grid = element_blank())

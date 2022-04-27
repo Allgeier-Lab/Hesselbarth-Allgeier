@@ -27,21 +27,22 @@ starting_list$detritus_pool <- stable_values$detritus_pool
 #### Setup experiment ####
 
 # create random sd for each iteration of amplitude levels and stochastic treatments
-rndm_sd <- runif(n = iterations * length(amplitude_levels) * 3, min = 0.0, max = 1.0)
+amplitude_sd <- runif(n = iterations * length(amplitude_levels), min = 0.0, max = 1.0)
+
+phase_sd <- runif(n = iterations * length(amplitude_levels), min = 0.0, max = 1.0)
+
+null_sd <- rep(x = 0, times = iterations * length(amplitude_levels))
 
 # create data.frame with all combinations
-experiment_df <- tibble::tibble(ampl_mn = rep(x = amplitude_levels, each = iterations * 3), 
-                                rndm_sd = rndm_sd, 
-                                stochastic = rep(x = rep(x = c("amplitude", "phase", "both"), 
-                                                         each = iterations), times = 3))
+experiment_df <- tibble::tibble(amplitude_mean = rep(x = rep(x = amplitude_levels, 
+                                                             each = iterations), times = 3), 
+                                amplitude_sd = c(amplitude_sd, null_sd, amplitude_sd), 
+                                phase_sd = c(null_sd, phase_sd, phase_sd), 
+                                stochastic = rep(x = c("amplitude", "phase", "both"), 
+                                                 each = iterations * 3))
 
 # setup HPC function
-foo_hpc <- function(ampl_mn, rndm_sd, stochastic) {
-  
-  # get sd values depending on what to vary
-  amplitude_sd <- ifelse(test = stochastic == "phase", yes = 0, no = rndm_sd)
-  
-  phase_sd <- ifelse(test = stochastic == "amplitude", yes = 0, no = rndm_sd)
+foo_hpc <- function(amplitude_mean, amplitude_sd, phase_sd, stochastic) {
   
   # setup metaecosystems
   metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = reef_matrix,
@@ -52,7 +53,7 @@ foo_hpc <- function(ampl_mn, rndm_sd, stochastic) {
   # simulate nutrient input
   input_temp <-  meta.arrR::simulate_nutr_input(n = n, max_i = max_i, frequency = freq_mn, 
                                                 input_mn = nutrient_input, 
-                                                amplitude_mn = ampl_mn, amplitude_sd = amplitude_sd, 
+                                                amplitude_mn = amplitude_mean, amplitude_sd = amplitude_sd, 
                                                 phase_mn = 0.0, phase_sd = phase_sd, 
                                                 verbose = FALSE)
 
@@ -67,7 +68,8 @@ foo_hpc <- function(ampl_mn, rndm_sd, stochastic) {
   cv <- meta.arrR::calc_variability(x = result_temp, lag = c(FALSE, TRUE))
   
   # combine to result data.frame
-  dplyr::mutate(dplyr::bind_rows(cv), ampl_mn = ampl_mn, rndm_sd = rndm_sd, stochastic = stochastic)
+  dplyr::mutate(dplyr::bind_rows(cv), amplitude_mean = amplitude_mean, amplitude_sd = amplitude_sd, 
+                phase_sd = phase_sd, residence_sd = 0.0, stochastic = stochastic)
                 
 }
 
@@ -105,8 +107,9 @@ cv_result <- readr::read_rds("02_Data/01-abiotic-variability.rds") %>%
   dplyr::mutate(part = factor(part, levels = c("ag_biomass", "bg_biomass", "ttl_biomass", 
                                                "ag_production", "bg_production", "ttl_production")), 
                 measure = factor(measure, levels = c("alpha", "gamma", "beta", "synchrony")), 
-                ampl_mn = factor(ampl_mn, labels = c("Low mean", "Medium mean", "High mean"), ordered = TRUE),
-                stochastic = factor(stochastic, levels = c("amplitude", "phase", "both"))) %>% 
+                amplitude_mean = factor(amplitude_mean, labels = c("Low mean", "Medium mean", "High mean"), 
+                                        ordered = TRUE),
+                stochastic = factor(stochastic, levels = c("amplitude", "phase", "both", "residence"))) %>% 
   tibble::tibble()
 
 #### Create ggplots ####
@@ -120,15 +123,18 @@ label_stochastic <- c(amplitude = "Amplitude variability", phase = "Phase variab
 
 # create ggplot variability vs cv
 gg_cv_abiotic <- dplyr::filter(cv_result, measure %in% c("alpha", "gamma"), 
-                               part %in% c("ag_production", "bg_production", "ttl_production")) %>% 
-  ggplot(aes(x = rndm_sd, y = value, linetype = measure, color = ampl_mn)) + 
+                               part %in% c("ag_production", "bg_production", "ttl_production"), 
+                               stochastic %in% c("amplitude", "phase")) %>%
+  dplyr::mutate(single_sd = dplyr::case_when(stochastic == "amplitude" ~ amplitude_sd, 
+                                             stochastic == "phase" ~ phase_sd)) %>% 
+  ggplot(aes(x = single_sd, y = value, linetype = measure, color = amplitude_mean)) + 
   geom_hline(yintercept = 0.0, linetype = 2, color = "grey") +
-  geom_point(alpha = 0.15, shape = 19, size = 1.5) +
+  geom_point(alpha = 0.25, shape = 19, size = 1.5) +
   geom_smooth(method = "loess", se = FALSE, size = 0.5, formula = 'y ~ x') +
-  facet_grid(rows = vars(part), cols = vars(stochastic), scales = "free_y", 
+  facet_grid(rows = vars(part), cols = vars(stochastic), scales = "free", 
              labeller = labeller(part = label_part, stochastic = label_stochastic)) + 
   scale_x_continuous(breaks = seq(from = 0, to = 1.0, length.out = 5), limits = c(0, 1)) +
-  # scale_y_continuous(breaks = seq(from = 0, to = 0.5, by = 0.1), limits = c(0, 0.5)) +
+  scale_y_continuous(breaks = seq(from = 0, to = 0.5, by = 0.1), limits = c(0, 0.5)) +
   scale_color_manual(name = "Amplitude base level", values = c("#007c2aff", "#ffcc00ff", "#2f62a7ff")) +
   scale_linetype_manual(name = "Scale", values = c(1, 2), labels = c(expression(paste(alpha, " scale")),
                                                                      expression(paste(gamma, " scale")))) +
@@ -141,14 +147,17 @@ gg_cv_abiotic <- dplyr::filter(cv_result, measure %in% c("alpha", "gamma"),
 
 # create ggplot alpha vs gamma
 gg_pe_abiotic <- dplyr::filter(cv_result, measure %in% c("alpha", "gamma"), 
-                               part %in% c("ag_production", "bg_production", "ttl_production")) %>% 
+                               part %in% c("ag_production", "bg_production", "ttl_production"), 
+                               stochastic %in% c("amplitude", "phase")) %>% 
+  dplyr::mutate(single_sd = dplyr::case_when(stochastic == "amplitude" ~ amplitude_sd, 
+                                             stochastic == "phase" ~ phase_sd)) %>% 
   tidyr::pivot_wider(names_from = measure, values_from = value) %>% 
-  ggplot(aes(x = alpha, y = gamma, color = ampl_mn)) + 
+  ggplot(aes(x = alpha, y = gamma, color = amplitude_mean, alpha = single_sd)) + 
   geom_abline(slope = 1, linetype = 2, color = "grey") +
   geom_hline(yintercept = 0.0, linetype = 2, color = "grey") +
   annotate(geom = "text", x = 0.25, y = 0.3, angle = 25, 
            color = "darkgrey", label = "paste(beta, '=1')", parse = TRUE) +
-  geom_point(shape = 19, alpha = 0.5) +
+  geom_point(shape = 19) +
   facet_grid(rows = vars(part), cols = vars(stochastic), scales = "free",
              labeller = labeller(part = label_part, stochastic = label_stochastic)) + 
   scale_x_continuous(breaks = seq(from = 0, to = 0.5, by = 0.1), limits = c(0, 0.5)) +
@@ -156,7 +165,6 @@ gg_pe_abiotic <- dplyr::filter(cv_result, measure %in% c("alpha", "gamma"),
   scale_color_manual(name = "Amplitude base level", values = c("#007c2a", "#ffcc00", "#2f62a7")) + 
   labs(x = expression(paste(alpha, " CV"["primary production"])),
        y = expression(paste(gamma, " CV"["primary production"]))) +
-  guides(size = "none", color = guide_legend(nrow = 1, title.position = "top")) +
-  # coord_equal() +
+  guides(alpha = "none", color = guide_legend(nrow = 1, title.position = "top")) +
   theme_bw() + theme(legend.position = "bottom", text = element_text(family = "Georgia"), 
                      panel.grid = element_blank())
