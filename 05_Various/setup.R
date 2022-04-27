@@ -11,13 +11,14 @@ library(meta.arrR) # remotes::install_github("Allgeier-Lab/meta.arrR", ref = "de
 library(arrR)
 
 library(cowplot)
-library(ggpubr)
+library(ggforce)
 library(magrittr)
 library(Rcpp)
 library(rslurm)
 library(suppoRt) # remotes::install_github("mhesselbarth/suppoRt")
 library(terra)
 library(tidyverse)
+library(vegan)
 
 #### Load data ####
 
