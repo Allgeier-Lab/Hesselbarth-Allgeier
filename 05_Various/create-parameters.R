@@ -45,8 +45,8 @@ parameters_list <- list(
   move_border = 2.0,
   move_reef = 1.0,
   move_return = 15.0,
-  move_residence_mean = 8.0,
-  move_residence_sd = 0.0,
+  move_meta_mean = 0.0,
+  move_meta_sd = 0.0,
   move_lambda = 0.0,
   
   # fishpop dimensions
