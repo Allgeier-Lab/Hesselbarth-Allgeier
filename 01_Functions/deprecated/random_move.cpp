@@ -17,6 +17,12 @@ NumericVector random_move(int n, int move_residence) {
   // init vector for results
   Rcpp::NumericVector result (n, 0.0);
   
+  // get random time-based seed 
+  unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+  
+  // set up random number generator
+  std::mt19937 generator(seed);
+  
   // loop through all repetitions
   for (int i = 0; i < n; i++) {
     
@@ -26,12 +32,6 @@ NumericVector random_move(int n, int move_residence) {
     // loop through all time steps from 0 to maximum time
     for (int j = 0; j <= move_residence; j++) {
     
-      // get random time-based seed 
-      unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-      
-      // set up random number generator
-      std::mt19937 generator(seed);
-      
       // random number between 0.0 and 1.0
       std::uniform_real_distribution<double> distribution(0.0, 1.0);
       

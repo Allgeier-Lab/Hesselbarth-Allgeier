@@ -20,9 +20,9 @@ stable_values <- arrR::get_req_nutrients(bg_biomass = starting_list$bg_biomass,
                                          ag_biomass = starting_list$ag_biomass,
                                          parameters = parameters_list)
 
-starting_list$nutrients_pool <- stable_values$nutrients_pool
+starting_list$nutrients_pool <- stable_values$nutrients_pool / 2
 
-starting_list$detritus_pool <- stable_values$detritus_pool
+starting_list$detritus_pool <- stable_values$detritus_pool / 2
 
 #### Setup experiment ####
 
@@ -33,28 +33,37 @@ phase_sd <- runif(n = iterations * length(amplitude_levels), min = 0.0, max = 1.
 
 null_sd <- rep(x = 0, times = iterations * length(amplitude_levels))
 
-residence_sd <- runif(n = iterations * length(amplitude_levels) * 3, min = 0.0, max = 1.0)
+move_meta_sd <- runif(n = iterations * length(amplitude_levels) * 3, min = 0.0, max = 1.0)
 
 # create data.frame with all combinations
 experiment_df <- tibble::tibble(amplitude_mean = rep(x = rep(x = amplitude_levels, 
                                                              each = iterations), times = 3), 
                                 amplitude_sd = c(amplitude_sd, null_sd, amplitude_sd), 
                                 phase_sd = c(null_sd, phase_sd, phase_sd), 
-                                residence_sd = residence_sd,
-                                stochastic = rep(x = c("amplitude", "phase", "both"), 
+                                move_meta_sd = move_meta_sd,
+                                stochastic = rep(x = c("amplitude_move", "phase_move", "all"), 
                                                  each = iterations * 3))
 
+# setup metaecosystems
+metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = reef_matrix,
+                                       starting_values = starting_list, parameters = parameters_list,
+                                       dimensions = dimensions, grain = grain, use_log = use_log, 
+                                       verbose = FALSE)
+
 # setup HPC function
-foo_hpc <- function(amplitude_mean, amplitude_sd, phase_sd, residence_sd, stochastic) {
+foo_hpc <- function(amplitude_mean, amplitude_sd, phase_sd, move_meta_sd, stochastic) {
   
-  # update biotic variability
-  parameters_list$move_residence_sd <- parameters_list$move_residence_mean * residence_sd
+  library(dplyr)
   
-  # setup metaecosystems
-  metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = reef_matrix,
-                                         starting_values = starting_list, parameters = parameters_list,
-                                         dimensions = dimensions, grain = grain, use_log = use_log, 
-                                         verbose = FALSE)
+  # update move meta sd
+  parameters_list$move_meta_sd <- move_meta_sd
+  
+  # create new attributed matrix
+  attr_replace <- meta.arrR:::setup_attributes(fishpop = metasyst_temp$fishpop, parameters = parameters_list, 
+                                               max_i = max_i)
+  
+  # replace matrix
+  metasyst_temp$fishpop_attr[, 3] <- attr_replace[, 3]
   
   # simulate nutrient input
   input_temp <-  meta.arrR::simulate_nutr_input(n = n, max_i = max_i, frequency = freq_mn, 
@@ -70,28 +79,50 @@ foo_hpc <- function(amplitude_mean, amplitude_sd, phase_sd, residence_sd, stocha
                                                 seagrass_each = seagrass_each,
                                                 save_each = save_each, verbose = FALSE)
   
+  # filter model run
+  result_temp <- meta.arrR::filter_meta(x = result_temp, filter = c((max_i / years) * years_filter, max_i), 
+                                        reset = TRUE, verbose = FALSE)
+  
   # calc cv
   cv <- meta.arrR::calc_variability(x = result_temp, lag = c(FALSE, TRUE))
   
-  # combine to result data.frame
-  dplyr::mutate(dplyr::bind_rows(cv), amplitude_mean = amplitude_mean, amplitude_sd = amplitude_sd, 
-                phase_sd = phase_sd, residence_sd = residence_sd, stochastic = stochastic)
+  # calculate biomass/production
+  production <- meta.arrR::summarize_meta(result = result_temp, biomass = TRUE, production = TRUE,
+                                          lag = c(FALSE, FALSE)) %>% 
+    purrr::map(tidyr::pivot_longer, cols = -c(meta, timestep), names_to = "part") %>% 
+    dplyr::bind_rows() %>% 
+    dplyr::filter(timestep == max_i) %>%
+    dplyr::group_by(part) %>% 
+    dplyr::summarise(alpha = mean(value), gamma = sum(value)) %>% 
+    tidyr::pivot_longer(-part, names_to = "measure")
+  
+  # combine to result data.frame and list
+  list(cv = dplyr::mutate(dplyr::bind_rows(cv), 
+                          amplitude_mean = amplitude_mean, amplitude_sd = amplitude_sd, 
+                          phase_mean = 0.0, phase_sd = phase_sd, 
+                          move_meta_sd = move_meta_sd, 
+                          stochastic = stochastic), 
+       production = dplyr::mutate(production,
+                                  amplitude_mean = amplitude_mean, amplitude_sd = amplitude_sd, 
+                                  phase_mean = 0.0, phase_sd = phase_sd, 
+                                  move_meta_sd = move_meta_sd, 
+                                  stochastic = stochastic))
   
 }
 
 #### Submit HPC
 
-globals <- c("n", "max_i", "reef_matrix", "starting_list", "parameters_list", "dimensions", 
-             "grain", "use_log", "freq_mn", "nutrient_input", "min_per_i", "seagrass_each", 
-             "save_each") 
+globals <- c("parameters_list", "metasyst_temp", "max_i", "n", "freq_mn", "nutrient_input", 
+             "min_per_i", "seagrass_each", "save_each", "years", "years_filter") 
 
 sbatch_cv <- rslurm::slurm_apply(f = foo_hpc, params = experiment_df, 
-                                 global_objects = globals, jobname = "pp_both_cv",
+                                 global_objects = globals, jobname = "pp_all_cv",
                                  nodes = nrow(experiment_df), cpus_per_node = 1, 
                                  slurm_options = list("account" = account, 
                                                       "partition" = "standard",
                                                       "time" = "01:00:00", ## hh:mm::ss
-                                                      "mem-per-cpu" = "7G"),
+                                                      "mem-per-cpu" = "7G", 
+                                                      "exclude" = exclude_nodes),
                                  pkgs = c("dplyr", "meta.arrR"),
                                  rscript_path = rscript_path, sh_template = sh_template, 
                                  submit = FALSE)
@@ -100,22 +131,23 @@ sbatch_cv <- rslurm::slurm_apply(f = foo_hpc, params = experiment_df,
 
 suppoRt::rslurm_missing(x = sbatch_cv)
 
-cv_result <- rslurm::get_slurm_out(sbatch_cv, outtype = "table")
+cv_result <- rslurm::get_slurm_out(sbatch_cv, outtype = "raw")
 
-suppoRt::save_rds(object = cv_result, filename = "01-both-variability.rds",
+suppoRt::save_rds(object = cv_result, filename = "01-all-variability.rds",
                   path = "02_Data/", overwrite = overwrite)
 
 rslurm::cleanup_files(sbatch_cv)
 
 #### Load results ####
 
-cv_result <- readr::read_rds("02_Data/01-both-variability.rds") %>% 
+cv_result <- readr::read_rds("02_Data/01-all-variability.rds") %>% 
+  purrr::map_dfr(function(i) i$cv) %>% 
   dplyr::mutate(part = factor(part, levels = c("ag_biomass", "bg_biomass", "ttl_biomass", 
                                                "ag_production", "bg_production", "ttl_production")), 
                 measure = factor(measure, levels = c("alpha", "gamma", "beta", "synchrony")), 
                 amplitude_mean = factor(amplitude_mean, labels = c("Low mean", "Medium mean", "High mean"), 
                                         ordered = TRUE),
-                stochastic = factor(stochastic, levels = c("amplitude", "phase", "both", "residence"))) %>% 
+                stochastic = factor(stochastic, levels = c("amplitude_move", "phase_move", "all"))) %>% 
   tibble::tibble()
 
 #### Create ggplots ####
@@ -124,15 +156,15 @@ cv_result <- readr::read_rds("02_Data/01-both-variability.rds") %>%
 label_part <- c(ag_production = "ag production", bg_production = "bg production",
                 ttl_production = "ttl production")
 
-label_stochastic <- c(amplitude = "Amplitude variability", phase = "Phase variability", 
-                      both = "Simultaneously variability")
+label_stochastic <- c(amplitude_move = "Amplitud-Move variability", phase_move = "Phase-Move variability", 
+                      all = "Simultaneously variability")
 
 # create ggplot variability vs cv
 gg_cv_both <- dplyr::filter(cv_result, measure %in% c("alpha", "gamma"), 
                             part %in% c("ag_production", "bg_production", "ttl_production"), 
-                            stochastic %in% c("amplitude", "phase")) %>%
-  dplyr::mutate(single_sd = dplyr::case_when(stochastic == "amplitude" ~ amplitude_sd, 
-                                             stochastic == "phase" ~ phase_sd)) %>%
+                            stochastic %in% c("amplitude_move", "phase_move")) %>%
+  dplyr::mutate(single_sd = dplyr::case_when(stochastic == "amplitude_move" ~ amplitude_sd, 
+                                             stochastic == "phase_move" ~ phase_sd)) %>%
   ggplot(aes(x = single_sd, y = value, linetype = measure, color = amplitude_mean)) + 
   geom_hline(yintercept = 0.0, linetype = 2, color = "grey") +
   geom_point(alpha = 0.25, shape = 19, size = 1.5) +
@@ -140,7 +172,7 @@ gg_cv_both <- dplyr::filter(cv_result, measure %in% c("alpha", "gamma"),
   facet_grid(rows = vars(part), cols = vars(stochastic), scales = "free", 
              labeller = labeller(part = label_part, stochastic = label_stochastic)) + 
   scale_x_continuous(breaks = seq(from = 0, to = 1.0, length.out = 5), limits = c(0, 1)) +
-  scale_y_continuous(breaks = seq(from = 0, to = 0.5, by = 0.1), limits = c(0, 0.5)) +
+  # scale_y_continuous(breaks = seq(from = 0, to = 0.5, by = 0.1), limits = c(0, 0.5)) +
   scale_color_manual(name = "Amplitude base level", values = c("#007c2aff", "#ffcc00ff", "#2f62a7ff")) +
   scale_linetype_manual(name = "Scale", values = c(1, 2), labels = c(expression(paste(alpha, " scale")), 
                                                                      expression(paste(gamma, " scale")))) +
@@ -154,9 +186,9 @@ gg_cv_both <- dplyr::filter(cv_result, measure %in% c("alpha", "gamma"),
 # create ggplot alpha vs gamma
 gg_pe_both <- dplyr::filter(cv_result, measure %in% c("alpha", "gamma"), 
                             part %in% c("ag_production", "bg_production", "ttl_production"), 
-                            stochastic %in% c("amplitude", "phase")) %>% 
-  dplyr::mutate(single_sd = dplyr::case_when(stochastic == "amplitude" ~ amplitude_sd, 
-                                             stochastic == "phase" ~ phase_sd)) %>% 
+                            stochastic %in% c("amplitude_move", "phase_move")) %>% 
+  dplyr::mutate(single_sd = dplyr::case_when(stochastic == "amplitude_move" ~ amplitude_sd, 
+                                             stochastic == "phase_move" ~ phase_sd)) %>% 
   tidyr::pivot_wider(names_from = measure, values_from = value) %>% 
   ggplot(aes(x = alpha, y = gamma, color = amplitude_mean, alpha = single_sd)) + 
   geom_abline(slope = 1, linetype = 2, color = "grey") +
@@ -167,10 +199,39 @@ gg_pe_both <- dplyr::filter(cv_result, measure %in% c("alpha", "gamma"),
   facet_grid(rows = vars(part), cols = vars(stochastic), scales = "free",
              labeller = labeller(part = label_part, stochastic = label_stochastic)) + 
   scale_x_continuous(breaks = seq(from = 0, to = 0.5, by = 0.1), limits = c(0, 0.5)) +
-  scale_y_continuous(breaks = seq(from = 0, to = 0.5, by = 0.1), limits = c(0, 0.5)) +
+  # scale_y_continuous(breaks = seq(from = 0, to = 0.5, by = 0.1), limits = c(0, 0.5)) +
   scale_color_manual(name = "Amplitude base level", values = c("#007c2a", "#ffcc00", "#2f62a7")) + 
   labs(x = expression(paste(alpha, " CV"["primary production"])),
        y = expression(paste(gamma, " CV"["primary production"]))) +
+  guides(alpha = "none", color = guide_legend(nrow = 1, title.position = "top")) +
+  theme_bw() + theme(legend.position = "bottom", text = element_text(family = "Georgia"), 
+                     panel.grid = element_blank())
+
+#### Load results prod ####
+
+prod_result <- readr::read_rds("02_Data/01-all-variability.rds") %>% 
+  purrr::map_dfr(function(i) i$production) %>% 
+  dplyr::mutate(part = factor(part, levels = c("ag_biomass", "bg_biomass", "ttl_biomass", 
+                                               "ag_production", "bg_production", "ttl_production")), 
+                measure = factor(measure, levels = c("alpha", "gamma", "beta", "synchrony")), 
+                amplitude_mean = factor(amplitude_mean, labels = c("Low mean", "Medium mean", "High mean"), 
+                                        ordered = TRUE),
+                stochastic = factor(stochastic, levels = c("amplitude_move", "phase_move", "all"))) %>% 
+  tibble::tibble()
+
+#### Create ggplots prod ####
+
+gg_prod_both <- dplyr::filter(prod_result, measure == "gamma", 
+                                 stochastic %in% c("amplitude_move", "phase_move")) %>% 
+  dplyr::mutate(single_sd = dplyr::case_when(stochastic == "amplitude_move" ~ amplitude_sd, 
+                                             stochastic == "phase_move" ~ phase_sd)) %>% 
+  ggplot(aes(x = single_sd, y = value, color = amplitude_mean)) + 
+  geom_point(shape = 19) +
+  geom_smooth(method = "loess", se = FALSE, size = 0.5, formula = 'y ~ x') +
+  facet_grid(rows = vars(part), cols = vars(stochastic), scales = "free",
+             labeller = labeller(part = label_part, stochastic = label_stochastic)) + 
+  scale_color_manual(name = "Amplitude base level", values = c("#007c2a", "#ffcc00", "#2f62a7")) + 
+  labs(x = "Abiotic/biotic variability", y = expression(paste(gamma, " primary production"))) +
   guides(alpha = "none", color = guide_legend(nrow = 1, title.position = "top")) +
   theme_bw() + theme(legend.position = "bottom", text = element_text(family = "Georgia"), 
                      panel.grid = element_blank())
