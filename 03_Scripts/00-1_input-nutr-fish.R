@@ -96,7 +96,7 @@ rslurm::cleanup_files(sbatch_fish)
 
 #### Results of simulations runs ####
 
-result <- readr::read_rds("02_Data/00_nutr_input_fish.rds")
+result <- readr::read_rds("02_Data/00-nutr-input-fish.rds")
 
 # calculate mean total input of fish population each timestep
 total_excretion <- mean(result$excretion_mn) * starting_list$pop_n
@@ -120,8 +120,8 @@ input_fishpop <- arrR::setup_fishpop(seafloor = input_seafloor, starting_values 
 
 result <- purrr::map2(c(0.0, nutrient_input_cell), c(0.0, nutrients_loss), function(i, j) {
 
-  input_nutrients <- meta.arrR::sim_nutr_input(n = 1, max_i = max_i, input_mn = i, 
-                                               freq_mn = freq_mn, amplitude_mod = 0.05)
+  input_nutrients <- meta.arrR::simulate_nutr_input(n = 1, max_i = max_i, input_mn = i, 
+                                                    frequency = years, amplitude_mod = 0.05)
   
   parameters_list$nutrients_loss <- j
   
