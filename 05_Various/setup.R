@@ -52,7 +52,6 @@ save_each <- (24 / (min_per_i / 60)) * days_save
 years_filter <- 40
 
 # set frequency of input peaks
-freq_mn <- years * 1/4
 
 # number of local metaecosystems
 n <- 5
