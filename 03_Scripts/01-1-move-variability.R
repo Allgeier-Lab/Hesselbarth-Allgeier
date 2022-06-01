@@ -12,7 +12,7 @@ source("05_Various/setup.R")
 
 #### Adapt parameters ####
 
-starting_list$pop_n <- 8
+starting_list$pop_n <- 128
 
 #### Stable values #### 
 
@@ -26,8 +26,8 @@ starting_list$detritus_pool <- stable_values$detritus_pool
 
 #### Setup experiment ####
 
-experiment_df <- expand.grid(move_meta_mean = seq(from = 0, to = 1, by = 0.1),
-                             move_meta_sd = seq(from = 0, to = 1, by = 0.1), 
+experiment_df <- expand.grid(move_meta_mean = seq(from = 0.1, to = 1, by = 0.1),
+                             move_meta_sd = seq(from = 0.1, to = 1, by = 0.1), 
                              amplitude_mn = amplitude_levels) %>% 
   dplyr::slice(rep(x = 1:dplyr::n(), each = 5)) %>% 
   tibble::tibble()
@@ -108,7 +108,8 @@ foo_hpc <- function(move_meta_mean, move_meta_sd, amplitude_mn) {
       dplyr::group_by(dist_class) %>% 
       dplyr::summarise(ag_production = mean(ag_production), bg_production = mean(bg_production), 
                        ttl_production = mean(ttl_production), nutrients_pool = mean(nutrients_pool), 
-                       .groups = "drop")}, .id = "meta") %>% 
+                       .groups = "drop")
+  }, .id = "meta") %>% 
     tidyr::pivot_longer(-c(meta, dist_class), names_to = "part") %>% 
     dplyr::group_by(dist_class, part) %>%
     dplyr::summarise(value = sum(value), .groups = "drop")
@@ -137,8 +138,7 @@ sbatch_cv <- rslurm::slurm_apply(f = foo_hpc, params = experiment_df,
                                                       "partition" = "standard",
                                                       "time" = "02:00:00", ## hh:mm::ss
                                                       "mem-per-cpu" = "7G"),
-                                 pkgs = c("arrR", "dplyr", "meta.arrR", "purrr", 
-                                          "stringr", "tidyr"),
+                                 pkgs = c("arrR", "dplyr", "meta.arrR", "purrr", "tidyr"),
                                  rscript_path = rscript_path, sh_template = sh_template, 
                                  submit = FALSE)
 
