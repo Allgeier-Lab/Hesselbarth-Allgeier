@@ -12,8 +12,6 @@ source("05_Various/setup.R")
 
 #### Adapt parameters ####
 
-starting_list$pop_n <- 128
-
 #### Stable values #### 
 
 stable_values <- arrR::get_req_nutrients(bg_biomass = starting_list$bg_biomass,
@@ -26,47 +24,42 @@ starting_list$detritus_pool <- stable_values$detritus_pool
 
 #### Setup experiment ####
 
-experiment_df <- expand.grid(move_meta_mean = seq(from = 0.1, to = 1, by = 0.1),
-                             move_meta_sd = seq(from = 0.1, to = 1, by = 0.1), 
-                             amplitude_mn = amplitude_levels) %>% 
-  dplyr::slice(rep(x = 1:dplyr::n(), each = 5)) %>% 
+experiment_df <- expand.grid(pop_n = c(8, 16, 32, 64), 
+                             move_meta_mean = seq(from = 0.1, to = 1, by = 0.1),
+                             move_meta_sd = seq(from = 0.1, to = 1, by = 0.1)) %>% 
+  dplyr::slice(rep(x = 1:dplyr::n(), each = 10)) %>% 
   tibble::tibble()
 
 # table(experiment_df$move_meta_mean, experiment_df$move_meta_sd)
 
-# setup metaecosystems
-metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = reef_matrix,
-                                       starting_values = starting_list, parameters = parameters_list,
-                                       dimensions = dimensions, grain = grain, use_log = use_log, 
-                                       verbose = FALSE)
-
-foo_hpc <- function(move_meta_mean, move_meta_sd, amplitude_mn) {
+foo_hpc <- function(pop_n, move_meta_mean, move_meta_sd) {
   
   library(dplyr)
+  
+  starting_list$pop_n <- pop_n
   
   # update move meta sd
   parameters_list$move_meta_mean <- move_meta_mean
   
   parameters_list$move_meta_sd <- move_meta_sd
+  
+  # setup metaecosystems
+  metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = reef_matrix,
+                                         starting_values = starting_list, parameters = parameters_list,
+                                         dimensions = dimensions, grain = grain, 
+                                         use_log = FALSE, verbose = FALSE)
 
-  # create new attributed matrix
-  attr_replace <- meta.arrR:::setup_attributes(fishpop = metasyst_temp$fishpop, parameters = parameters_list, 
-                                               max_i = max_i)
-  
-  # replace matrix
-  metasyst_temp$fishpop_attr[, 3] <- attr_replace[, 3]
-  
   # simulate nutrient input
   input_temp <-  meta.arrR::simulate_nutr_input(n = n, max_i = max_i, frequency = years, 
-                                                input_mn = nutrient_input, amplitude_mn = amplitude_mn,
+                                                input_mn = nutrient_input, amplitude_mn = 0.05,
                                                 verbose = FALSE)
   
   # run model
   result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = parameters_list,
                                                 nutrients_input = input_temp, movement = "behav",
                                                 max_i = max_i, min_per_i = min_per_i,
-                                                seagrass_each = seagrass_each,
-                                                save_each = save_each, verbose = FALSE)
+                                                seagrass_each = seagrass_each, save_each = save_each, 
+                                                verbose = FALSE)
   
   # filter model run
   result_temp <- meta.arrR::filter_meta(x = result_temp, filter = c((max_i / years) * years_filter, max_i), 
@@ -91,45 +84,22 @@ foo_hpc <- function(move_meta_mean, move_meta_sd, amplitude_mn) {
     dplyr::group_by(part) %>% 
     dplyr::summarise(value = sum(value), .groups = "drop")
   
-  # calc seafloor values at distance
-  dist <- purrr::map_dfr(result_temp$seafloor, function(i) {
-    
-    seafloor_temp <- dplyr::filter(i, timestep == max_i, reef == 0) 
-    
-    dist_reef <- purrr::map2_dbl(seafloor_temp$x, seafloor_temp$y, function(x,y) {
-      
-      arrR:::rcpp_closest_reef(x = x, y = y, coords_reef = metasyst_temp$reef[[1]])[[2]]
-      
-    })
-    
-    dplyr::mutate(seafloor_temp, dist_reef = dist_reef,
-                  ttl_production = ag_production + bg_production,
-                  dist_class = cut(dist_reef, breaks = seq(from = 0, to = 35, by = 1))) %>% 
-      dplyr::group_by(dist_class) %>% 
-      dplyr::summarise(ag_production = mean(ag_production), bg_production = mean(bg_production), 
-                       ttl_production = mean(ttl_production), nutrients_pool = mean(nutrients_pool), 
-                       .groups = "drop")
-  }, .id = "meta") %>% 
-    tidyr::pivot_longer(-c(meta, dist_class), names_to = "part") %>% 
-    dplyr::group_by(dist_class, part) %>%
-    dplyr::summarise(value = sum(value), .groups = "drop")
-  
   # combine to result data.frame and list
-  list(moved = dplyr::mutate(moved, move_meta_mean = move_meta_mean, 
-                               move_meta_sd = move_meta_sd, amplitude_mn = amplitude_mn), 
-       production = dplyr::mutate(production, move_meta_mean = move_meta_mean, 
-                                  move_meta_sd = move_meta_sd, amplitude_mn = amplitude_mn), 
-       cv = dplyr::mutate(dplyr::bind_rows(cv), move_meta_mean = move_meta_mean, 
-                          move_meta_sd = move_meta_sd, amplitude_mn = amplitude_mn), 
-       dist = dplyr::mutate(dist, move_meta_mean = move_meta_mean, 
-                            move_meta_sd = move_meta_sd, amplitude_mn = amplitude_mn))
+  list(moved = dplyr::mutate(moved, pop_n = pop_n, move_meta_mean = move_meta_mean, 
+                             move_meta_sd = move_meta_sd), 
+       cv = dplyr::mutate(dplyr::bind_rows(cv), pop_n = pop_n, move_meta_mean = move_meta_mean, 
+                          move_meta_sd = move_meta_sd), 
+       production = dplyr::mutate(production, pop_n = pop_n, move_meta_mean = move_meta_mean, 
+                                  move_meta_sd = move_meta_sd))
   
 }
 
 #### Submit HPC
 
-globals <- c("parameters_list", "metasyst_temp", "max_i", "n", "nutrient_input",
-             "min_per_i", "seagrass_each", "save_each", "years", "years_filter") 
+globals <- c("n", "max_i", "reef_matrix", "starting_list", "parameters_list", "dimensions", "grain", # setup_meta
+             "years", "nutrient_input", # simulate_nutr_input
+             "min_per_i", "seagrass_each", "save_each", # run_simulation_meta
+             "years_filter") # filter_meta 
 
 sbatch_cv <- rslurm::slurm_apply(f = foo_hpc, params = experiment_df, 
                                  global_objects = globals, jobname = "cv_move_var",
@@ -148,7 +118,7 @@ suppoRt::rslurm_missing(x = sbatch_cv)
 
 cv_result <- rslurm::get_slurm_out(sbatch_cv, outtype = "raw")
 
-suppoRt::save_rds(object = cv_result, filename = paste0("01-move-variability-", starting_list$pop_n, ".rds"),
-                  path = "02_Data/", overwrite = overwrite)
+suppoRt::save_rds(object = cv_result, filename = "01-move-variability.rds",
+                  path = "02_Data/", overwrite = TRUE)
 
 rslurm::cleanup_files(sbatch_cv)

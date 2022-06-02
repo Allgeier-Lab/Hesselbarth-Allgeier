@@ -89,9 +89,6 @@ height <- 297
 # set pixels
 dpi <- 900
 
-# set base_size
-base_size <- 12
-
 #### HPC settings ####
 
 account <- "jeallg0"
