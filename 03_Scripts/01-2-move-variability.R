@@ -228,12 +228,12 @@ df_label <- dplyr::select(df_regression, -value.cv.log, -value.prod.log.pred) %>
   dplyr::group_by(part, measure, pop_n) %>% 
   dplyr::distinct() %>% 
   dplyr::ungroup() %>% 
-  dplyr::mutate(dir = dplyr::case_when(coef < 0.0 ~ "-", coef > 0.0 ~ "+"),
+  dplyr::mutate(dir = dplyr::case_when(coef < 0.0 ~ "-", coef > 0.0 ~ ""),
                 int = round(int, digits = 2), coef = convert_label(coef, digits = 2),
                 r.squared = round(x = r.squared, digits = 2), 
                 p.value = dplyr::case_when(p.value <  0.001 ~  "'***'", p.value <  0.01 ~  "'**'",
                                            p.value <  0.05 ~  "'*'", p.value >  0.05 ~  "n.s."), 
-                label = paste0("R^2==", r.squared, "*';'~", p.value),
+                label = paste0("R^2==", dir, r.squared, "*';'~", p.value),
                 label = dplyr::case_when(p.value == "n.s." ~ "'---'", TRUE ~ label)) %>% 
   dplyr::left_join(x = ., y = dplyr::group_by(df_cv_prod, part, measure) %>% 
                      dplyr::summarise(pop_n = factor(c(8, 16, 32, 64), ordered = TRUE), 
@@ -244,29 +244,63 @@ df_label <- dplyr::select(df_regression, -value.cv.log, -value.prod.log.pred) %>
                                       .groups = "drop"), 
                    by = c("part", "measure", "pop_n"))
 
-gg_cv_prod_overall <- ggplot(data = df_cv_prod, aes(x = value.cv.log, y = value.prod.log, color = pop_n)) +
-  geom_point(shape = 1, alpha = 0.1) +
-  geom_line(data = df_regression, aes(x = value.cv.log, y = value.prod.log.pred, color = pop_n)) +
-  geom_text(data = df_label, aes(x = x, y = y, color = pop_n, label = label), parse = TRUE, size = text_size) +
-  facet_wrap(. ~ part + measure, nrow = 3, ncol = 3, scales = "free",
-             labeller = labeller(part = c("ag_production" = "Aboveground", "bg_production" = "Belowground",
-                                          "ttl_production" = "Total"),
-                                 measure = c("alpha" = "Local scale", "gamma" = "Meta-ecosystem scale",
-                                             "beta" = "Portfolio effect"))) +
+list_gg_parts <- purrr::map(c("ag_production", "bg_production", "ttl_production"), function(part_i) {
+  
+  
+  if (part_i == "ag_production") {
+    
+    strip_text <- element_text(hjust = 0.0)
+    
+  } else {
+    
+    strip_text <- element_blank()
+    
+  }
+  
+  dplyr::filter(df_cv_prod, part == part_i) %>% 
+    ggplot(aes(x = value.cv.log, y = value.prod.log, color = pop_n)) +
+    geom_point(shape = 1, alpha = 0.1) +
+    geom_line(data = dplyr::filter(df_regression, part == part_i), 
+              aes(x = value.cv.log, y = value.prod.log.pred, color = pop_n)) +
+    geom_text(data = dplyr::filter(df_label, part == part_i), 
+              aes(x = x, y = y, color = pop_n, label = label), parse = TRUE, size = text_size) +
+    facet_wrap(. ~ part + measure, nrow = 3, ncol = 3, scales = "free_x",
+               labeller = labeller(part = c("ag_production" = "Aboveground", "bg_production" = "Belowground",
+                                            "ttl_production" = "Total"),
+                                   measure = c("alpha" = "Local scale", "gamma" = "Meta-ecosystem scale",
+                                               "beta" = "Portfolio effect"))) +
+    scale_color_manual(name = "Population size", values = colors_pop) +
+    scale_x_continuous(breaks = function(x) seq(quantile(x, 0.1), quantile(x, 0.9), length.out = 5), 
+                       limits = function(x) c(min(x), max(x)), labels = function(x) round(x, 2)) +
+    scale_y_continuous(breaks = function(x) seq(quantile(x, 0.1), quantile(x, 0.9), length.out = 5), 
+                       limits = function(x) c(min(x), max(x)), labels = function(x) round(x, 2)) +
+    guides(color = guide_legend(override.aes = list(shape = 19, alpha = 1.0), 
+                                nrow = 2, byrow = TRUE)) +
+    labs(x = ifelse(test = part_i == "ttl_production", yes = "log(Coeffiecent of variation)", no = ""),
+         y = ifelse(test = part_i == "bg_production", yes = "og(Total primary production)", no = "")) +
+    theme_classic(base_size = base_size) + 
+    theme(legend.position = "none", legend.spacing.x = unit(1.0, "mm"), legend.spacing.y = unit(-1.0, "mm"),
+          legend.text = element_text(size = 6), legend.title = element_text(size = 8),
+          axis.title = element_text(size = 6.5),
+          axis.line = element_blank(), panel.border = element_rect(size = 0.5, fill = NA),
+          strip.text = strip_text, strip.background = element_blank())
+})
+
+gg_cv_prod_overall <- cowplot::plot_grid(plotlist = list_gg_parts, nrow = 3)
+
+gg_dummy <- dplyr::filter(df_cv_prod, part == "ag_production", measure == "alpha") %>% 
+  ggplot(aes(x = value.move, y = value.cv, color = pop_n)) +
+  geom_point(shape = 19) + geom_line() +
   scale_color_manual(name = "Population size", values = colors_pop) +
-  scale_x_continuous(breaks = function(x) seq(quantile(x, 0.1), quantile(x, 0.9), length.out = 5), 
-                     limits = function(x) c(min(x), max(x)), labels = function(x) round(x, 2)) +
-  scale_y_continuous(breaks = function(x) seq(quantile(x, 0.1), quantile(x, 0.9), length.out = 5), 
-                   limits = function(x) c(min(x), max(x)), labels = function(x) round(x, 2)) +
-  guides(color = guide_legend(override.aes = list(shape = 19, alpha = 1.0), 
-                              nrow = 2, byrow = TRUE)) +
-  labs(x = "log(Coeffiecent of variation)", y = "log(Total primary production)") +
+  guides(color = guide_legend(nrow = 2, byrow = TRUE)) +
   theme_classic(base_size = base_size) + 
   theme(legend.position = "bottom", legend.spacing.x = unit(1.0, "mm"), legend.spacing.y = unit(-1.0, "mm"),
-        legend.text = element_text(size = 6), legend.title = element_text(size = 8),
-        axis.title = element_text(size = 6.5),
-        axis.line = element_blank(), panel.border = element_rect(size = 0.5, fill = NA),
-        strip.text = element_text(hjust = 0.0), strip.background = element_blank())
+        legend.text = element_text(size = 6), legend.title = element_text(size = 8))
+
+gg_legend <- cowplot::get_legend(gg_dummy)
+
+gg_cv_prod_overall <- cowplot::plot_grid(gg_cv_prod_overall, gg_legend, ncol = 1, 
+                                         rel_heights = c(0.95, 0.05))
 
 suppoRt::save_ggplot(plot = gg_cv_prod_overall, filename = paste0("01-cv-prod", extension),
                      path = "04_Figures/", width = height, height = width,
@@ -331,12 +365,13 @@ gg_move_pe_overall <- dplyr::filter(df_cv_prod, measure == "beta") %>%
   guides(color = guide_legend(override.aes = list(shape = 19, alpha = 1.0), 
                               ncol = 1, byrow = TRUE)) +
   labs(x = "Mean cross-ecosystem movement", y = "Portfolio effect") +
-  theme_classic(base_size = 10) + 
+  theme_classic(base_size = base_size) + 
   theme(legend.position = "right", legend.spacing.y = unit(-1, "mm"),
         legend.text = element_text(size = 6), legend.title = element_text(size = 8),
+        axis.title = element_text(size = 6.5),
         strip.text = element_text(hjust = 0.0), strip.background = element_blank(), 
         axis.line = element_blank(), panel.border = element_rect(size = 0.5, fill = NA))
 
 suppoRt::save_ggplot(plot = gg_move_pe_overall, filename = paste0("01-connect-pe", extension),
                      path = "04_Figures/", width = width, height = height / 2,
-                     units = units, dpi = dpi, overwrite = TRUE)
+                     units = units, dpi = dpi, overwrite = overwrite)
