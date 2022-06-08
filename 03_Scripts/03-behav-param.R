@@ -6,6 +6,8 @@
 ##    www.github.com/mhesselbarth             ##
 ##--------------------------------------------##
 
+# Purpose: Calculate time period individuals are within different behavior stages
+
 #### Load setup ####
 
 source("05_Various/setup.R")
@@ -119,7 +121,7 @@ suppoRt::rslurm_missing(sbatch_behav)
 behavior_states <- rslurm::get_slurm_out(sbatch_behav, outtype = "table")
 
 # save results to disk
-suppoRt::save_rds(object = behavior_states, file = "02_Data/00_behavior_states.rds", 
+suppoRt::save_rds(object = behavior_states, file = "02_Data/03-behavior-states.rds", 
                   overwrite = overwrite)
 
 # delete .sh scripts
@@ -127,7 +129,7 @@ rslurm::cleanup_files(sbatch_behav)
 
 #### Results parameter space ####
 
-behavior_states <- readr::read_rds("02_Data/00_behavior_states.rds")
+behavior_states <- readr::read_rds("02_Data/03-behavior-states.rds")
 
 cutoff <- 3.5
 

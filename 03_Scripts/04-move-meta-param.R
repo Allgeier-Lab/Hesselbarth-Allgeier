@@ -6,6 +6,8 @@
 ##    www.github.com/mhesselbarth             ##
 ##--------------------------------------------##
 
+# Purpose: Relationship between movement parameters and mean cross-meta-ecosystem movement
+
 #### Load setup ####
 
 source("05_Various/setup.R")
@@ -123,14 +125,14 @@ suppoRt::rslurm_missing(x = sbatch_move_meta)
 
 move_meta_result <- rslurm::get_slurm_out(sbatch_move_meta, outtype = "table")
 
-suppoRt::save_rds(object = move_meta_result, filename = "00-move_meta-param.rds",
+suppoRt::save_rds(object = move_meta_result, filename = "04-move-meta-param.rds",
                   path = "02_Data/", overwrite = overwrite)
 
 rslurm::cleanup_files(sbatch_move_meta)
 
 #### Load results ####
 
-move_meta_result <- readr::read_rds("02_Data/00-move_meta-param.rds")
+move_meta_result <- readr::read_rds("02_Data/04-move-meta-param.rds")
 
 #### Create figure moved ####
 
@@ -154,3 +156,7 @@ gg_probs_moved <- ggplot(data = move_meta_result_sum,
   labs(x = expression(paste("Parameter ", italic(move_meta_mean), " / ", italic(move_meta_sd))),
                  y = "Mean cross-system movement") +
   theme_classic() 
+
+suppoRt::save_ggplot(plot = gg_probs_moved, filename = "04-param-connect.pdf",
+                     path = "04_Figures/", width = width, height = height / 2,
+                     units = units, dpi = dpi, overwrite = overwrite)

@@ -6,6 +6,8 @@
 ##    www.github.com/mhesselbarth             ##
 ##--------------------------------------------##
 
+# Purpose: Results of connectivity experiment for low amplitude treatment 
+
 #### Load setup ####
 
 source("05_Various/setup.R")
@@ -15,7 +17,12 @@ extension <- ".pdf"
 
 #### Load/wrangle simulated data ####
 
-df_cv_prod <- readr::read_rds("02_Data/01-move-variability.rds") %>% 
+amplitude <- "005"
+frequency <- "50"
+
+file_path <- paste0("02_Data/05-move-variability-", amplitude, "-", frequency, ".rds")
+
+df_cv_prod <- readr::read_rds(file_path) %>% 
   purrr::map_dfr(function(j) {
     dplyr::left_join(x = j$cv, y = j$production, by = c("part", "pop_n", "move_meta_mean", 
                                                         "move_meta_sd"), 
@@ -82,7 +89,8 @@ gg_pop_prod_ttl <- dplyr::filter(df_cv_prod, part == "ttl_production", measure =
 
 gg_pop_prod_overall <- cowplot::plot_grid(gg_pop_prod_agbg, gg_pop_prod_ttl, ncol = 2)
 
-suppoRt::save_ggplot(plot = gg_pop_prod_overall, filename = paste0("00-pop-prod", extension),
+suppoRt::save_ggplot(plot = gg_pop_prod_overall, filename = paste0("06-pop-prod-", amplitude, "-", 
+                                                                   frequency, extension),
                      path = "04_Figures/", width = width, height = height / 2,
                      units = units, dpi = dpi, overwrite = overwrite)
 
@@ -199,7 +207,8 @@ gg_legend <- cowplot::get_legend(gg_dummy)
 gg_move_cv_overall <- cowplot::plot_grid(gg_move_cv_overall, gg_legend, ncol = 1, 
                                          rel_heights = c(0.95, 0.05))
 
-suppoRt::save_ggplot(plot = gg_move_cv_overall, filename = paste0("01-connect-cv", extension),
+suppoRt::save_ggplot(plot = gg_move_cv_overall, filename = paste0("06-connect-cv-", amplitude, "-", 
+                                                                  frequency, extension),
                      path = "04_Figures/", width = width, height = height,
                      units = units, dpi = dpi, overwrite = overwrite)
 
@@ -249,13 +258,17 @@ list_gg_parts <- purrr::map(c("ag_production", "bg_production", "ttl_production"
   
   if (part_i == "ag_production") {
     
-    strip_text <- element_text(hjust = 0.0)
+    labeller_measure <- c("alpha" = "Local scale", "gamma" = "Meta-ecosystem scale",
+                          "beta" = "Portfolio effect")
     
   } else {
     
-    strip_text <- element_blank()
+    labeller_measure <- c("alpha" = "", "gamma" = "", "beta" = "")
     
   }
+  
+  labeller_part <- c("ag_production" = "Aboveground", "bg_production" = "Belowground", 
+                     "ttl_production" = "Total")
   
   dplyr::filter(df_cv_prod, part == part_i) %>% 
     ggplot(aes(x = value.cv.log, y = value.prod.log, color = pop_n)) +
@@ -264,11 +277,8 @@ list_gg_parts <- purrr::map(c("ag_production", "bg_production", "ttl_production"
               aes(x = value.cv.log, y = value.prod.log.pred, color = pop_n)) +
     geom_text(data = dplyr::filter(df_label, part == part_i), 
               aes(x = x, y = y, color = pop_n, label = label), parse = TRUE, size = text_size) +
-    facet_wrap(. ~ part + measure, nrow = 3, ncol = 3, scales = "free_x",
-               labeller = labeller(part = c("ag_production" = "Aboveground", "bg_production" = "Belowground",
-                                            "ttl_production" = "Total"),
-                                   measure = c("alpha" = "Local scale", "gamma" = "Meta-ecosystem scale",
-                                               "beta" = "Portfolio effect"))) +
+    facet_wrap(. ~ measure + part, nrow = 3, ncol = 3, scales = "free_x",
+               labeller = labeller(measure = labeller_measure, part = labeller_part)) +
     scale_color_manual(name = "Population size", values = colors_pop) +
     scale_x_continuous(breaks = function(x) seq(quantile(x, 0.1), quantile(x, 0.9), length.out = 5), 
                        limits = function(x) c(min(x), max(x)), labels = function(x) round(x, 2)) +
@@ -277,13 +287,13 @@ list_gg_parts <- purrr::map(c("ag_production", "bg_production", "ttl_production"
     guides(color = guide_legend(override.aes = list(shape = 19, alpha = 1.0), 
                                 nrow = 2, byrow = TRUE)) +
     labs(x = ifelse(test = part_i == "ttl_production", yes = "log(Coeffiecent of variation)", no = ""),
-         y = ifelse(test = part_i == "bg_production", yes = "og(Total primary production)", no = "")) +
+         y = ifelse(test = part_i == "bg_production", yes = "log(Total primary production)", no = "")) +
     theme_classic(base_size = base_size) + 
     theme(legend.position = "none", legend.spacing.x = unit(1.0, "mm"), legend.spacing.y = unit(-1.0, "mm"),
           legend.text = element_text(size = 6), legend.title = element_text(size = 8),
           axis.title = element_text(size = 6.5),
           axis.line = element_blank(), panel.border = element_rect(size = 0.5, fill = NA),
-          strip.text = strip_text, strip.background = element_blank())
+          strip.text = element_text(hjust = 0.0), strip.background = element_blank())
 })
 
 gg_cv_prod_overall <- cowplot::plot_grid(plotlist = list_gg_parts, nrow = 3)
@@ -302,7 +312,8 @@ gg_legend <- cowplot::get_legend(gg_dummy)
 gg_cv_prod_overall <- cowplot::plot_grid(gg_cv_prod_overall, gg_legend, ncol = 1, 
                                          rel_heights = c(0.95, 0.05))
 
-suppoRt::save_ggplot(plot = gg_cv_prod_overall, filename = paste0("01-cv-prod", extension),
+suppoRt::save_ggplot(plot = gg_cv_prod_overall, filename = paste0("06-cv-prod-", amplitude, "-", 
+                                                                  frequency, extension),
                      path = "04_Figures/", width = height, height = width,
                      units = units, dpi = dpi, overwrite = overwrite)
 
@@ -372,6 +383,7 @@ gg_move_pe_overall <- dplyr::filter(df_cv_prod, measure == "beta") %>%
         strip.text = element_text(hjust = 0.0), strip.background = element_blank(), 
         axis.line = element_blank(), panel.border = element_rect(size = 0.5, fill = NA))
 
-suppoRt::save_ggplot(plot = gg_move_pe_overall, filename = paste0("01-connect-pe", extension),
-                     path = "04_Figures/", width = width, height = height / 2,
+suppoRt::save_ggplot(plot = gg_move_pe_overall, filename = paste0("06-connect-pe-", amplitude, "-", 
+                                                                  frequency, extension),
+                     path = "04_Figures/", width = width, height = height * 0.40,
                      units = units, dpi = dpi, overwrite = overwrite)

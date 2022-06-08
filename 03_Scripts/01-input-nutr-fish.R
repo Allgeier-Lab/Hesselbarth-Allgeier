@@ -6,6 +6,8 @@
 ##    www.github.com/mhesselbarth             ##
 ##--------------------------------------------##
 
+# Purpose: Calculate average excretion of local fish populations
+
 #### Load setup ####
 
 source("05_Various/setup.R")
@@ -88,7 +90,7 @@ suppoRt::rslurm_missing(sbatch_fish)
 fish_input <- rslurm::get_slurm_out(sbatch_fish, outtype = "table")
 
 # save results to disk
-suppoRt::save_rds(object = fish_input, file = "02_Data/00_nutr_input_fish.rds", 
+suppoRt::save_rds(object = fish_input, file = "02_Data/01-nutr-input-fish.rds", 
                   overwrite = overwrite)
 
 # delete .sh scripts
@@ -96,7 +98,7 @@ rslurm::cleanup_files(sbatch_fish)
 
 #### Results of simulations runs ####
 
-result <- readr::read_rds("02_Data/00-nutr-input-fish.rds")
+result <- readr::read_rds("02_Data/01-nutr-input-fish.rds")
 
 # calculate mean total input of fish population each timestep
 total_excretion <- mean(result$excretion_mn) * starting_list$pop_n
