@@ -54,7 +54,7 @@ years_filter <- 40
 # set frequency of input peaks
 
 # number of local metaecosystems
-n <- 5
+n <- 9
 
 # setup extent and grain
 dimensions <- c(50, 50)
