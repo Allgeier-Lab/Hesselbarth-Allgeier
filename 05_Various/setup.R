@@ -11,14 +11,11 @@ library(meta.arrR) # remotes::install_github("Allgeier-Lab/meta.arrR", ref = "de
 library(arrR)
 
 library(cowplot)
-library(ggpubr)
-library(magrittr)
 library(Rcpp)
 library(rslurm)
 library(suppoRt) # remotes::install_github("mhesselbarth/suppoRt")
 library(terra)
 library(tidyverse)
-library(vegan)
 
 #### Load data ####
 
@@ -49,12 +46,12 @@ save_each <- (24 / (min_per_i / 60)) * days_save
 # max_i %% save_each
 
 # years used to filter
-years_filter <- 40
+years_filter <- 10
 
 # set frequency of input peaks
 
 # number of local metaecosystems
-n <- 9
+n <- 5
 
 # setup extent and grain
 dimensions <- c(50, 50)
@@ -105,7 +102,7 @@ overwrite <- FALSE
 message("\nUsing R v", stringr::str_split(rscript_path, pattern = "/", simplify = TRUE)[, 9], " on HPC")
 
 # # exclude slow nodes
-exclude_nodes <- "gl[3368-3371]"
+# exclude_nodes <- "gl[3368-3371]"
 
 #### Remove some basic parameters ####
 

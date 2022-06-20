@@ -6,7 +6,7 @@
 ##    www.github.com/mhesselbarth             ##
 ##--------------------------------------------##
 
-# Purpose: Simulation experiment of movement parameters and CV/Production
+# Purpose: Simulation experiment of phase_sd and CV/Production
 
 #### Load setup ####
 
@@ -26,43 +26,33 @@ starting_list$detritus_pool <- stable_values$detritus_pool
 
 #### Setup experiment ####
 
-experiment_df <- tibble::tibble(pop_n = rep(x = c(8, 16, 32, 64), each = 500), 
-                                move_meta_mean = sample(x = seq(from = 0.1, to = 1.0, by = 0.1),
-                                                        size = length(pop_n), replace = TRUE),
-                                move_meta_sd = sample(x = seq(from = 0.1, to = 1.0, by = 0.1), 
-                                                      size = length(pop_n), replace = TRUE), 
-                                phase_sd = sample(x = seq(from = 0.0, to = 1.0, by = 0.1), 
-                                                  size = length(pop_n), replace = TRUE))
+experiment_df <- expand.grid(pop_n = c(8, 16, 32, 64),
+                             phase_sd = seq(from = 0.1, to = 1, by = 0.1)) %>%
+  dplyr::slice(rep(x = 1:dplyr::n(), each = 10)) %>%
+  tibble::tibble()
 
-table(experiment_df$move_meta_mean, experiment_df$phase_sd)
-
-amplitude_mn <- 0.95
+amplitude_mn <- 0.05
 
 frequency <- years
 
 #### Init HPC function ####
 
-foo_hpc <- function(pop_n, move_meta_mean, move_meta_sd, phase_sd) {
+foo_hpc <- function(pop_n, phase_sd) {
   
   library(dplyr)
   
   starting_list$pop_n <- pop_n
-  
-  # update move meta sd
-  parameters_list$move_meta_mean <- move_meta_mean
-  
-  parameters_list$move_meta_sd <- move_meta_sd
   
   # setup metaecosystems
   metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = reef_matrix,
                                          starting_values = starting_list, parameters = parameters_list,
                                          dimensions = dimensions, grain = grain, 
                                          use_log = FALSE, verbose = FALSE)
-
+  
   # simulate nutrient input
-  input_temp <- meta.arrR::simulate_nutr_input(n = n, max_i = max_i, frequency = frequency, 
-                                               input_mn = nutrient_input, amplitude_mn = amplitude_mn,
-                                               phase_sd = phase_sd, verbose = FALSE)
+  input_temp <- meta.arrR::simulate_nutrient_sine(n = n, max_i = max_i, frequency = frequency, 
+                                                  input_mn = nutrient_input, amplitude_mn = amplitude_mn,
+                                                  phase_sd = phase_sd, verbose = FALSE)
   
   # run model
   result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = parameters_list,
@@ -95,12 +85,9 @@ foo_hpc <- function(pop_n, move_meta_mean, move_meta_sd, phase_sd) {
     dplyr::summarise(value = sum(value), .groups = "drop")
   
   # combine to result data.frame and list
-  list(moved = dplyr::mutate(moved, pop_n = pop_n, move_meta_mean = move_meta_mean, 
-                             move_meta_sd = move_meta_sd, phase_sd = phase_sd), 
-       cv = dplyr::mutate(dplyr::bind_rows(cv), pop_n = pop_n, move_meta_mean = move_meta_mean, 
-                          move_meta_sd = move_meta_sd, phase_sd = phase_sd), 
-       production = dplyr::mutate(production, pop_n = pop_n, move_meta_mean = move_meta_mean, 
-                                  move_meta_sd = move_meta_sd, phase_sd = phase_sd))
+  list(moved = dplyr::mutate(moved, pop_n = pop_n, phase_sd = phase_sd), 
+       cv = dplyr::mutate(dplyr::bind_rows(cv), pop_n = pop_n, phase_sd = phase_sd), 
+       production = dplyr::mutate(production, pop_n = pop_n, phase_sd = phase_sd))
   
 }
 
@@ -112,7 +99,7 @@ globals <- c("n", "max_i", "reef_matrix", "starting_list", "parameters_list", "d
              "years_filter") # filter_meta 
 
 sbatch_cv <- rslurm::slurm_apply(f = foo_hpc, params = experiment_df, 
-                                 global_objects = globals, jobname = "cv_move_var",
+                                 global_objects = globals, jobname = "phase_cv",
                                  nodes = nrow(experiment_df), cpus_per_node = 1, 
                                  slurm_options = list("account" = account, 
                                                       "partition" = "standard",
@@ -129,10 +116,9 @@ suppoRt::rslurm_missing(x = sbatch_cv)
 cv_result <- rslurm::get_slurm_out(sbatch_cv, outtype = "raw")
 
 suppoRt::save_rds(object = cv_result, 
-                  filename = paste0("05-move-variability-", 
-                                    "phase",  
-                                    # stringr::str_remove(amplitude_mn, pattern = "\\."),
-                                    # "-", stringr::str_remove(floor(frequency), pattern = "\\."),
+                  filename = paste0("05-variability-phase-", 
+                                    stringr::str_remove(amplitude_mn, pattern = "\\."),
+                                    "-", stringr::str_remove(floor(frequency), pattern = "\\."),
                                     ".rds"),
                   path = "02_Data/", overwrite = overwrite)
 
