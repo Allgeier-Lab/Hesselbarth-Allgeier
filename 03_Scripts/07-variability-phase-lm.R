@@ -47,43 +47,73 @@ df_regression <- dplyr::filter(df_cv_prod, measure %in% c("alpha", "gamma")) %>%
     
     lm_temp <- lm(log(value.cv) ~ move_meta_sd + phase_sd, data = i)
     
-    pred <- coef(lm_temp)[[1]] + coef(lm_temp)[[2]] * i$move_meta_sd + coef(lm_temp)[[3]] * i$phase_sd
-    
-    r.squared <- cor(log(i$value.cv), pred)
-    
-    p.value <- summary(lm_temp)[["coefficients"]][2, 4]
-    
-    tibble::tibble(
-      part = unique(i$part), measure = unique(i$measure), pop_n = unique(i$pop_n), 
-      int = lm_temp$coefficients[[1]], coef_biotic = lm_temp$coefficients[[2]],
-      coef_abiotic = lm_temp$coefficients[[3]], r.squared = r.squared, p.value = p.value)
-  })
+    broom::tidy(lm_temp) %>% 
+      dplyr::mutate(part = unique(i$part), measure = unique(i$measure), pop_n = unique(i$pop_n), 
+                    .before = term)
+  }) 
 
 #### Create ggplot ###
 
 gg_list <- map(c("ag_production", "bg_production", "ttl_production"), function(part_i) {
   
-  df_temp <- dplyr::filter(df_regression, part == part_i)
+  df_temp <- dplyr::filter(df_regression, part == part_i) %>% 
+    dplyr::select(-c(std.error, statistic)) %>% 
+    dplyr::mutate(term = dplyr::case_when(term == "(Intercept)" ~ "Intercept", 
+                                          TRUE ~ term), 
+                  p.value = dplyr::case_when(p.value < 0.001 ~ "***", 
+                                             p.value < 0.01 ~ "**", 
+                                             p.value < 0.05 ~  "*",
+                                             p.value >= 0.05 ~ "")) %>% 
+    tidyr::pivot_wider(names_from = term, values_from = c(estimate, p.value))
   
-  labels_y_right <- round(seq(from = min(c(df_temp$coef_biotic, df_temp$coef_abiotic)), 
-                              to = max(c(df_temp$coef_biotic, df_temp$coef_abiotic)), 
+  labels_y_right <- round(seq(from = min(c(df_temp$estimate_move_meta_sd, 
+                                           df_temp$estimate_phase_sd)), 
+                              to = max(c(df_temp$estimate_move_meta_sd, 
+                                         df_temp$estimate_phase_sd)), 
                               length.out = 4), digits = 2)
   
-  scales_y <- seq(from = min(df_temp$int), to = max(df_temp$int), length.out = 4)
+  scales_y <- seq(from = min(df_temp$estimate_Intercept), to = max(df_temp$estimate_Intercept), 
+                  length.out = 4)
   
-  df_temp$coef_biotic <- scales::rescale(df_temp$coef_biotic, to = range(df_temp$int))
+  df_temp$estimate_move_meta_sd <- scales::rescale(df_temp$estimate_move_meta_sd, 
+                                                   to = range(df_temp$estimate_Intercept))
   
-  df_temp$coef_abiotic <- scales::rescale(df_temp$coef_abiotic, to = range(df_temp$int))
+  df_temp$estimate_phase_sd <- scales::rescale(df_temp$estimate_phase_sd, 
+                                               to = range(df_temp$estimate_Intercept))
+  
+  w <- 0.25
   
   ggplot(data = df_temp) + 
-    geom_point(aes(x = pop_n, y = int, shape = measure, color = "Intercept"), size = 3.0) +
-    geom_line(aes(x = pop_n, y = int, group = measure, linetype = measure, color = "Intercept"), alpha = 0.5) +
-    geom_point(aes(x = pop_n, y = coef_biotic, shape = measure, color = "Connectivity"), size = 3.0) +
-    geom_line(aes(x = pop_n, y = coef_biotic, group = measure, linetype = measure, color = "Connectivity"), alpha = 0.5) +
-    geom_point(aes(x = pop_n, y = coef_abiotic, shape = measure, color = "Phase"), size = 3.0) +
-    geom_line(aes(x = pop_n, y = coef_abiotic, group = measure, linetype = measure, color = "Phase"), alpha = 0.5) +
+    # Lines
+    geom_line(aes(x = pop_n, y = estimate_Intercept, group = measure, linetype = measure, color = "Intercept"),
+              alpha = 0.5, position = position_dodge(width = w)) +
+    geom_line(aes(x = pop_n, y = estimate_move_meta_sd, group = measure, linetype = measure, color = "Connectivity"),
+              alpha = 0.5, position = position_dodge(width = w)) +
+    geom_line(aes(x = pop_n, y = estimate_phase_sd, group = measure, linetype = measure, color = "Phase"),
+              alpha = 0.5, position = position_dodge(width = w)) +
+    
+    # Points
+    geom_point(aes(x = pop_n, y = estimate_Intercept, shape = measure, color = "Intercept"), 
+               size = 3.0, position = position_dodge(width = w)) +
+    geom_point(aes(x = pop_n, y = estimate_move_meta_sd, shape = measure, color = "Connectivity"), 
+               size = 3.0, position = position_dodge(width = w)) +
+    geom_point(aes(x = pop_n, y = estimate_phase_sd, shape = measure, color = "Phase"), 
+               size = 3.0, position = position_dodge(width = w)) +
+    
+    # Text
+    geom_text(aes(x = pop_n, y = estimate_Intercept, label = p.value_Intercept, 
+                  group = measure, color = "Intercept"), 
+              position = position_dodge(width = w)) +
+    geom_text(aes(x = pop_n, y = estimate_move_meta_sd, label = p.value_move_meta_sd, 
+                  group = measure, color = "Connectivity"), 
+              position = position_dodge(width = w)) +
+    geom_text(aes(x = pop_n, y = estimate_phase_sd, label = p.value_phase_sd, 
+                  group = measure, color = "Phase"), 
+              position = position_dodge(width = w)) +
+    
+    # Stuff
     scale_color_manual(name = "Regression model", values = color_palette) +
-    scale_shape_manual(name = "Scale", values = c(19, 2)) +
+    scale_shape_manual(name = "Scale", values = c(1, 2)) +
     scale_linetype_manual(name = "Scale", values = c(1, 2)) +
     scale_y_continuous(name = ifelse(test = part_i == "bg_production", yes = "Intercept", no = ""), 
                        breaks = scales_y, labels = function(x) round(x, digits = 2),
@@ -108,11 +138,18 @@ gg_list <- map(c("ag_production", "bg_production", "ttl_production"), function(p
 
 gg_lm_coef <- cowplot::plot_grid(plotlist = gg_list, ncol = 1)
 
-gg_dummy <- ggplot(data = df_regression, aes(x = pop_n)) + 
-  geom_point(aes(y = int, color = "Intercept", shape = factor(measure, labels = c("Local", "Meta-ecosystem")))) +
-  geom_point(aes(y = coef_biotic, color = "Connectivity", shape = factor(measure, labels = c("Local", "Meta-ecosystem")))) + 
-  geom_point(aes(y = coef_abiotic, color = "Phase", shape = factor(measure, labels = c("Local", "Meta-ecosystem")))) + 
-  scale_shape_manual(name = "Scale", values = c(19, 2)) +
+gg_dummy <- dplyr::select(df_regression, -c(std.error, statistic)) %>% 
+  dplyr::mutate(term = dplyr::case_when(term == "(Intercept)" ~ "Intercept", 
+                                        TRUE ~ term)) %>% 
+  tidyr::pivot_wider(names_from = term, values_from = c(estimate, p.value)) %>% 
+  ggplot(aes(x = pop_n)) + 
+  geom_point(aes(y = estimate_Intercept, color = "Intercept", 
+                 shape = factor(measure, labels = c("Local", "Meta-ecosystem")))) +
+  geom_point(aes(y = estimate_move_meta_sd, color = "Connectivity", 
+                 shape = factor(measure, labels = c("Local", "Meta-ecosystem")))) + 
+  geom_point(aes(y = estimate_phase_sd, color = "Phase", 
+                 shape = factor(measure, labels = c("Local", "Meta-ecosystem")))) + 
+  scale_shape_manual(name = "Scale", values = c(1, 2)) +
   scale_color_manual(name = "Coeffiecent", values = color_palette) +
   theme(legend.position = "bottom")
 
@@ -122,4 +159,3 @@ gg_lm_coef <- cowplot::plot_grid(gg_lm_coef, cowplot::get_legend(gg_dummy), rel_
 suppoRt::save_ggplot(plot = gg_lm_coef, filename = paste0("07-phase-coef-", amplitude, extension),
                      path = "04_Figures/", width = width, height = height,
                      units = units, dpi = dpi, overwrite = overwrite)
-
