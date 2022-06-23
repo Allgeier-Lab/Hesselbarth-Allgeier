@@ -25,13 +25,21 @@ starting_list$nutrients_pool <- stable_values$nutrients_pool
 starting_list$detritus_pool <- stable_values$detritus_pool
 
 #### Setup experiment ####
-experiment_df <- expand.grid(pop_n = c(8, 16, 32, 64),
-                             move_meta_sd = seq(from = 0.1, to = 1, by = 0.1), 
-                             phase_sd = seq(from = 0.1, to = 1, by = 0.1)) %>%
-  dplyr::slice(rep(x = 1:dplyr::n(), each = 10)) %>%
-  tibble::tibble()
 
-amplitude_mn <- 0.05
+reps <- 250
+
+param_values <- lhs::improvedLHS(n = reps, k = 2, dup = 2)
+
+table(cut(param_values[, 1], breaks = seq(0, 1, 0.1)),
+      cut(param_values[, 2], breaks = seq(0, 1, 0.1)))
+
+experiment_df <- cbind(rep(x = c(8, 16, 32, 64), each = reps), 
+                       matrix(data = rep(x = t(param_values), times = 4), 
+                              ncol = ncol(param_values), byrow = TRUE)) %>% 
+  tibble::as_tibble() %>% 
+  purrr::set_names(c("pop_n", "move_meta_sd", "phase_sd"))
+
+amplitude_mn <- 0.95
 
 frequency <- years
 
@@ -102,7 +110,7 @@ globals <- c("n", "max_i", "reef_matrix", "starting_list", "parameters_list", "d
              "years_filter") # filter_meta 
 
 sbatch_cv <- rslurm::slurm_apply(f = foo_hpc, params = experiment_df, 
-                                 global_objects = globals, jobname = "both_cv",
+                                 global_objects = globals, jobname = "phase_sd",
                                  nodes = nrow(experiment_df), cpus_per_node = 1, 
                                  slurm_options = list("account" = account, 
                                                       "partition" = "standard",
