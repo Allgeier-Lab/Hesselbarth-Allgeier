@@ -68,12 +68,14 @@ list_gg_parts <- purrr::map(c("ag_production", "bg_production", "ttl_production"
     list_gg_pop <- purrr::map(c(8, 16, 32, 64), function(pop_i) {
       
       dplyr::filter(df_cv_prod, part == part_i, measure == measure_i, pop_n == pop_i) %>% 
+        dplyr::mutate(move_meta_sd = cut(move_meta_sd, breaks = seq(0, 1, 0.1)), 
+                      phase_sd = cut(phase_sd, breaks = seq(0, 1, 0.1))) %>%
         dplyr::group_by(move_meta_sd, phase_sd) %>%
         dplyr::summarise(value.cv = mean(value.cv), .groups = "drop") %>%
         ggplot(aes(x = phase_sd, y = move_meta_sd, fill = value.cv)) +
         geom_tile() + 
         scale_fill_gradientn(colors = MetBrewer::met.brewer("Demuth", n = 255, type = "continuous")) +
-        scale_x_continuous(breaks = c(0.1, 0.5, 1.0)) + scale_y_continuous(breaks = c(0.1, 0.5, 1.0)) +
+        # scale_x_continuous(breaks = c(0.1, 0.5, 1.0)) + scale_y_continuous(breaks = c(0.1, 0.5, 1.0)) +
         labs(title = paste0("Population size: ", pop_i), 
              x = expression(italic(phase_sd)), y = expression(italic(move_meta_sd))) +
         theme_classic(base_size = base_size) +
