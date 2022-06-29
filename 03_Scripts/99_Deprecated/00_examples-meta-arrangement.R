@@ -34,19 +34,19 @@ seafloor_xy_full <- list(rand = seafloor_xy_rand, reg = seafloor_xy_reg, clust =
 
 #### Stable values ####
 
-stable_values <- arrR::get_stable_values(bg_biomass = starting_list$bg_biomass,
-                                         ag_biomass = starting_list$ag_biomass,
-                                         parameters = parameters_list)
+stable_values <- arrR::get_stable_values(bg_biomass = list_starting$bg_biomass,
+                                         ag_biomass = list_starting$ag_biomass,
+                                         parameters = list_parameters)
 
-starting_list$nutrients_pool <- stable_values$nutrients_pool
+list_starting$nutrients_pool <- stable_values$nutrients_pool
 
-starting_list$detritus_pool <- stable_values$detritus_pool
+list_starting$detritus_pool <- stable_values$detritus_pool
 
 #### Different ecosystem placements ####
 
 metasyst_full <- purrr::map(seafloor_xy_full, function(i) 
   meta.arrR::setup_meta(n = n, max_i = max_i, seafloor_xy = i,
-                        starting_values = starting_list, parameters = parameters_list, reef = reef_matrix,
+                        starting_values = list_starting, parameters = list_parameters, reef = matrix_reef,
                         dimensions = dimensions, grain = grain, verbose = FALSE))
 
 purrr::map(metasyst_full, plot, viridis_option = "B", base_size = 12)
@@ -54,7 +54,7 @@ purrr::map(metasyst_full, plot, viridis_option = "B", base_size = 12)
 #### Residence time variability ####
 
 metassyst <- meta.arrR::setup_meta(n = n, max_i = max_i, seafloor_xy = NULL,
-                                   starting_values = starting_list, parameters = parameters_list, reef = reef_matrix,
+                                   starting_values = list_starting, parameters = list_parameters, reef = matrix_reef,
                                    dimensions = dimensions, grain = grain, verbose = FALSE)
 
 variability_vec <- c(0.1, 0.25, 0.35)

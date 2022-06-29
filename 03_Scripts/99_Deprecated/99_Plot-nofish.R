@@ -10,9 +10,9 @@ source("05_Various/setup.R")
 
 #### Load data ####
 
-starting_list <- readRDS("02_Data/starting_list.rds")
+list_starting <- readRDS("02_Data/list_starting.rds")
 
-parameters_list <- readRDS("02_Data/parameters_list.rds")
+list_parameters <- readRDS("02_Data/list_parameters.rds")
 
 variability_experiment <- readRDS("02_Data/variability_experiment.rds")
 

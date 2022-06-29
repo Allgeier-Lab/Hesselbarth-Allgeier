@@ -16,13 +16,13 @@ source("05_Various/setup.R")
 
 #### Stable values #### 
 
-stable_values <- arrR::get_req_nutrients(bg_biomass = starting_list$bg_biomass,
-                                         ag_biomass = starting_list$ag_biomass,
-                                         parameters = parameters_list)
+stable_values <- arrR::get_req_nutrients(bg_biomass = list_starting$bg_biomass,
+                                         ag_biomass = list_starting$ag_biomass,
+                                         parameters = list_parameters)
 
-starting_list$nutrients_pool <- stable_values$nutrients_pool
+list_starting$nutrients_pool <- stable_values$nutrients_pool
 
-starting_list$detritus_pool <- stable_values$detritus_pool
+list_starting$detritus_pool <- stable_values$detritus_pool
 
 #### Setup experiment ####
 
@@ -41,11 +41,11 @@ foo_hpc <- function(pop_n, phase_sd) {
   
   library(dplyr)
   
-  starting_list$pop_n <- pop_n
+  list_starting$pop_n <- pop_n
   
   # setup metaecosystems
-  metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = reef_matrix,
-                                         starting_values = starting_list, parameters = parameters_list,
+  metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = matrix_reef,
+                                         starting_values = list_starting, parameters = list_parameters,
                                          dimensions = dimensions, grain = grain, 
                                          use_log = FALSE, verbose = FALSE)
   
@@ -55,7 +55,7 @@ foo_hpc <- function(pop_n, phase_sd) {
                                                   phase_sd = phase_sd, verbose = FALSE)
   
   # run model
-  result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = parameters_list,
+  result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = list_parameters,
                                                 nutrients_input = input_temp, movement = "behav",
                                                 max_i = max_i, min_per_i = min_per_i,
                                                 seagrass_each = seagrass_each, save_each = save_each, 
@@ -93,7 +93,7 @@ foo_hpc <- function(pop_n, phase_sd) {
 
 #### Submit HPC
 
-globals <- c("n", "max_i", "reef_matrix", "starting_list", "parameters_list", "dimensions", "grain", # setup_meta
+globals <- c("n", "max_i", "matrix_reef", "list_starting", "list_parameters", "dimensions", "grain", # setup_meta
              "years", "frequency", "nutrient_input", "amplitude_mn", # simulate_nutr_input
              "min_per_i", "seagrass_each", "save_each", # run_simulation_meta
              "years_filter") # filter_meta 

@@ -14,7 +14,7 @@ source("01_Functions/log_response.R")
 
 #### setup_inputs ####
 # create 5 reef cells in center of seafloor
-reef_matrix <- matrix(data = c(-1, 0, 0, 1, 1, 0, 0, -1, 0, 0),
+matrix_reef <- matrix(data = c(-1, 0, 0, 1, 1, 0, 0, -1, 0, 0),
                       ncol = 2, byrow = TRUE)
 
 #### setup experiment ####
@@ -34,20 +34,20 @@ foo <- function(enrichment_levels, amplitude_levels) {
                                           freq_mn = freq_mn, verbose = FALSE)
   
   # create list with no fishpop and fishpop
-  input_list <- list(0, starting_list$pop_n)
+  input_list <- list(0, list_starting$pop_n)
   
   # run model
   result_temp <- purrr::map_dfr(input_list, function(i) {
     
-    starting_list$pop_n <- i
+    list_starting$pop_n <- i
     
-    metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = reef_matrix,
-                                           starting_values = starting_list, parameters = parameters_list,
+    metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = matrix_reef,
+                                           starting_values = list_starting, parameters = list_parameters,
                                            dimensions = dimensions, use_log = use_log, 
                                            verbose = FALSE)
     
     # run model
-    run_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = parameters_list,
+    run_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = list_parameters,
                                                nutrients_input = input_temp, movement = "behav",
                                                max_i = max_i, min_per_i = min_per_i,
                                                seagrass_each = seagrass_each, save_each = save_each, 
@@ -86,8 +86,8 @@ foo <- function(enrichment_levels, amplitude_levels) {
 #### Submit to HPC ####
 
 globals <- c("n", "max_i", "nutrient_input", "freq_mn", 
-             "starting_list", 
-             "reef_matrix", "parameters_list", "dimensions", "use_log", 
+             "list_starting", 
+             "matrix_reef", "list_parameters", "dimensions", "use_log", 
              "min_per_i", "seagrass_each", "save_each")
 
 # create .sh script

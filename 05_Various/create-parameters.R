@@ -7,7 +7,7 @@
 ##--------------------------------------------##
 
 #### default parameters ####
-parameters_list <- list(
+list_parameters <- list(
   
   # belowground biomass
   bg_biomass_min = 275.89,
@@ -72,13 +72,13 @@ parameters_list <- list(
 
 #### default starting values ####
 
-# ag <- parameters_list$ag_biomass_min +
-#   (parameters_list$ag_biomass_max - parameters_list$ag_biomass_min) * 1/3
+# ag <- list_parameters$ag_biomass_min +
+#   (list_parameters$ag_biomass_max - list_parameters$ag_biomass_min) * 1/3
 # 
-# bg <- parameters_list$bg_biomass_min +
-#   (parameters_list$bg_biomass_max - parameters_list$bg_biomass_min) * 1/3
+# bg <- list_parameters$bg_biomass_min +
+#   (list_parameters$bg_biomass_max - list_parameters$bg_biomass_min) * 1/3
 
-starting_list <- list(
+list_starting <- list(
   
   # biomass (mean field data)
   bg_biomass = 547.01948, # bg,
@@ -94,16 +94,16 @@ starting_list <- list(
   pop_sd_size = 10.0
 )
 
-((starting_list$bg_biomass - parameters_list$bg_biomass_min) /
-  (parameters_list$bg_biomass_max - parameters_list$bg_biomass_min)) * 100
+((list_starting$bg_biomass - list_parameters$bg_biomass_min) /
+  (list_parameters$bg_biomass_max - list_parameters$bg_biomass_min)) * 100
 
-((starting_list$ag_biomass - parameters_list$ag_biomass_min) /
-    (parameters_list$ag_biomass_max - parameters_list$ag_biomass_min)) * 100
+((list_starting$ag_biomass - list_parameters$ag_biomass_min) /
+    (list_parameters$ag_biomass_max - list_parameters$ag_biomass_min)) * 100
 
 #### save results ####
 
-suppoRt::save_rds(object = parameters_list, filename = "parameters_list.rds", 
+suppoRt::save_rds(object = list_parameters, filename = "list_parameters.rds", 
                   path = "02_Data/", overwrite = TRUE)
 
-suppoRt::save_rds(object = starting_list, filename = "starting_list.rds", 
+suppoRt::save_rds(object = list_starting, filename = "list_starting.rds", 
                   path = "02_Data/", overwrite = TRUE)

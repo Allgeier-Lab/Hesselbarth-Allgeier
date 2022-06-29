@@ -10,18 +10,20 @@
 library(meta.arrR) # remotes::install_github("Allgeier-Lab/meta.arrR", ref = "development")
 library(arrR)
 
+library(broom)
 library(cowplot)
-library(Rcpp)
+library(ggforce)
+library(lhs)
+library(relaimpo)
 library(rslurm)
 library(suppoRt) # remotes::install_github("mhesselbarth/suppoRt")
-library(terra)
 library(tidyverse)
 
 #### Load data ####
 
-starting_list <- readRDS("02_Data/starting_list.rds")
+list_starting <- readRDS("02_Data/list_starting.rds")
 
-parameters_list <- readRDS("02_Data/parameters_list.rds")
+list_parameters <- readRDS("02_Data/list_parameters.rds")
 
 #### Basic parameters ####
 
@@ -65,7 +67,7 @@ nutrient_input <- 4.584905e-05 # see 00_input-nutr-fish.R
 
 #### Setup reef cells ####
 
-reef_matrix <- matrix(data = c(-1, 0, 0, 1, 1, 0, 0, -1, 0, 0), 
+matrix_reef <- matrix(data = c(-1, 0, 0, 1, 1, 0, 0, -1, 0, 0), 
                       ncol = 2, byrow = TRUE)
 
 #### Setup treatment levels ####
@@ -103,6 +105,7 @@ message("\nUsing R v", stringr::str_split(rscript_path, pattern = "/", simplify 
 
 # # exclude slow nodes
 # exclude_nodes <- "gl[3368-3371]"
+exclude_nodes <- "gl3069"
 
 #### Remove some basic parameters ####
 

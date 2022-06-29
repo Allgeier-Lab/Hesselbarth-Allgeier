@@ -14,22 +14,22 @@ source("05_Various/setup.R")
 
 #### Change parameters and starting values ####
 
-parameters_list$nutrients_loss <- 0.0 
+list_parameters$nutrients_loss <- 0.0 
 
 #### Setup environment #### 
 
 # create 5 reef cells in center of seafloor
-reef_matrix <- matrix(data = c(-1, 0, 0, 1, 1, 0, 0, -1, 0, 0),
+matrix_reef <- matrix(data = c(-1, 0, 0, 1, 1, 0, 0, -1, 0, 0),
                       ncol = 2, byrow = TRUE)
 
 # get stable nutrient/detritus values
-stable_values <- arrR::get_req_nutrients(bg_biomass = starting_list$bg_biomass, 
-                                         ag_biomass = starting_list$ag_biomass,
-                                         parameters = parameters_list)
+stable_values <- arrR::get_req_nutrients(bg_biomass = list_starting$bg_biomass, 
+                                         ag_biomass = list_starting$ag_biomass,
+                                         parameters = list_parameters)
 
-starting_list$nutrients_pool <- stable_values$nutrients_pool
+list_starting$nutrients_pool <- stable_values$nutrients_pool
 
-starting_list$detritus_pool <- stable_values$detritus_pool
+list_starting$detritus_pool <- stable_values$detritus_pool
 
 #### Setup experiment #### 
  
@@ -40,15 +40,15 @@ foo <- function(itr) {
   
   # create seafloor
   input_seafloor <- arrR::setup_seafloor(dimensions = dimensions, grain = grain, 
-                                         reef = reef_matrix, starting_values = starting_list, 
+                                         reef = matrix_reef, starting_values = list_starting, 
                                          verbose = FALSE)
   
   input_fishpop <- arrR::setup_fishpop(seafloor = input_seafloor, 
-                                       starting_values = starting_list, parameters = parameters_list,
+                                       starting_values = list_starting, parameters = list_parameters,
                                        use_log = use_log, verbose = FALSE)
     
   result_temp <- arrR::run_simulation(seafloor = input_seafloor, fishpop = input_fishpop,
-                                      parameters = parameters_list, movement = "behav",
+                                      parameters = list_parameters, movement = "behav",
                                       max_i = max_i, min_per_i = min_per_i, seagrass_each = seagrass_each, 
                                       save_each = save_each, verbose = FALSE)
   
@@ -63,8 +63,8 @@ foo <- function(itr) {
   
 }
 
-globals <- c("dimensions", "grain", "reef_matrix", "starting_list", 
-             "parameters_list", "use_log",
+globals <- c("dimensions", "grain", "matrix_reef", "list_starting", 
+             "list_parameters", "use_log",
              "max_i", "min_per_i", "seagrass_each", "save_each")
 
 input_df <- data.frame(itr = 1:iterations)
@@ -101,7 +101,7 @@ rslurm::cleanup_files(sbatch_fish)
 result <- readr::read_rds("02_Data/01-nutr-input-fish.rds")
 
 # calculate mean total input of fish population each timestep
-total_excretion <- mean(result$excretion_mn) * starting_list$pop_n
+total_excretion <- mean(result$excretion_mn) * list_starting$pop_n
 
 # calculate nutrient input each cell so that total input equals total excretion
 (nutrient_input_cell <- total_excretion / prod(dimensions))
@@ -115,21 +115,21 @@ total_excretion <- mean(result$excretion_mn) * starting_list$pop_n
 
 # create seafloor
 input_seafloor <- arrR::setup_seafloor(dimensions = dimensions, grain = grain, 
-                                       reef = reef_matrix, starting_values = starting_list)
+                                       reef = matrix_reef, starting_values = list_starting)
 
-input_fishpop <- arrR::setup_fishpop(seafloor = input_seafloor, starting_values = starting_list, 
-                                     parameters = parameters_list, use_log = use_log)
+input_fishpop <- arrR::setup_fishpop(seafloor = input_seafloor, starting_values = list_starting, 
+                                     parameters = list_parameters, use_log = use_log)
 
 result <- purrr::map2(c(0.0, nutrient_input_cell), c(0.0, nutrients_loss), function(i, j) {
 
   input_nutrients <- meta.arrR::simulate_nutr_input(n = 1, max_i = max_i, input_mn = i, 
                                                     frequency = years, amplitude_mod = 0.05)
   
-  parameters_list$nutrients_loss <- j
+  list_parameters$nutrients_loss <- j
   
   arrR::run_simulation(seafloor = input_seafloor, fishpop = input_fishpop,
                        nutrients_input = input_nutrients$values$meta_1$input, 
-                       parameters = parameters_list, movement = "behav", max_i = max_i, 
+                       parameters = list_parameters, movement = "behav", max_i = max_i, 
                        min_per_i = min_per_i, seagrass_each = seagrass_each, 
                        save_each = save_each, verbose = TRUE)}) %>% 
   purrr::set_names(c("no_input", "input"))

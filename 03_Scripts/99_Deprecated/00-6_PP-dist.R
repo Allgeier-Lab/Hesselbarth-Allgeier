@@ -12,22 +12,22 @@ source("05_Various/setup.R")
 
 #### Stable values ####
 
-stable_values <- arrR::get_req_nutrients(bg_biomass = starting_list$bg_biomass,
-                                         ag_biomass = starting_list$ag_biomass,
-                                         parameters = parameters_list)
+stable_values <- arrR::get_req_nutrients(bg_biomass = list_starting$bg_biomass,
+                                         ag_biomass = list_starting$ag_biomass,
+                                         parameters = list_parameters)
 
-starting_list$nutrients_pool <- stable_values$nutrients_pool
+list_starting$nutrients_pool <- stable_values$nutrients_pool
 
-starting_list$detritus_pool <- stable_values$detritus_pool
+list_starting$detritus_pool <- stable_values$detritus_pool
 
 #### Setup HPC ####
 
 df_input <- expand.grid(amplitude_mn = c(0.05, 0.5, 1.0), 
                         enrichment = c(0.5, 1.0, 1.5))
 
-helper_dist <- function(x, y) arrR:::rcpp_closest_reef(x, y, coords_reef = reef_matrix)[[2]]
+helper_dist <- function(x, y) arrR:::rcpp_closest_reef(x, y, coords_reef = matrix_reef)[[2]]
 
-globals <- c("n", "reef_matrix", "max_i", "starting_list", "parameters_list", "dimensions", 
+globals <- c("n", "matrix_reef", "max_i", "list_starting", "list_parameters", "dimensions", 
              "grain", "use_log", "nutrient_input", "freq_mn", "min_per_i", "seagrass_each", 
              "save_each", "helper_dist") 
 
@@ -36,8 +36,8 @@ foo_hpc <- function(amplitude_mn, enrichment) {
   library(dplyr)
   
   # setup metaecosystems
-  metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = reef_matrix,
-                                         starting_values = starting_list, parameters = parameters_list,
+  metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = matrix_reef,
+                                         starting_values = list_starting, parameters = list_parameters,
                                          dimensions = dimensions, grain = grain, use_log = use_log, 
                                          verbose = FALSE)
   
@@ -49,11 +49,11 @@ foo_hpc <- function(amplitude_mn, enrichment) {
   
   purrr::map_dfr(list(local = 0, mobile = 8), function(i) {
     
-    parameters_list$move_residence_mean <- i
+    list_parameters$move_residence_mean <- i
     
     metasyst_temp$fishpop_attr[, 3] <- i
     
-    result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = parameters_list,
+    result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = list_parameters,
                                                   nutrients_input = input_temp, movement = "behav",
                                                   max_i = max_i, min_per_i = min_per_i,
                                                   seagrass_each = seagrass_each,

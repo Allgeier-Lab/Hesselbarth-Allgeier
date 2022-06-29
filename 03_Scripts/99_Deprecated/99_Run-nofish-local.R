@@ -12,29 +12,29 @@ source("05_Various/setup.R")
 
 #### Adapt parameters ####
 
-# parameters_list$seagrass_thres <- -1/2
+# list_parameters$seagrass_thres <- -1/2
 
-parameters_list$nutrients_diffusion <- 0.0
-parameters_list$detritus_diffusion <- 0.0
-parameters_list$detritus_fish_diffusion <- 0.0
+list_parameters$nutrients_diffusion <- 0.0
+list_parameters$detritus_diffusion <- 0.0
+list_parameters$detritus_fish_diffusion <- 0.0
 
 n <- 5
 
-starting_list$pop_n <- 0
+list_starting$pop_n <- 0
 
-starting_list$bg_biomass <- parameters_list$bg_biomass_max
+list_starting$bg_biomass <- list_parameters$bg_biomass_max
 
-starting_list$ag_biomass <- parameters_list$ag_biomass_max
+list_starting$ag_biomass <- list_parameters$ag_biomass_max
 
 #### Stable values ####
 
-stable_values <- arrR::get_stable_values(bg_biomass = starting_list$bg_biomass,
-                                         ag_biomass = starting_list$ag_biomass,
-                                         parameters = parameters_list)
+stable_values <- arrR::get_stable_values(bg_biomass = list_starting$bg_biomass,
+                                         ag_biomass = list_starting$ag_biomass,
+                                         parameters = list_parameters)
 
-starting_list$nutrients_pool <- stable_values$nutrients_pool
+list_starting$nutrients_pool <- stable_values$nutrients_pool
 
-starting_list$detritus_pool <- stable_values$detritus_pool
+list_starting$detritus_pool <- stable_values$detritus_pool
 
 input_mn <- stable_values$nutr_input
 
@@ -42,7 +42,7 @@ input_mn <- stable_values$nutr_input
 
 # setup metaecosystems
 metasyst <- meta.arrR::setup_meta(n = n, max_i = max_i, 
-                                  starting_values = starting_list, parameters = parameters_list,
+                                  starting_values = list_starting, parameters = list_parameters,
                                   dimensions = dimensions, grain = grain, reef = NULL)
 
 # simulate input 
@@ -68,7 +68,7 @@ input_temp <- meta.arrR::sim_nutr_input(n = n, max_i = max_i,
 
 # run model
 result <- meta.arrR::run_meta(metasyst = metasyst, nutr_input = input_temp, 
-                              parameters = parameters_list,
+                              parameters = list_parameters,
                               max_i = max_i, min_per_i = min_per_i, 
                               seagrass_each = seagrass_each, save_each = save_each)
 

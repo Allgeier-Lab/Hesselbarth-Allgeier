@@ -12,8 +12,8 @@ source("05_Various/setup.R")
 
 #### Setup experiment ####
 
-stable_values <- get_stable_values(starting_values = starting_list, 
-                                   parameters = parameters_list)
+stable_values <- get_stable_values(starting_values = list_starting, 
+                                   parameters = list_parameters)
 
 # create variability data.frame with all combinations 
 variability_experiment <- expand.grid(amplitude = c(0.05, 0.5, 1), 

@@ -12,9 +12,9 @@ source("05_Various/setup.R")
 
 #### Setup experiment ####
 
-stable_values <- arrR::get_stable_values(bg_biomass = starting_list$bg_biomass,
-                                         ag_biomass = starting_list$ag_biomass,
-                                         parameters = parameters_list)
+stable_values <- arrR::get_stable_values(bg_biomass = list_starting$bg_biomass,
+                                         ag_biomass = list_starting$ag_biomass,
+                                         parameters = list_parameters)
 
 input_mn <- stable_values$nutr_input
 

@@ -15,8 +15,8 @@ source("01_Functions/predict_nls.R")
 
 #### Setup experiment ####
 
-input_mn <- get_stable_values(starting_values = starting_list, 
-                              parameters = parameters_list) %>% 
+input_mn <- get_stable_values(starting_values = list_starting, 
+                              parameters = list_parameters) %>% 
   magrittr::extract2("nutr_input")
 
 # set number of repetitions

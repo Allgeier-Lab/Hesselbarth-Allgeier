@@ -14,19 +14,19 @@ source("01_Functions/get_modifier.R")
 
 #### Adapt parameters ####
 
-parameters_list$move_residence <- 0.0
+list_parameters$move_residence <- 0.0
 
-parameters_list$move_residence_var <- 0.0
+list_parameters$move_residence_var <- 0.0
 
 #### Stable values ####
 
-stable_values <- arrR::get_req_nutrients(bg_biomass = starting_list$bg_biomass,
-                                         ag_biomass = starting_list$ag_biomass,
-                                         parameters = parameters_list)
+stable_values <- arrR::get_req_nutrients(bg_biomass = list_starting$bg_biomass,
+                                         ag_biomass = list_starting$ag_biomass,
+                                         parameters = list_parameters)
 
-starting_list$nutrients_pool <- stable_values$nutrients_pool
+list_starting$nutrients_pool <- stable_values$nutrients_pool
 
-starting_list$detritus_pool <- stable_values$detritus_pool
+list_starting$detritus_pool <- stable_values$detritus_pool
 
 #### Simulate input ####
 
@@ -44,15 +44,15 @@ variability_input <- tidyr::expand_grid(enrichment = enrichment_levels,
 
 #### Setup HPC function ####
 
-globals <- c("n", "reef_matrix", "max_i", "starting_list", "parameters_list", "dimensions", 
+globals <- c("n", "matrix_reef", "max_i", "list_starting", "list_parameters", "dimensions", 
              "grain", "use_log", "nutrient_input", "freq_mn", "min_per_i", "seagrass_each", 
              "save_each") 
 
 foo <- function(nutr_input) {
   
   # setup metaecosystems
-  metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = reef_matrix,
-                                         starting_values = starting_list, parameters = parameters_list,
+  metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = matrix_reef,
+                                         starting_values = list_starting, parameters = list_parameters,
                                          dimensions = dimensions, grain = grain, use_log = use_log, 
                                          verbose = FALSE)
   
@@ -62,7 +62,7 @@ foo <- function(nutr_input) {
                                           input_mn = nutrient_input * unique(nutr_input[, 1]))
   
   # run model
-  result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = parameters_list,
+  result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = list_parameters,
                                                 nutrients_input = input_temp, movement = "behav",
                                                 max_i = max_i, min_per_i = min_per_i,
                                                 seagrass_each = seagrass_each,

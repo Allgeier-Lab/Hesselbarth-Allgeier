@@ -16,12 +16,12 @@ source("05_Various/setup.R")
 
 #### Stable values ####
 
-stable_values <- arrR::get_stable_values(bg_biomass = starting_list$bg_biomass,
-                                         ag_biomass = starting_list$ag_biomass,
-                                         parameters = parameters_list)
+stable_values <- arrR::get_stable_values(bg_biomass = list_starting$bg_biomass,
+                                         ag_biomass = list_starting$ag_biomass,
+                                         parameters = list_parameters)
 
-starting_list$nutrients_pool <- stable_values$nutrients_pool
-starting_list$detritus_pool <- stable_values$detritus_pool
+list_starting$nutrients_pool <- stable_values$nutrients_pool
+list_starting$detritus_pool <- stable_values$detritus_pool
 
 #### Simulate input ####
 
@@ -34,8 +34,8 @@ df_experiment <- data.frame(variability = variability, enrichment = enrichment_l
 
 #### Setup HPC function ####
 
-globals <- list(n = n, reef_matrix = reef_matrix, max_i = max_i, starting_list = starting_list, 
-                parameters_list = parameters_list, dimensions = dimensions, 
+globals <- list(n = n, matrix_reef = matrix_reef, max_i = max_i, list_starting = list_starting, 
+                list_parameters = list_parameters, dimensions = dimensions, 
                 grain = grain, use_log = use_log, input_mn = stable_values$nutrients_input, 
                 freq_mn = freq_mn, min_per_i = min_per_i, seagrass_each = seagrass_each, 
                 save_each = save_each) 
@@ -43,9 +43,9 @@ globals <- list(n = n, reef_matrix = reef_matrix, max_i = max_i, starting_list =
 foo <- function(variability, enrichment) {
   
   # setup metaecosystems
-  metasyst_temp <- meta.arrR::setup_meta(n = globals$n, max_i = globals$max_i, reef = globals$reef_matrix,
-                                         starting_values = globals$starting_list,
-                                         parameters = globals$parameters_list,
+  metasyst_temp <- meta.arrR::setup_meta(n = globals$n, max_i = globals$max_i, reef = globals$matrix_reef,
+                                         starting_values = globals$list_starting,
+                                         parameters = globals$list_parameters,
                                          dimensions = globals$dimensions, grain = globals$grain,
                                          use_log = globals$use_log, verbose = FALSE)
   
@@ -55,7 +55,7 @@ foo <- function(variability, enrichment) {
                                           freq_mn = globals$freq_mn)
   
   # run model
-  result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = globals$parameters_list,
+  result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = globals$list_parameters,
                                                 nutrients_input = input_temp, movement = "behav",
                                                 max_i = globals$max_i, min_per_i = globals$min_per_i,
                                                 seagrass_each = globals$seagrass_each,

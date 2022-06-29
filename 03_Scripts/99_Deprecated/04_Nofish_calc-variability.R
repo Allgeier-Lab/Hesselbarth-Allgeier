@@ -12,14 +12,14 @@ source("05_Various/setup.R")
 
 #### Adapt parameters ####
 
-parameters_list$nutrients_diffusion <- 0.0
-parameters_list$detritus_diffusion <- 0.0
-parameters_list$detritus_fish_diffusion <- 0.0
+list_parameters$nutrients_diffusion <- 0.0
+list_parameters$detritus_diffusion <- 0.0
+list_parameters$detritus_fish_diffusion <- 0.0
 
-starting_list$bg_biomass <- parameters_list$bg_biomass_max
-starting_list$ag_biomass <- parameters_list$ag_biomass_max
+list_starting$bg_biomass <- list_parameters$bg_biomass_max
+list_starting$ag_biomass <- list_parameters$ag_biomass_max
 
-starting_list$pop_n <- 0
+list_starting$pop_n <- 0
 
 # save results only every m days
 days_save <- 125 # which(max_i %% ((24 / (min_per_i / 60)) * (1:365)) == 0)
@@ -28,13 +28,13 @@ save_each <- (24 / (min_per_i / 60)) * days_save
 
 #### Stable values ####
 
-stable_values <- arrR::get_stable_values(bg_biomass = starting_list$bg_biomass,
-                                         ag_biomass = starting_list$ag_biomass,
-                                         parameters = parameters_list)
+stable_values <- arrR::get_stable_values(bg_biomass = list_starting$bg_biomass,
+                                         ag_biomass = list_starting$ag_biomass,
+                                         parameters = list_parameters)
 
-starting_list$nutrients_pool <- stable_values$nutrients_pool
+list_starting$nutrients_pool <- stable_values$nutrients_pool
 
-starting_list$detritus_pool <- stable_values$detritus_pool
+list_starting$detritus_pool <- stable_values$detritus_pool
 
 input_mn <- stable_values$nutr_input
 
@@ -50,7 +50,7 @@ sim_experiment <- data.frame(amplitude = runif(n = itr, min = 0, max = 1),
 
 # create globals
 globals <- list(n = n, max_i = max_i, input_mn = input_mn, freq_mn = freq_mn, 
-                starting_list = starting_list, parameters_list = parameters_list, 
+                list_starting = list_starting, list_parameters = list_parameters, 
                 dimensions = dimensions, grain = grain,
                 min_per_i = min_per_i, seagrass_each = seagrass_each, save_each = save_each) 
 
@@ -60,8 +60,8 @@ foo <- function(amplitude, phase) {
   
   # setup metaecosystems
   metasyst_temp <- meta.arrR::setup_meta(n = globals$n, max_i = globals$max_i, 
-                                         starting_values = globals$starting_list, 
-                                         parameters = globals$parameters_list, 
+                                         starting_values = globals$list_starting, 
+                                         parameters = globals$list_parameters, 
                                          dimensions = globals$dimensions, grain = globals$grain, 
                                          reef = NULL, verbose = FALSE)
   
@@ -73,7 +73,7 @@ foo <- function(amplitude, phase) {
   
   # run model
   result_temp <- meta.arrR::run_meta(metasyst = metasyst_temp, nutr_input = input_temp,
-                                     parameters = globals$parameters_list,
+                                     parameters = globals$list_parameters,
                                      max_i = globals$max_i, min_per_i = globals$min_per_i, 
                                      seagrass_each = globals$seagrass_each,
                                      save_each = globals$save_each, verbose = FALSE)

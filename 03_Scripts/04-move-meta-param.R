@@ -18,13 +18,13 @@ source("05_Various/setup.R")
 
 #### Stable values #### 
 
-stable_values <- arrR::get_req_nutrients(bg_biomass = starting_list$bg_biomass,
-                                         ag_biomass = starting_list$ag_biomass,
-                                         parameters = parameters_list)
+stable_values <- arrR::get_req_nutrients(bg_biomass = list_starting$bg_biomass,
+                                         ag_biomass = list_starting$ag_biomass,
+                                         parameters = list_parameters)
 
-starting_list$nutrients_pool <- stable_values$nutrients_pool
+list_starting$nutrients_pool <- stable_values$nutrients_pool
 
-starting_list$detritus_pool <- stable_values$detritus_pool
+list_starting$detritus_pool <- stable_values$detritus_pool
 
 #### Setup experiment ####
 
@@ -46,8 +46,8 @@ experiment_df <- tibble::tibble(
   rand = rep(x = c("mean", "sd"), each = iterations))
   
 # setup metaecosystems
-metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = reef_matrix,
-                                       starting_values = starting_list, parameters = parameters_list,
+metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = matrix_reef,
+                                       starting_values = list_starting, parameters = list_parameters,
                                        dimensions = dimensions, grain = grain, use_log = use_log, 
                                        verbose = FALSE)
 
@@ -56,13 +56,13 @@ foo_hpc <- function(move_meta_mean, move_meta_sd, rand) {
   library(dplyr)
   
   # update move meta sd
-  parameters_list$move_meta_mean <- move_meta_mean
+  list_parameters$move_meta_mean <- move_meta_mean
   
-  parameters_list$move_meta_sd <- move_meta_sd
+  list_parameters$move_meta_sd <- move_meta_sd
   
   # create new attributed matrix
   attr_replace <- meta.arrR:::setup_attributes(fishpop = metasyst_temp$fishpop, 
-                                               parameters = parameters_list, max_i = max_i)
+                                               parameters = list_parameters, max_i = max_i)
   
   # replace matrix
   metasyst_temp$fishpop_attr[, 3] <- attr_replace[, 3]
@@ -72,7 +72,7 @@ foo_hpc <- function(move_meta_mean, move_meta_sd, rand) {
                                                 input_mn = nutrient_input, verbose = FALSE)
   
   # run model
-  result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = parameters_list,
+  result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = list_parameters,
                                                 nutrients_input = input_temp, movement = "behav",
                                                 max_i = max_i, min_per_i = min_per_i,
                                                 seagrass_each = seagrass_each,
@@ -105,7 +105,7 @@ foo_hpc <- function(move_meta_mean, move_meta_sd, rand) {
 
 #### Submit HPC
 
-globals <- c("parameters_list", "metasyst_temp", "max_i", "n", "years", "nutrient_input", 
+globals <- c("list_parameters", "metasyst_temp", "max_i", "n", "years", "nutrient_input", 
              "min_per_i", "seagrass_each", "save_each")
 
 sbatch_move_meta <- rslurm::slurm_apply(f = foo_hpc, params = experiment_df, 

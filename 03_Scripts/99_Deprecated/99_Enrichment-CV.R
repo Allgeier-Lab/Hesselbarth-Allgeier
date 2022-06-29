@@ -15,23 +15,23 @@ source("01_Functions/get_modifier.R")
 
 n <- 1
 
-starting_list$pop_n <- 0
+list_starting$pop_n <- 0
 
-parameters_list$nutrients_diffusion <- 0.0
-parameters_list$detritus_diffusion <- 0.0
-parameters_list$detritus_fish_diffusion <- 0.0
+list_parameters$nutrients_diffusion <- 0.0
+list_parameters$detritus_diffusion <- 0.0
+list_parameters$detritus_fish_diffusion <- 0.0
 
-# parameters_list$seagrass_thres <- 1/3
+# list_parameters$seagrass_thres <- 1/3
 
 #### Stable values ####
 
-stable_values <- arrR::get_stable_values(bg_biomass = starting_list$bg_biomass,
-                                         ag_biomass = starting_list$ag_biomass,
-                                         parameters = parameters_list)
+stable_values <- arrR::get_stable_values(bg_biomass = list_starting$bg_biomass,
+                                         ag_biomass = list_starting$ag_biomass,
+                                         parameters = list_parameters)
 
-starting_list$nutrients_pool <- stable_values$nutrients_pool
+list_starting$nutrients_pool <- stable_values$nutrients_pool
 
-starting_list$detritus_pool <- stable_values$detritus_pool
+list_starting$detritus_pool <- stable_values$detritus_pool
 
 #### Simulate input ####
 
@@ -46,8 +46,8 @@ sim_experiment <- expand.grid(amplitude = amplitude_lvls, enrichment = enrichmen
 
 #### Setup HPC function ####
 
-globals <- list(n = n, max_i = max_i, starting_list = starting_list, 
-                parameters_list = parameters_list, dimensions = dimensions, 
+globals <- list(n = n, max_i = max_i, list_starting = list_starting, 
+                list_parameters = list_parameters, dimensions = dimensions, 
                 grain = grain, nutr_input = stable_values$nutr_input, freq_mn = freq_mn, 
                 min_per_i = min_per_i, seagrass_each = seagrass_each, save_each = save_each) 
 
@@ -55,8 +55,8 @@ foo <- function(amplitude, enrichment) {
   
   # setup metaecosystems
   metasyst_temp <- meta.arrR::setup_meta(n = globals$n, max_i = globals$max_i,
-                                         starting_values = globals$starting_list,
-                                         parameters = globals$parameters_list,
+                                         starting_values = globals$list_starting,
+                                         parameters = globals$list_parameters,
                                          dimensions = globals$dimensions, grain = globals$grain,
                                          reef = NULL, verbose = FALSE)
   
@@ -68,7 +68,7 @@ foo <- function(amplitude, enrichment) {
   
   # run model
   result_temp <- meta.arrR::run_meta(metasyst = metasyst_temp, nutr_input = input_temp,
-                                     parameters = globals$parameters_list,
+                                     parameters = globals$list_parameters,
                                      max_i = globals$max_i, min_per_i = globals$min_per_i,
                                      seagrass_each = globals$seagrass_each,
                                      save_each = globals$save_each, verbose = FALSE)

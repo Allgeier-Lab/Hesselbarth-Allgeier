@@ -19,17 +19,17 @@ source("01_Functions/log_response.R")
 #### Setup environment #### 
 
 # create 5 reef cells in center of seafloor
-reef_matrix <- matrix(data = c(-1, 0, 0, 1, 1, 0, 0, -1, 0, 0),
+matrix_reef <- matrix(data = c(-1, 0, 0, 1, 1, 0, 0, -1, 0, 0),
                       ncol = 2, byrow = TRUE)
 
 # get stable nutrient/detritus values
-stable_values <- arrR::get_req_nutrients(bg_biomass = starting_list$bg_biomass,
-                                         ag_biomass = starting_list$ag_biomass,
-                                         parameters = parameters_list)
+stable_values <- arrR::get_req_nutrients(bg_biomass = list_starting$bg_biomass,
+                                         ag_biomass = list_starting$ag_biomass,
+                                         parameters = list_parameters)
 
-starting_list$nutrients_pool <- stable_values$nutrients_pool
+list_starting$nutrients_pool <- stable_values$nutrients_pool
 
-starting_list$detritus_pool <- stable_values$detritus_pool
+list_starting$detritus_pool <- stable_values$detritus_pool
 
 #### setup experiment ####
 
@@ -48,20 +48,20 @@ foo <- function(enrichment_levels, amplitude_levels) {
                                           freq_mn = freq_mn, verbose = FALSE)
   
   # create list with no fishpop and fishpop
-  input_list <- list(0.0, parameters_list$move_residence)
+  input_list <- list(0.0, list_parameters$move_residence)
   
   # run model
   result_temp <- purrr::map_dfr(input_list, function(i) {
     
-    parameters_list$move_residence <- i
+    list_parameters$move_residence <- i
     
-    metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = reef_matrix,
-                                           starting_values = starting_list, parameters = parameters_list,
+    metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = matrix_reef,
+                                           starting_values = list_starting, parameters = list_parameters,
                                            dimensions = dimensions, use_log = use_log, 
                                            verbose = FALSE)
     
     # run model
-    run_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = parameters_list,
+    run_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = list_parameters,
                                                nutrients_input = input_temp, movement = "behav",
                                                max_i = max_i, min_per_i = min_per_i,
                                                seagrass_each = seagrass_each, save_each = save_each, 
@@ -100,8 +100,8 @@ foo <- function(enrichment_levels, amplitude_levels) {
 #### Submit to HPC ####
 
 globals <- c("n", "max_i", "nutrient_input", "freq_mn", 
-             "starting_list", 
-             "reef_matrix", "parameters_list", "dimensions", "use_log", 
+             "list_starting", 
+             "matrix_reef", "list_parameters", "dimensions", "use_log", 
              "min_per_i", "seagrass_each", "save_each")
 
 # create .sh script
