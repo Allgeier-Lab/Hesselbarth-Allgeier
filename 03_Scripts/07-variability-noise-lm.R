@@ -41,11 +41,9 @@ df_regression <- dplyr::filter(df_results, measure %in% c("alpha", "gamma")) %>%
   dplyr::group_split() %>% 
   purrr::map_dfr(function(df_temp) {
     
-    df_temp$value.cv <- log(df_temp$value.cv)
+    df_temp$value.cv <- log(df_temp$value.cv) - mean(log(df_temp$value.cv))
     
-    df_temp$value.cv <- df_temp$value.cv - mean(df_temp$value.cv)
-    
-    lm_temp <- lm(value.cv ~ move_meta_sd + noise_sd, data = df_temp)
+    lm_temp <- lm(value.cv ~ log(move_meta_sd) + log(noise_sd), data = df_temp)
 
     broom::tidy(lm_temp) %>% 
       dplyr::mutate(part = unique(df_temp$part), measure = unique(df_temp$measure), 
@@ -89,8 +87,8 @@ gg_list <- map(c("ag_production", "bg_production", "ttl_production"), function(p
     
     # Facets
     facet_wrap(. ~ term, ncol = 3, scales = "free_y", 
-               labeller = labeller(term = c(Intercept = "Intercept", move_meta_sd = "Connectivity", 
-                                            noise_sd = "Abiotic variability (noise)"))) +
+               labeller = labeller(term = c("Intercept" = "centered(Intercept)", "log(move_meta_sd)" = "log(Connectivity)", 
+                                            "log(noise_sd)" = "log(Noise variability)"))) +
     
     # Stuff
     scale_color_manual(name = "Scale", values = color_palette) +

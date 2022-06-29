@@ -39,7 +39,9 @@ df_importance <- dplyr::group_by(df_results, part, measure, pop_n) %>%
   dplyr::group_split() %>% 
   purrr::map_dfr(function(df_temp) {
     
-    lm_temp <- lm(log(value.cv) ~ log(move_meta_sd) + log(noise_sd), data = df_temp)
+    df_temp$value.cv <- log(df_temp$value.cv) - mean(log(df_temp$value.cv))
+    
+    lm_temp <- lm(value.cv ~ log(move_meta_sd) + log(noise_sd), data = df_temp)
     
     rel_r2 <- relaimpo::boot.relimp(lm_temp, type = "lmg", b = 1000, level = 0.95, fixed = FALSE) %>% 
       relaimpo::booteval.relimp(bty = "bca")
@@ -85,7 +87,7 @@ gg_indiv <- purrr::map(c(8, 16, 32, 64), function(pop_i) {
       dplyr::select(part, move_meta_sd, noise_sd, value.cv) %>% 
       tidyr::pivot_longer(-c(part, value.cv))
     
-    gg_lm <- ggplot(data = df_results_temp, aes(x = value, y = log(value.cv), color = part)) + 
+    gg_lm <- ggplot(data = df_results_temp, aes(x = log(value), y = log(value.cv), color = part)) + 
       geom_point(shape = 1, alpha = 0.15) + 
       geom_smooth(size = 0.5, formula = y ~ x, se = FALSE, method = "lm") +
       scale_color_manual(name = "", values = color_part) +
@@ -96,7 +98,7 @@ gg_indiv <- purrr::map(c(8, 16, 32, 64), function(pop_i) {
       theme(legend.position = "none", strip.text = element_text(hjust = 0), strip.background = element_blank(),
             plot.margin = unit(c(t = 0.0, r = 0.25, b = ifelse(test = pop_i == 64, yes = 0.25, no = 0.75), l = 0.25), "cm"))
     
-    cowplot::plot_grid(gg_relimp_temp, gg_lm, nrow = 2, rel_heights = c(0.4, 0.6))
+    cowplot::plot_grid(gg_relimp_temp, gg_lm, nrow = 2, rel_heights = c(0.3, 0.7))
   
   })}) %>% 
   purrr::flatten()
@@ -118,7 +120,7 @@ gg_varpart <- cowplot::plot_grid(cowplot::plot_grid(plotlist = gg_indiv, ncol = 
 
 suppoRt::save_ggplot(plot = gg_varpart, filename = paste0("08-varpart-noise-", amplitude, extension),
                      path = "04_Figures/", width = width, height = height,
-                     units = units, dpi = dpi, overwrite = overwrite)
+                     units = units, dpi = dpi, overwrite = T)
 
 ##--------------------------------------------##
 ##    Author: Maximilian H.K. Hesselbarth     ##
