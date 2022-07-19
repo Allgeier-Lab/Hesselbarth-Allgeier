@@ -79,24 +79,24 @@ list_parameters$detritus_fish_diffusion <- 0.0
 
 #### Stable values ####
 
-stable_values <- arrR::get_stable_values(bg_biomass = list_starting$bg_biomass,
+list_stable <- arrR::get_stable_values(bg_biomass = list_starting$bg_biomass,
                                          ag_biomass = list_starting$ag_biomass,
                                          parameters = list_parameters)
 
-list_starting$nutrients_pool <- stable_values$nutrients_pool
+list_starting$nutrients_pool <- list_stable$nutrients_pool
 
-list_starting$detritus_pool <- stable_values$detritus_pool
+list_starting$detritus_pool <- list_stable$detritus_pool
 
 #### Setup input and metaecosyst ####
 
 # simulate input
 input_temp <- meta.arrR::sim_nutr_input(n = n, max_i = max_i,
-                                        input_mn = stable_values$nutr_input, freq_mn = freq_mn,
+                                        input_mn = list_stable$nutr_input, freq_mn = freq_mn,
                                         amplitude_mod = seq(from = 0.01, to = 1.0, length.out = n),
                                         phase_mod = runif(n = n, min = 0.0, max = 0.0))
 
 plot(input_temp, gamma = FALSE) +
-  geom_hline(yintercept = stable_values$nutr_input, linetype = 2)
+  geom_hline(yintercept = list_stable$nutr_input, linetype = 2)
 
 # setup metaecosystems
 metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i,

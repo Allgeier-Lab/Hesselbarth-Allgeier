@@ -88,7 +88,7 @@ gg_indiv <- purrr::map(c(8, 16, 32, 64), function(pop_i) {
       tidyr::pivot_longer(-c(part, value.cv))
     
     gg_lm <- ggplot(data = df_results_temp, aes(x = log(value), y = log(value.cv), color = part)) + 
-      geom_point(shape = 1, alpha = 1) + 
+      geom_point(shape = 1, alpha = 0.15) + 
       geom_smooth(size = 0.5, formula = y ~ x, se = FALSE, method = "lm") +
       scale_color_manual(name = "", values = color_part) +
       scale_y_continuous(breaks = function(x) seq(quantile(x, 0.1), quantile(x, 0.9), length.out = 4), labels = function(x) round(x, 2)) +

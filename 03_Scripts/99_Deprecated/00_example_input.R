@@ -21,7 +21,7 @@ freq_mn <- years * 1/2
 
 #### Stable values ####
 
-stable_values <- arrR::get_stable_values(bg_biomass = list_starting$bg_biomass,
+list_stable <- arrR::get_stable_values(bg_biomass = list_starting$bg_biomass,
                                          ag_biomass = list_starting$ag_biomass,
                                          parameters = list_parameters)
 
@@ -46,7 +46,7 @@ alpha_df <- purrr::map(1:nrow(variability_input), function(i) {
   
   meta.arrR::sim_nutr_input(n = n, max_i = max_i, 
                             variability = as.numeric(variability_input[i, 1:2]),
-                            input_mn = stable_values$nutrients_input, freq_mn = freq_mn) %>% 
+                            input_mn = list_stable$nutrients_input, freq_mn = freq_mn) %>% 
     meta.arrR::get_input_df(gamma = FALSE, long = TRUE)}) %>% 
   purrr::set_names(variability_input$combined_label) %>% 
   dplyr::bind_rows(.id = "input") %>% 
@@ -64,7 +64,7 @@ gamma_df <- purrr::map(1:nrow(variability_input), function(i) {
     
     meta.arrR::sim_nutr_input(n = n, max_i = max_i,
                               variability = as.numeric(variability_input[i, 1:2]),
-                              input_mn = stable_values$nutrients_input, freq_mn = freq_mn) %>% 
+                              input_mn = list_stable$nutrients_input, freq_mn = freq_mn) %>% 
       meta.arrR::get_input_df() %>% 
       dplyr::select(timestep, gamma) %>% 
       dplyr::bind_cols(iterations = j, .)}) %>% 

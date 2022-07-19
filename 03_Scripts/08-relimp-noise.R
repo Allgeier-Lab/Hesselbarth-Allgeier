@@ -33,7 +33,7 @@ df_results <- readr::read_rds(file_path) %>%
                 measure %in% c("alpha", "gamma")) %>% 
   tibble::tibble()
 
-#### Partition the variation ####
+#### Relative importance R2 ####
 
 df_importance <- dplyr::group_by(df_results, part, measure, pop_n) %>% 
   dplyr::group_split() %>% 
@@ -49,7 +49,8 @@ df_importance <- dplyr::group_by(df_results, part, measure, pop_n) %>%
     tibble::tibble(
       part = unique(df_temp$part), measure = unique(df_temp$measure), pop_n = unique(df_temp$pop_n),
       beta = factor(x = c("connectivity", "noise", "residual"), levels  = c("residual", "noise", "connectivity")),
-      mean = c(rel_r2@lmg, 1 - sum(rel_r2@lmg)), lower = c(rel_r2@lmg.lower, NA), higher = c(rel_r2@lmg.upper, NA)
+      mean = c(rel_r2@lmg, 1 - sum(rel_r2@lmg)), lower = c(rel_r2@lmg.lower, NA), higher = c(rel_r2@lmg.upper, NA), 
+      p_value = ifelse(c(summary(lm_temp)$coefficients[c(2:3), 4], NA) < 0.05, yes = "signif.", no = "n.s.")
     )
   })
 
@@ -63,15 +64,27 @@ color_beta <- c(connectivity = "#f6c2a9", noise = "#b99dd9", residual = "grey")
 
 color_part <- c(ag_production = "#df4e25", bg_production = "#007aa1", ttl_production = "#41b282")
 
-#### Create ggplot ####
+cv_minmax <- df_results$value.cv %>% 
+  log() %>% 
+  range()
 
-gg_indiv <- purrr::map(c(8, 16, 32, 64), function(pop_i) {
+#### Create relative importance ggplot ####
+
+gg_relimp_list <- purrr::map(c(8, 16, 32, 64), function(pop_i) {
   
   purrr::map(c("alpha", "gamma"), function(measure_i) {
     
+    label_x <- NULL
+    
+    label_y <- NULL
+    
+    if (pop_i != 64) label_x <- element_blank()
+    
+    if (measure_i == "gamma") label_y <- element_blank()
+    
     df_importance_temp <- dplyr::filter(df_importance, pop_n == pop_i, measure == measure_i)
     
-    gg_relimp_temp <- ggplot(data = df_importance_temp) + 
+    ggplot(data = df_importance_temp) + 
       geom_col(aes(x = part, y = mean, fill = beta)) + 
       scale_fill_manual(name = "", values = color_beta) +
       scale_color_manual(name = "", values = color_beta) +
@@ -81,46 +94,78 @@ gg_indiv <- purrr::map(c(8, 16, 32, 64), function(pop_i) {
       labs(x = "", y = "Relative importance") +
       coord_flip() +
       theme_classic(base_size = size_base) + 
-      theme(legend.position = "none", plot.margin = unit(c(t = 0.25, r = 0.25, b = 0.0, l = 0.25), "cm"))
+      theme(legend.position = "none", plot.margin = unit(c(t = 0.25, r = 0.25, b = 0.25, l = 0.5), "cm"), 
+            axis.title.x = label_x, axis.text.x = label_x, axis.title.y = label_y, axis.text.y = label_y)
+    
+  })}) %>% 
+  purrr::flatten()
+
+gg_relimp_dummy <- ggplot() + 
+  geom_col(data = df_importance, aes(x = part, y = mean, fill = beta)) + 
+  scale_fill_manual(name = "", values = color_beta, 
+                    labels = c(connectivity = "Connectivity", noise = "Noise", residual = "Residuals")) +
+  guides(fill = guide_legend(order = 1), colour = guide_legend(order = 2)) +
+  theme_classic(base_size = size_base) + 
+  theme(legend.position = "bottom")
+
+gg_relimp_ttl <- cowplot::plot_grid(cowplot::plot_grid(plotlist = gg_relimp_list, ncol = 2, nrow = 4,
+                                                       labels = "auto", label_fontface = "italic"), 
+                                 cowplot::get_legend(gg_relimp_dummy), nrow = 2, rel_heights = c(0.975, 0.025))
+
+suppoRt::save_ggplot(plot = gg_relimp_ttl, filename = paste0("08-relimp-noise-", amplitude, extension),
+                     path = "04_Figures/", width = width, height = height,
+                     units = units, dpi = dpi, overwrite = overwrite)
+
+#### Create scatter ggplot ####
+
+gg_scatter_list <- purrr::map(c(8, 16, 32, 64), function(pop_i) {
+  
+  purrr::map(c("alpha", "gamma"), function(measure_i) {
+    
+    label_x <- NULL
+    
+    label_y <- NULL
+    
+    if (pop_i != 64) label_x <- element_blank()
+    
+    if (measure_i == "gamma") label_y <- element_blank()
     
     df_results_temp <- dplyr::filter(df_results, pop_n == pop_i, measure == measure_i) %>% 
       dplyr::select(part, move_meta_sd, noise_sd, value.cv) %>% 
       tidyr::pivot_longer(-c(part, value.cv))
     
-    gg_lm <- ggplot(data = df_results_temp, aes(x = log(value), y = log(value.cv), color = part)) + 
-      geom_point(shape = 1, alpha = 0.15) + 
+    ggplot(data = df_results_temp, aes(x = log(value), y = log(value.cv), color = part)) + 
+      geom_point(shape = 1, alpha = 0.15) +
       geom_smooth(size = 0.5, formula = y ~ x, se = FALSE, method = "lm") +
+      ggpubr::stat_regline_equation( label.y.npc = "bottom") + 
       scale_color_manual(name = "", values = color_part) +
-      scale_y_continuous(breaks = function(x) seq(quantile(x, 0.1), quantile(x, 0.9), length.out = 4), labels = function(x) round(x, 2)) +
+      scale_y_continuous(breaks = function(x) seq(quantile(x, 0.1), quantile(x, 0.9), length.out = 4),
+                         labels = function(x) round(exp(x), 2), limits = cv_minmax) +
+      scale_x_continuous(labels = function(x) round(exp(x), 1)) +
       facet_wrap(. ~ name, labeller = labeller(name = c(move_meta_sd = "Connectivity", noise_sd = "Noise"))) + 
       labs(x = "log(Variability)", y = "log(CV)") +
       theme_classic(base_size = size_base) + 
       theme(legend.position = "none", strip.text = element_text(hjust = 0), strip.background = element_blank(),
             plot.margin = unit(c(t = 0.0, r = 0.25, b = ifelse(test = pop_i == 64, yes = 0.25, no = 0.75), l = 0.25), "cm"))
     
-    cowplot::plot_grid(gg_relimp_temp, gg_lm, nrow = 2, rel_heights = c(0.3, 0.7))
-  
   })}) %>% 
   purrr::flatten()
 
-gg_dummy <- ggplot() + 
-  geom_col(data = df_importance, aes(x = part, y = mean, fill = beta)) + 
-  geom_line(data = df_results, aes(x = move_meta_sd, y = log(value.cv), color = part), size = 1.5) + 
-  scale_fill_manual(name = "", values = color_beta, 
-                    labels = c(connectivity = "Connectivity", noise = "Noise", residual = "Residuals")) +
+gg_scatter_dummy <- ggplot() + 
+  geom_line(data = df_results, aes(x = move_meta_sd, y = log(value.cv), color = part), size = 1.5) +
   scale_color_manual(name = "", values = color_part, 
                      labels = c(ag_production = "Aboveground (AG)", bg_production = "Belowground (BG)", ttl_production = "Total")) +
   guides(fill = guide_legend(order = 1), colour = guide_legend(order = 2)) +
   theme_classic(base_size = size_base) + 
   theme(legend.position = "bottom")
 
-gg_varpart <- cowplot::plot_grid(cowplot::plot_grid(plotlist = gg_indiv, ncol = 2, nrow = 4, 
-                                                    labels = "auto", label_fontface = "italic"), 
-                                 cowplot::get_legend(gg_dummy), nrow = 2, rel_heights = c(0.975, 0.025))
+gg_scatter_ttl <- cowplot::plot_grid(cowplot::plot_grid(plotlist = gg_scatter_list, ncol = 2, nrow = 4, 
+                                                        labels = "auto", label_fontface = "italic"), 
+                        cowplot::get_legend(gg_scatter_dummy), nrow = 2, rel_heights = c(0.975, 0.025))
 
-suppoRt::save_ggplot(plot = gg_varpart, filename = paste0("08-varpart-noise-", amplitude, extension),
-                     path = "04_Figures/", width = width, height = height,
-                     units = units, dpi = dpi, overwrite = T)
+suppoRt::save_ggplot(plot = gg_scatter_ttl, filename = paste0("08-scatter-noise-", amplitude, extension),
+                     path = "04_Figures/", width = width, height = height / 2,
+                     units = units, dpi = dpi, overwrite = overwrite)
 
 ##--------------------------------------------##
 ##    Author: Maximilian H.K. Hesselbarth     ##

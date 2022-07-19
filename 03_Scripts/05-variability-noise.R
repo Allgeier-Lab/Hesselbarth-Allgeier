@@ -16,33 +16,33 @@ source("05_Various/setup.R")
 
 #### Stable values #### 
 
-stable_values <- arrR::get_req_nutrients(bg_biomass = list_starting$bg_biomass,
-                                         ag_biomass = list_starting$ag_biomass,
-                                         parameters = list_parameters)
+list_stable <- arrR::get_req_nutrients(bg_biomass = list_starting$bg_biomass,
+                                       ag_biomass = list_starting$ag_biomass,
+                                       parameters = list_parameters)
 
-list_starting$nutrients_pool <- stable_values$nutrients_pool
+list_starting$nutrients_pool <- list_stable$nutrients_pool
 
-list_starting$detritus_pool <- stable_values$detritus_pool
+list_starting$detritus_pool <- list_stable$detritus_pool
 
 #### Setup experiment ####
 
-reps <- 250
+reps <- 500
 
-param_values <- lhs::improvedLHS(n = reps, k = 2, dup = 2)
+matrix_lhs <- lhs::improvedLHS(n = reps, k = 2, dup = 2)
 
-param_values[, 1] <- qunif(param_values[, 1], 0.1, 1.0) 
+matrix_lhs[, 1] <- qunif(matrix_lhs[, 1], 0.1, 1.0) 
 
-param_values[, 2] <- qunif(param_values[, 2], 0.1, 1.0) 
+matrix_lhs[, 2] <- qunif(matrix_lhs[, 2], 0.1, 1.0) 
 
-table(cut(param_values[, 1], breaks = seq(0.1, 1, 0.1)),
-      cut(param_values[, 2], breaks = seq(0.1, 1, 0.1)))
+table(cut(matrix_lhs[, 1], breaks = seq(0.1, 1, 0.1)),
+      cut(matrix_lhs[, 2], breaks = seq(0.1, 1, 0.1)))
 
-experiment_df <- tibble::as_tibble(param_values) %>% 
-  purrr::set_names(c("move_meta_sd", "noise_sd")) %>% 
+df_experiment <- tibble::tibble(move_meta_sd = matrix_lhs[, 1], 
+                                noise_sd = matrix_lhs[, 2]) %>% 
   dplyr::slice(rep(x = 1:dplyr::n(), times = 4)) %>% 
-  dplyr::mutate(pop_n =  rep(x = c(8, 16, 32, 64), each = reps))
+  dplyr::mutate(pop_n = rep(x = c(8, 16, 32, 64), each = reps))
 
-amplitude_mn <- 0.95
+amplitude_mn <- 0.05
 
 frequency <- years
 
@@ -110,9 +110,9 @@ globals <- c("n", "max_i", "matrix_reef", "list_starting", "list_parameters", "d
              "min_per_i", "seagrass_each", "save_each", # run_simulation_meta
              "years", "years_filter") # filter_meta 
 
-sbatch_cv <- rslurm::slurm_apply(f = foo_hpc, params = experiment_df, 
+sbatch_cv <- rslurm::slurm_apply(f = foo_hpc, params = df_experiment, 
                                  global_objects = globals, jobname = "noise_sd",
-                                 nodes = nrow(experiment_df), cpus_per_node = 1, 
+                                 nodes = nrow(df_experiment), cpus_per_node = 1, 
                                  slurm_options = list("account" = account, 
                                                       "partition" = "standard",
                                                       "time" = "02:00:00", ## hh:mm::ss

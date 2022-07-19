@@ -18,13 +18,13 @@ list_starting$pop_n <- 0
 
 #### Stable values ####
 
-stable_values <- arrR::get_stable_values(bg_biomass = list_starting$bg_biomass,
+list_stable <- arrR::get_stable_values(bg_biomass = list_starting$bg_biomass,
                                          ag_biomass = list_starting$ag_biomass,
                                          parameters = list_parameters)
 
-list_starting$nutrients_pool <- stable_values$nutrients_pool
+list_starting$nutrients_pool <- list_stable$nutrients_pool
 
-list_starting$detritus_pool <- stable_values$detritus_pool
+list_starting$detritus_pool <- list_stable$detritus_pool
 
 #### Simulate input ####
 
@@ -49,7 +49,7 @@ variability_input <- tidyr::expand_grid(enrichment = enrichment_levels,
 
 globals <- list(n = n, matrix_reef = matrix_reef, max_i = max_i, list_starting = list_starting, 
                 list_parameters = list_parameters, dimensions = dimensions, 
-                grain = grain, input_mn = stable_values$nutrients_input, freq_mn = freq_mn,
+                grain = grain, input_mn = list_stable$nutrients_input, freq_mn = freq_mn,
                 min_per_i = min_per_i, seagrass_each = seagrass_each, save_each = save_each) 
 
 foo <- function(nutr_input) {

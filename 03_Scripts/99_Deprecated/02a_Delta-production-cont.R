@@ -25,13 +25,13 @@ list_starting$pop_n <- 0
 
 #### Stable values ####
 
-stable_values <- arrR::get_stable_values(bg_biomass = list_starting$bg_biomass,
+list_stable <- arrR::get_stable_values(bg_biomass = list_starting$bg_biomass,
                                          ag_biomass = list_starting$ag_biomass,
                                          parameters = list_parameters)
 
-list_starting$nutrients_pool <- stable_values$nutrients_pool
+list_starting$nutrients_pool <- list_stable$nutrients_pool
 
-list_starting$detritus_pool <- stable_values$detritus_pool
+list_starting$detritus_pool <- list_stable$detritus_pool
 
 #### Setup experiment ####
 
@@ -44,7 +44,7 @@ sim_experiment <- expand.grid(amplitude_mod = seq(from = 0, to = 1, by = 0.1),
 # create globals
 globals <- list(n = n, max_i = max_i, list_starting = list_starting, 
                 list_parameters = list_parameters, dimensions = dimensions, 
-                grain = grain, input_mn = stable_values$nutr_input,
+                grain = grain, input_mn = list_stable$nutr_input,
                 min_per_i = min_per_i, seagrass_each = seagrass_each, 
                 save_each = save_each) 
 

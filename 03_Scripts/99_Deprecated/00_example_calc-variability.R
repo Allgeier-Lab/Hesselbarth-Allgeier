@@ -12,7 +12,7 @@ source("05_Various/setup.R")
 
 #### Setup experiment ####
 
-stable_values <- get_stable_values(starting_values = list_starting, 
+list_stable <- get_stable_values(starting_values = list_starting, 
                                    parameters = list_parameters)
 
 # create variability data.frame with all combinations 
@@ -27,7 +27,7 @@ foo <- function(amplitude, phase) {
   # simulate input
   input_temp <- meta.arrR::sim_nutr_input(n = n, max_i = max_i,
                                           variability = c(amplitude, phase),
-                                          input_mn = stable_values$nutr_input, freq_mn = freq_mn)
+                                          input_mn = list_stable$nutr_input, freq_mn = freq_mn)
   
   # sample cv
   cv_temp <- meta.arrR::calc_variability(input_temp)
@@ -40,7 +40,7 @@ foo <- function(amplitude, phase) {
 #### Submit to HPC #### 
 
 variability_sbatch <- rslurm::slurm_apply(f = foo, params = variability_experiment, 
-                                          global_objects = c("n", "max_i", "stable_values", "freq_mn"),
+                                          global_objects = c("n", "max_i", "list_stable", "freq_mn"),
                                           jobname = "example_calc_vari",
                                           nodes = nrow(variability_experiment), cpus_per_node = 1, 
                                           slurm_options = list("account" = account, 

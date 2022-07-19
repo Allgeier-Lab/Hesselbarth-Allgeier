@@ -22,15 +22,15 @@ list_parameters$detritus_fish_diffusion <- 0.0
 
 #### Stable values ####
 
-stable_values <- arrR::get_stable_values(bg_biomass = list_starting$bg_biomass,
+list_stable <- arrR::get_stable_values(bg_biomass = list_starting$bg_biomass,
                                          ag_biomass = list_starting$ag_biomass,
                                          parameters = list_parameters)
 
-list_starting$nutrients_pool <- stable_values$nutrients_pool
+list_starting$nutrients_pool <- list_stable$nutrients_pool
 
-list_starting$detritus_pool <- stable_values$detritus_pool
+list_starting$detritus_pool <- list_stable$detritus_pool
 
-input_mn <- stable_values$nutr_input
+input_mn <- list_stable$nutr_input
 
 #### Create function ####
 

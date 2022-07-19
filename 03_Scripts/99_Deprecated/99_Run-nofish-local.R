@@ -28,15 +28,15 @@ list_starting$ag_biomass <- list_parameters$ag_biomass_max
 
 #### Stable values ####
 
-stable_values <- arrR::get_stable_values(bg_biomass = list_starting$bg_biomass,
+list_stable <- arrR::get_stable_values(bg_biomass = list_starting$bg_biomass,
                                          ag_biomass = list_starting$ag_biomass,
                                          parameters = list_parameters)
 
-list_starting$nutrients_pool <- stable_values$nutrients_pool
+list_starting$nutrients_pool <- list_stable$nutrients_pool
 
-list_starting$detritus_pool <- stable_values$detritus_pool
+list_starting$detritus_pool <- list_stable$detritus_pool
 
-input_mn <- stable_values$nutr_input
+input_mn <- list_stable$nutr_input
 
 #### Setup metaecosystems ####
 
@@ -55,14 +55,14 @@ input_temp <- meta.arrR::sim_nutr_input(n = n, max_i = max_i,
 #   dplyr::select(-Timestep) %>%
 #   apply(MARGIN = 2, FUN = sum)
 # 
-# stable_values$nutr_input * max_i
+# list_stable$nutr_input * max_i
 
 # input_temp$values <- purrr::map2(input_temp$values, input_temp$amplitude_i,
 #                                  function(x,y) x + y)
 
 # plot(input_temp, gamma = FALSE) +
 #   geom_hline(yintercept = input_mn, linetype = 2, col = "black") +
-#   geom_hline(yintercept = stable_values$nutr_input, linetype = 2, col = "grey")
+#   geom_hline(yintercept = list_stable$nutr_input, linetype = 2, col = "grey")
 
 #### Run model ####
 
