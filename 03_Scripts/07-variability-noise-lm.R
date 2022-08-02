@@ -52,67 +52,68 @@ df_regression <- dplyr::filter(df_results, measure %in% c("alpha", "gamma")) %>%
 
 #### Setup globals ####
 
-color_palette <- c(alpha = "#642f70", gamma = "#007054")
+color_palette <- c("Intercept" = "#ed968b", "log(move_meta_sd)" = "#88a0dc", "log(noise_sd)" = "#f9d14a")
 
 size_point <- 7.5
 
 #### Create ggplot ###
 
-gg_list <- map(c("ag_production", "bg_production", "ttl_production"), function(part_i) {
+gg_list <- purrr::map(c("alpha", "gamma"), function(measure_i) {
   
-  df_temp <- dplyr::filter(df_regression, part == part_i) %>% 
+  df_temp <- dplyr::filter(df_regression, measure == measure_i) %>% 
     dplyr::select(-c(std.error, statistic)) %>% 
     dplyr::mutate(term = dplyr::case_when(term == "(Intercept)" ~ "Intercept", TRUE ~ term), 
                   p.value = dplyr::case_when(p.value < 0.001 ~ "***", p.value < 0.01 ~ "**", 
                                              p.value < 0.05 ~  "*", p.value >= 0.05 ~ ""))
   
-  strip_text <- element_blank()
-  
-  if (part_i == "ag_production") strip_text <- element_text(hjust = 0)
-   
   w <- 0.5
   
   ggplot(data = df_temp) + 
+    
+    # zero line
+    geom_hline(yintercept = 0.0, linetype = 2, color = "grey") +
+    
     # Lines
-    geom_line(aes(x = pop_n, y = estimate, group = measure, color = measure),
+    geom_line(aes(x = pop_n, y = estimate, group = term, color = term),
               alpha = 0.5, position = position_dodge(width = w)) +
     
     # Points
-    geom_point(aes(x = pop_n, y = estimate, colour = measure),
+    geom_point(aes(x = pop_n, y = estimate, colour = term),
                size = size_point, shape = 19, position = position_dodge(width = w)) +
 
     # Text
-    geom_text(aes(x = pop_n, y = estimate, label = p.value, group = measure), 
+    geom_text(aes(x = pop_n, y = estimate, label = p.value, group = term),
               color = "white", position = position_dodge(width = w)) +
     
     # Facets
-    facet_wrap(. ~ term, ncol = 3, scales = "free_y", 
-               labeller = labeller(term = c("Intercept" = "centered(Intercept)", "log(move_meta_sd)" = "log(Connectivity)", 
-                                            "log(noise_sd)" = "log(Noise variability)"))) +
+    facet_wrap(. ~ part, nrow = 3, scales = "free", 
+               labeller = labeller(part = c("ag_production" = ifelse(measure_i == "alpha", yes = "Aboveground", no = ""), 
+                                            "bg_production" = ifelse(measure_i == "alpha", yes = "Belowground", no = ""), 
+                                            "ttl_production" = ifelse(measure_i == "alpha", yes = "Total", no = "")))) +
     
     # Stuff
     scale_color_manual(name = "Scale", values = color_palette) +
-    scale_y_continuous(breaks = function(x) seq(quantile(x, 0.1), quantile(x, 0.9), length.out = 4),
-                       labels = function(x) round(x, digits = 2), 
-                       limits = function(x) c(min(x) - abs(min(x)) * 0.05, max(x) + max(abs(x)) * 0.05)) +
-    labs(x = ifelse(test = part_i == "ttl_production", yes = "Population size", no = ""), 
-         y = ifelse(test = part_i == "bg_production", yes = "Parameter value", no = ""),
-         title = ifelse(test = part_i == "ag_production", yes = "Aboveground", 
-                        no = ifelse(test = part_i == "bg_production", yes = "Belowground", no = "Total"))) +
+    scale_y_continuous(limits = range(df_regression$estimate), 
+                       breaks = seq(min(df_regression$estimate), max(df_regression$estimate), length.out = 4), 
+                       labels = function(x) round(x, digits = 2)) + 
+    labs(title = ifelse(measure_i == "alpha", yes = "Local scale", no = "Meta-ecosystem scale"), 
+         x = "Population size", y = ifelse(measure_i == "alpha", yes = "Parameter value", no = "")) +
     theme_classic(base_size = 10.0) + 
     theme(legend.position = "none", plot.title = element_text(size = 8.0), 
-          strip.background = element_blank(), strip.text = strip_text)
-  })
+          strip.background = element_blank(), strip.text = element_text(hjust = 0))
+})
 
 gg_dummy <- dplyr::select(df_regression, -c(std.error, statistic)) %>% 
   dplyr::mutate(term = dplyr::case_when(term == "(Intercept)" ~ "Intercept", TRUE ~ term)) %>% 
-  ggplot(aes(x = pop_n, y = estimate, color = measure)) + 
+  ggplot(aes(x = pop_n, y = estimate, color = term)) + 
   geom_point(size = size_point / 2) +
   scale_color_manual(name = "Scale", values = color_palette, 
-                     labels = c(alpha = "Local scale", gamma = "Meta-ecosystem scale")) +
+                     labels = c("Intercept" = "Intercept", 
+                                "log(move_meta_sd)" = "Biotic variability", 
+                                "log(noise_sd)" = "Abiotic variability")) +
   theme(legend.position = "bottom")
 
-gg_lm_coef <- cowplot::plot_grid(cowplot::plot_grid(plotlist = gg_list, ncol = 1), 
+gg_lm_coef <- cowplot::plot_grid(cowplot::plot_grid(plotlist = gg_list, ncol = 2), 
                                  cowplot::get_legend(gg_dummy), rel_heights = c(0.95, 0.05), 
                                  nrow = 2)
 
