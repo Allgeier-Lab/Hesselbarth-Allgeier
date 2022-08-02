@@ -24,8 +24,8 @@ matrix_reef <- matrix(data = c(-1, 0, 0, 1, 1, 0, 0, -1, 0, 0),
 
 # get stable nutrient/detritus values
 list_stable <- arrR::get_req_nutrients(bg_biomass = list_starting$bg_biomass, 
-                                         ag_biomass = list_starting$ag_biomass,
-                                         parameters = list_parameters)
+                                       ag_biomass = list_starting$ag_biomass,
+                                       parameters = list_parameters)
 
 list_starting$nutrients_pool <- list_stable$nutrients_pool
 

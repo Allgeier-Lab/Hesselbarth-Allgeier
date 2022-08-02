@@ -71,7 +71,8 @@ list_gg_parts <- purrr::map(c("ag_production", "bg_production", "ttl_production"
         dplyr::summarise(value.cv = mean(value.cv), .groups = "drop") %>%
         ggplot(aes(x = noise_sd, y = move_meta_sd, fill = value.cv)) +
         geom_tile() + 
-        scale_fill_gradientn(colors = MetBrewer::met.brewer("Demuth", n = 255, type = "continuous")) +
+        scale_fill_gradientn(colors = MetBrewer::met.brewer("Demuth", n = 255, type = "continuous"), 
+                             limits= c(0, 1)) +
         scale_x_continuous(breaks = c(1, 5, 9), labels = c(0.1, 0.5, 1.0)) +
         scale_y_continuous(breaks = c(1, 5, 9), labels = c(0.1, 0.5, 1.0)) +
         labs(title = paste0("Population size: ", pop_i)) +

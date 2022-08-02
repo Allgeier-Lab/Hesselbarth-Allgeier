@@ -32,7 +32,7 @@ list_starting$detritus_pool <- list_stable$detritus_pool
 
 #### Simulate nutrient inputs variability ####
 
-variability <- 1.0
+variability <- 0.75
 
 # simulate nutrient input
 df_input_null <- meta.arrR::simulate_nutrient_sine(n = n, max_i = max_i, frequency = frequency, 
@@ -52,7 +52,7 @@ filter_factor <- 10
 
 breaks_x <- seq(from = 0, to = max_i / filter_factor, by = max_i / years)
 
-labels_x <- seq(from = 0, to = years / filter_factor, by = 1)
+labels_x <- paste(seq(from = 0, to = years / filter_factor, by = 1), "years")
 
 label_size <- 7.5
 
@@ -60,51 +60,54 @@ line_size <- 0.25
 
 line_color <- MetBrewer::met.brewer(name = "Java", n = n, type = "discrete")
 
-base_size <- 10.0
+base_size <- 7.5
 
 gg_input_null <- meta.arrR::get_input_df(df_input_null, gamma = FALSE, long = TRUE) %>% 
   dplyr::filter(timestep < max_i / filter_factor) %>% 
-  ggplot(aes(x = timestep, y = value, color = meta)) +
-  geom_hline(yintercept = nutrient_input, linetype = 1, color = "grey") +
-  geom_hline(yintercept = 0.0, linetype = 2, color = "grey") +
+  ggplot(aes(x = timestep, y = value)) +
+  geom_hline(yintercept = nutrient_input, linetype = 2, color = "grey") +
+  # geom_hline(yintercept = 0.0, linetype = 2, color = "grey") +
   geom_line(size = line_size) + 
-  annotate(geom = "text", x = max_i / filter_factor / 2, y = nutrient_input * 1.1, 
-           label = "Average nutrient input", color = "darkgrey") +
+  # annotate(geom = "text", x = max_i / filter_factor / 2, y = nutrient_input * 1.1, 
+  #          label = "Mean nutrient input", color = "darkgrey") +
   scale_x_continuous(breaks = breaks_x, labels = labels_x) + 
-  scale_y_continuous(breaks = c(nutrient_input * 0.05, nutrient_input, nutrient_input * 1.95),
-                     labels = c("5%", "100%", "195%")) + 
-  scale_color_manual(values = line_color) + 
+  scale_y_continuous(breaks = c(nutrient_input * 0.05, nutrient_input,nutrient_input * 1.95),
+                     labels = c("5%", "Mean", "195%")) + 
+  # scale_color_manual(values = line_color) + 
   labs(x = "", y = "") +
   theme_classic(base_size = base_size) + 
-  theme(legend.position = "none", plot.margin = unit(c(t = 5.5, r = 5.5, b = 0.0, l = 5.5), "pt"))
+  theme(legend.position = "none", plot.margin = unit(c(t = 5.5, r = 5.5, b = 0.0, l = 5.5), "pt"), 
+        axis.text = element_text(color = "black"))
 
 gg_input_sine <- meta.arrR::get_input_df(df_input_sine, gamma = FALSE, long = TRUE) %>% 
   dplyr::filter(timestep < max_i / filter_factor) %>% 
   ggplot(aes(x = timestep, y = value, color = meta)) +
-  geom_hline(yintercept = nutrient_input, linetype = 1, color = "grey") +
-  geom_hline(yintercept = 0.0, linetype = 2, color = "grey") +
+  geom_hline(yintercept = nutrient_input, linetype = 2, color = "grey") +
+  # geom_hline(yintercept = 0.0, linetype = 2, color = "grey") +
   geom_line(size = line_size) + 
   scale_x_continuous(breaks = breaks_x, labels = labels_x) + 
   scale_y_continuous(breaks = c(nutrient_input * 0.05, nutrient_input,nutrient_input * 1.95),
-                     labels = c("5%", "100%", "195%")) + 
+                     labels = c("5%", "Mean", "195%")) + 
   scale_color_manual(values = line_color) + 
   labs(x = "", y = "") +
   theme_classic(base_size = base_size) + 
-  theme(legend.position = "none", plot.margin = unit(c(t = 0.0, r = 1.5, b = 5.5, l = 5.5), "pt"))
+  theme(legend.position = "none", plot.margin = unit(c(t = 0.0, r = 1.5, b = 5.5, l = 5.5), "pt"), 
+        axis.text = element_text(color = "black"))
 
 gg_input_noise <- meta.arrR::get_input_df(df_input_noise, gamma = FALSE, long = TRUE) %>% 
   dplyr::filter(timestep < max_i / filter_factor) %>% 
   ggplot(aes(x = timestep, y = value, color = meta)) +
-  geom_hline(yintercept = nutrient_input, linetype = 1, color = "grey") +
-  geom_hline(yintercept = 0.0, linetype = 2, color = "grey") +
+  geom_hline(yintercept = nutrient_input, linetype = 2, color = "grey") +
+  # geom_hline(yintercept = 0.0, linetype = 2, color = "grey") +
   geom_line(size = line_size) + 
   scale_x_continuous(breaks = breaks_x, labels = labels_x) + 
-  scale_y_continuous(breaks = c(nutrient_input * 0.05, nutrient_input, nutrient_input * 1.95),
-                     labels = c("", "", "")) + 
+  scale_y_continuous(breaks = c(nutrient_input * 0.05, nutrient_input,nutrient_input * 1.95),
+                     labels = c("5%", "Mean", "195%")) + 
   scale_color_manual(values = line_color) + 
   labs(x = "", y = "") +
   theme_classic(base_size = base_size) + 
-  theme(legend.position = "none", plot.margin = unit(c(t = 0.0, r = 5.5, b = 5.5, l = 1.5), "pt"))
+  theme(legend.position = "none", plot.margin = unit(c(t = 0.0, r = 5.5, b = 5.5, l = 1.5), "pt"), 
+        axis.text = element_text(color = "black"))
 
 #### Combine overall figure #### 
 
@@ -114,16 +117,9 @@ gg_input_var <- cowplot::plot_grid(gg_input_sine, gg_input_noise, ncol = 2,
 gg_input_overall <- cowplot::plot_grid(gg_input_null, gg_input_var, nrow = 2, 
                                        labels = c("a)", ""), label_size = label_size)
 
-# gg_input_overall <- cowplot::add_sub(gg_input_overall, label = "Years", hjust = 0, vjust = -1)
-# 
-# gg_input_overall <- cowplot::add_sub(gg_input_overall, label = "Nutrient input",
-#                                      x = 0.0, y = 2.0, angle = 90, hjust = -1)
-# 
-# gg_input_overall <- cowplot::ggdraw(gg_input_overall)
-
 #### Save result ####
 
-suppoRt::save_ggplot(plot = gg_input_overall, filename = paste0("02-nutrient-input", extension),
+suppoRt::save_ggplot(plot = gg_input_overall, filename = paste0("02-nutrient-curves", extension),
                      path = "04_Figures/", width = width, height = height * 0.35,
                      units = units, dpi = dpi, overwrite = T)
 
