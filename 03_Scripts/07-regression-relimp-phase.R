@@ -40,11 +40,11 @@ df_regression <- dplyr::filter(df_results, measure %in% c("alpha", "gamma")) %>%
   dplyr::group_by(part, measure, pop_n) %>%
   dplyr::group_split() %>%
   purrr::map_dfr(function(df_temp) {
-    
+
     df_temp$value.cv <- log(df_temp$value.cv) - mean(log(df_temp$value.cv))
-    
+
     lm_temp <- lm(value.cv ~ log(move_meta_sd) + log(phase_sd), data = df_temp)
-    
+
     broom::tidy(lm_temp) %>%
       dplyr::mutate(part = unique(df_temp$part), measure = unique(df_temp$measure),
                     pop_n = unique(df_temp$pop_n), .before = term)
@@ -55,14 +55,14 @@ df_regression <- dplyr::filter(df_results, measure %in% c("alpha", "gamma")) %>%
 df_importance <- dplyr::group_by(df_results, part, measure, pop_n) %>%
   dplyr::group_split() %>%
   purrr::map_dfr(function(df_temp) {
-    
+
     df_temp$value.cv <- log(df_temp$value.cv) - mean(log(df_temp$value.cv))
-    
+
     lm_temp <- lm(value.cv ~ log(move_meta_sd) + log(phase_sd), data = df_temp)
-    
+
     rel_r2 <- relaimpo::boot.relimp(lm_temp, type = "lmg", b = 1000, level = 0.95, fixed = FALSE) %>%
       relaimpo::booteval.relimp(bty = "bca")
-    
+
     tibble::tibble(
       part = unique(df_temp$part), measure = unique(df_temp$measure), pop_n = unique(df_temp$pop_n),
       beta = factor(x = c("connectivity", "phase", "residual"), levels  = c("residual", "phase", "connectivity")),
@@ -74,8 +74,8 @@ df_importance <- dplyr::group_by(df_results, part, measure, pop_n) %>%
 #### Setup ggplot ####
 
 size_base <- 10.0
-size_text <- 3.5
-size_point <- 6.5
+size_text <- 2.0
+size_point <- 3.5
 
 color_parameter <- c("Intercept" = "#ed968b", "log(move_meta_sd)" = "#88a0dc", "log(phase_sd)" = "#f9d14a")
 color_relimp <- c(connectivity = "#88a0dc", phase = "#f9d14a", residual = "grey")
@@ -106,18 +106,19 @@ gg_list <- purrr::map(c("alpha", "gamma"), function(measure_i) {
                 alpha = 0.5, position = position_dodge(width = w)) +
       
       # Points
-      geom_point(aes(x = pop_n, y = estimate, colour = term), fill = "white",
-                 size = size_point, shape = 21, position = position_dodge(width = w)) +
+      geom_point(aes(x = pop_n, y = estimate, color = term),
+                 size = size_point, shape = 19, position = position_dodge(width = w)) +
       
       # Text
-      geom_text(aes(x = pop_n, y = estimate, label = p.value, group = term, color = term),
+      geom_text(aes(x = pop_n, y = estimate, label = p.value, group = term), color = "white",
                 size = size_text, position = position_dodge(width = w), vjust = 0.75) +
       
       # set scales
       scale_color_manual(name = "Scale", values = color_parameter) +
-      scale_y_continuous(limits = range(df_regression$estimate), 
+      scale_y_continuous(limits = c(min(df_regression$estimate), max(df_regression$estimate)),
                          breaks = seq(min(df_regression$estimate), max(df_regression$estimate), length.out = 4), 
                          labels = function(x) round(x, digits = 3)) + 
+      coord_cartesian(clip = "off") +
       
       # labels and themes
       labs(x = "", y = "") +
@@ -179,5 +180,5 @@ gg_combined <- cowplot::plot_grid(gg_combined, cowplot::get_legend(gg_dummy),
 #### Save plot ####
 
 suppoRt::save_ggplot(plot = gg_combined, filename = paste0("07-phase-", amplitude, extension),
-                     path = "04_Figures/", width = height, height = width,
-                     units = units, dpi = dpi, overwrite = T)
+                     path = "04_Figures/", width = height, height = width * 0.7,
+                     units = units, dpi = dpi, overwrite = overwrite)

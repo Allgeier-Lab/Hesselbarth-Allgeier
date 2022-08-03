@@ -74,8 +74,8 @@ df_importance <- dplyr::group_by(df_results, part, measure, pop_n) %>%
 #### Setup ggplot ####
 
 size_base <- 10.0
-size_text <- 3.5
-size_point <- 6.5
+size_text <- 2.0
+size_point <- 3.5
 
 color_parameter <- c("Intercept" = "#ed968b", "log(move_meta_sd)" = "#88a0dc", "log(noise_sd)" = "#f9d14a")
 color_relimp <- c(connectivity = "#88a0dc", noise = "#f9d14a", residual = "grey")
@@ -117,7 +117,8 @@ gg_list <- purrr::map(c("alpha", "gamma"), function(measure_i) {
       scale_color_manual(name = "Scale", values = color_parameter) +
       scale_y_continuous(limits = range(df_regression$estimate), 
                          breaks = seq(min(df_regression$estimate), max(df_regression$estimate), length.out = 4), 
-                         labels = function(x) round(x, digits = 3)) + 
+                         labels = function(x) round(x, digits = 3)) +
+      coord_cartesian(clip = "off") +
       
       # labels and themes
       labs(x = "", y = "") +
@@ -153,7 +154,7 @@ gg_list <- purrr::map(c("alpha", "gamma"), function(measure_i) {
 
 gg_dummy <- data.frame(beta = factor(c("connectivity", "noise", "Intercept", "residual"), 
                                      levels = c("connectivity", "noise", "Intercept", "residual")),
-                              mean = c(1, 1, 1, 1)) %>% 
+                       mean = c(1, 1, 1, 1)) %>% 
   ggplot() + 
   geom_col(aes(x = beta, y = mean, fill = beta)) + 
   scale_fill_manual(name = "", values = c(color_relimp["connectivity"], color_relimp["noise"], 
@@ -165,7 +166,8 @@ gg_dummy <- data.frame(beta = factor(c("connectivity", "noise", "Intercept", "re
   theme(legend.position = "bottom")
 
 gg_combined <- cowplot::plot_grid(plotlist = gg_list, nrow = 3, ncol = 2, byrow = FALSE, 
-                                  labels = "auto", label_fontface = "plain", label_size = 12.0)
+                                  labels = c("a)", "b)", "c)", "d)", "e)", "f)"),
+                                  label_fontface = "plain", label_size = 12.0)
 
 gg_combined <- cowplot::ggdraw(gg_combined, xlim = c(-0.015, 1.0)) + 
   cowplot::draw_label("Population size", x = 0.5, y = 0, vjust = -0.5, angle = 0, size = size_base) + 
@@ -178,5 +180,5 @@ gg_combined <- cowplot::plot_grid(gg_combined, cowplot::get_legend(gg_dummy),
 #### Save plot ####
 
 suppoRt::save_ggplot(plot = gg_combined, filename = paste0("07-noise-", amplitude, extension),
-                     path = "04_Figures/", width = height, height = width,
-                     units = units, dpi = dpi, overwrite = T)
+                     path = "04_Figures/", width = height, height = width * 0.7,
+                     units = units, dpi = dpi, overwrite = overwrite)
