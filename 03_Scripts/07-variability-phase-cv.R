@@ -95,7 +95,7 @@ list_gg_parts <- purrr::map(c("ag_production", "bg_production", "ttl_production"
 gg_move_cv_overall <- cowplot::plot_grid(plotlist = list_gg_parts, nrow = 3, ncol = 2, 
                                          labels = "auto", label_fontface = "italic")
 
-suppoRt::save_ggplot(plot = gg_move_cv_overall, filename = paste0("06-phase-cv-", amplitude, extension),
+suppoRt::save_ggplot(plot = gg_move_cv_overall, filename = paste0("07-phase-cv-", amplitude, extension),
                      path = "04_Figures/", width = width, height = height,
                      units = units, dpi = dpi, overwrite = overwrite)
 

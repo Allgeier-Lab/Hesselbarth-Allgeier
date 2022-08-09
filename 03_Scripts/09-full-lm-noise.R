@@ -39,12 +39,14 @@ df_dredge <- dplyr::group_by(df_results, part, measure) %>%
   dplyr::group_split() %>% 
   purrr::map_dfr(function(df_temp) {
     
-    lm(value.cv ~ as.numeric(pop_n) * move_meta_sd * noise_sd, data = df_temp, 
-       na.action = "na.fail") %>% 
+    lm(value.cv ~ as.numeric(pop_n) + move_meta_sd + noise_sd + as.numeric(pop_n):move_meta_sd + 
+         as.numeric(pop_n):noise_sd + move_meta_sd:noise_sd, data = df_temp, na.action = "na.fail") %>%
       MuMIn::dredge() %>%
       as.data.frame() %>% 
-      head(n = 5) %>% 
+      head(n = 3) %>% 
       dplyr::mutate(part = unique(df_temp$part), measure = unique(df_temp$measure), 
                     .before = "(Intercept)")
   })
 
+# dplyr::mutate(df_dredge, dplyr::across(c(3:9, 11:14), round, 3)) %>% 
+#   dplyr::select(-c(df, logLik, AICc, weight)) %>% View

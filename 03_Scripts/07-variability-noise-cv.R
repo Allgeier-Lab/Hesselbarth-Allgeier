@@ -72,7 +72,7 @@ list_gg_parts <- purrr::map(c("ag_production", "bg_production", "ttl_production"
         ggplot(aes(x = noise_sd, y = move_meta_sd, fill = value.cv)) +
         geom_tile() + 
         scale_fill_gradientn(colors = MetBrewer::met.brewer("Demuth", n = 255, type = "continuous"), 
-                             limits= c(0, 1)) +
+                             limits = c(0, 1)) +
         scale_x_continuous(breaks = c(1, 5, 9), labels = c(0.1, 0.5, 1.0)) +
         scale_y_continuous(breaks = c(1, 5, 9), labels = c(0.1, 0.5, 1.0)) +
         labs(title = paste0("Population size: ", pop_i)) +
@@ -96,7 +96,7 @@ list_gg_parts <- purrr::map(c("ag_production", "bg_production", "ttl_production"
 gg_move_cv_overall <- cowplot::plot_grid(plotlist = list_gg_parts, nrow = 3, ncol = 2, 
                                          labels = "auto", label_fontface = "italic")
 
-suppoRt::save_ggplot(plot = gg_move_cv_overall, filename = paste0("06-noise-cv-", amplitude, extension),
+suppoRt::save_ggplot(plot = gg_move_cv_overall, filename = paste0("07-noise-cv-", amplitude, extension),
                      path = "04_Figures/", width = width, height = height,
                      units = units, dpi = dpi, overwrite = overwrite)
 
