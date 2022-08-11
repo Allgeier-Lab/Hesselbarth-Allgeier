@@ -121,5 +121,4 @@ gg_input_overall <- cowplot::plot_grid(gg_input_null, gg_input_var, nrow = 2,
 
 suppoRt::save_ggplot(plot = gg_input_overall, filename = paste0("02-nutrient-curves", extension),
                      path = "04_Figures/", width = width, height = height * 0.35,
-                     units = units, dpi = dpi, overwrite = T)
-
+                     units = units, dpi = dpi, overwrite = FALSE)

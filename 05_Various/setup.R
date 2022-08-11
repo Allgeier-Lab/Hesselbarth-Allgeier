@@ -86,7 +86,7 @@ width <- 210
 height <- 297
 
 # set pixels
-dpi <- 900
+dpi <- 600
 
 #### HPC settings ####
 
@@ -94,12 +94,7 @@ account <- "jeallg0"
 
 # path for rslurm
 # run file.path(R.home("bin"), "Rscript") on HPC
-rscript_path <- "/sw/arcts/centos7/stacks/gcc/8.2.0/R/4.1.0/lib64/R/bin/Rscript"
-
-# check file in 99_various/hpc for raw template
-sh_template <- "05_Various/rslurm_slurm.tmpl"
-
-overwrite <- FALSE
+rscript_path <- "/sw/pkgs/arc/stacks/gcc/10.3.0/R/4.2.0/lib64/R/bin/Rscript"
 
 message("\nUsing R v", stringr::str_split(rscript_path, pattern = "/", simplify = TRUE)[, 9], " on HPC")
 

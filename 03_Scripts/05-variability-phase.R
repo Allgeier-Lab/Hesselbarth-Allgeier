@@ -42,15 +42,13 @@ df_experiment <- tibble::tibble(move_meta_sd = matrix_lhs[, 1],
   dplyr::slice(rep(x = 1:dplyr::n(), times = 4)) %>% 
   dplyr::mutate(pop_n =  rep(x = c(8, 16, 32, 64), each = reps))
 
-amplitude_mn <- 0.05
+amplitude_mn <- 0.95
 
 frequency <- years
 
 #### Init HPC function ####
 
 foo_hpc <- function(pop_n, move_meta_sd, phase_sd) {
-  
-  library(dplyr)
   
   list_starting$pop_n <- pop_n
   
@@ -90,18 +88,21 @@ foo_hpc <- function(pop_n, move_meta_sd, phase_sd) {
   cv <- meta.arrR::calc_variability(x = result_temp, lag = c(FALSE, TRUE))
   
   # calculate biomass/production
-  production <- meta.arrR::summarize_meta(result = result_temp, biomass = TRUE, production = TRUE,
-                                          lag = c(FALSE, FALSE)) %>% 
-    purrr::map(tidyr::pivot_longer, cols = -c(meta, timestep), names_to = "part") %>% 
-    dplyr::bind_rows() %>% 
-    dplyr::filter(timestep == max_i) %>%
-    dplyr::group_by(part) %>% 
-    dplyr::summarise(value = sum(value), .groups = "drop")
+  prod <- meta.arrR::summarize_meta(result = result_temp, biomass = TRUE, production = TRUE, 
+                                    lag = c(FALSE, FALSE)) %>% 
+    purrr::map(function(i) { 
+      dplyr::filter(i, timestep == max_i) %>% 
+        tidyr::pivot_longer(-c(meta, timestep), names_to = "part") %>% 
+        dplyr::group_by(part) %>% 
+        dplyr::summarise(alpha = mean(value), gamma = sum(value)) %>% 
+        tidyr::pivot_longer(-part, names_to = "measure", values_to = "value")
+      
+    })
   
   # combine to result data.frame and list
   list(moved = dplyr::mutate(moved, pop_n = pop_n, move_meta_sd = move_meta_sd, phase_sd = phase_sd), 
        cv = dplyr::mutate(dplyr::bind_rows(cv), pop_n = pop_n, move_meta_sd = move_meta_sd, phase_sd = phase_sd), 
-       production = dplyr::mutate(production, pop_n = pop_n, move_meta_sd = move_meta_sd, phase_sd = phase_sd))
+       prod = dplyr::mutate(dplyr::bind_rows(prod), pop_n = pop_n, move_meta_sd = move_meta_sd, phase_sd = phase_sd))
   
 }
 
@@ -121,8 +122,7 @@ sbatch_cv <- rslurm::slurm_apply(f = foo_hpc, params = df_experiment,
                                                       "mem-per-cpu" = "7G",
                                                       "exclude" = exclude_nodes),
                                  pkgs = c("arrR", "dplyr", "meta.arrR", "purrr", "tidyr"),
-                                 rscript_path = rscript_path, sh_template = sh_template, 
-                                 submit = FALSE)
+                                 rscript_path = rscript_path, submit = FALSE)
 
 #### Collect results #### 
 

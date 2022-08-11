@@ -87,8 +87,7 @@ sbatch_move_meta <- rslurm::slurm_apply(f = foo_hpc, params = df_experiment,
                                                              "time" = "01:00:00", ## hh:mm::ss
                                                              "mem-per-cpu" = "7G"),
                                         pkgs = c("dplyr", "meta.arrR"),
-                                        rscript_path = rscript_path, sh_template = sh_template, 
-                                        submit = FALSE)
+                                        rscript_path = rscript_path, submit = FALSE)
 
 #### Collect results #### 
 
@@ -130,4 +129,4 @@ gg_probs_moved <- ggplot(data = move_meta_result_sum, aes(x = move_meta_sd, y = 
 
 suppoRt::save_ggplot(plot = gg_probs_moved, filename = "04-param-connect.pdf",
                      path = "04_Figures/", width = width, height = height * 1/3,
-                     units = units, dpi = dpi, overwrite = overwrite)
+                     units = units, dpi = dpi, overwrite = FALSE)

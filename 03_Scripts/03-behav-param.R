@@ -111,8 +111,7 @@ sbatch_behav <- rslurm::slurm_apply(f = foo, params = input_df,
                                                          "time" = "00:30:00", ## hh:mm::ss
                                                          "mem-per-cpu" = "7G"),
                                     pkgs = c("arrR", "purrr", "dplyr"),
-                                    rscript_path = rscript_path, sh_template = sh_template, 
-                                    submit = FALSE)
+                                    rscript_path = rscript_path, submit = FALSE)
 
 # check results
 suppoRt::rslurm_missing(sbatch_behav)
