@@ -11,6 +11,7 @@
 #### Load setup ####
 
 source("05_Various/setup.R")
+source("05_Various/import_data.R")
 
 extension <- ".pdf"
 
@@ -22,33 +23,9 @@ file_path_phase <- paste0("02_Data/05-variability-phase-", amplitude, ".rds")
 
 file_path_noise <- paste0("02_Data/05-variability-noise-", amplitude, ".rds")
 
-df_phase <- readr::read_rds(file_path_phase) %>% 
-  purrr::map_dfr(function(j) {
-    dplyr::left_join(x = j$cv, y = j$production, by = c("part", "pop_n", "move_meta_sd", "phase_sd"), 
-                     suffix = c(".cv", ".prod")) %>% 
-      dplyr::mutate(value.move = mean(j$moved$moved, na.rm = TRUE))
-  }) %>% 
-  dplyr::mutate(part = factor(part, levels = c("ag_biomass", "bg_biomass", "ttl_biomass",
-                                               "ag_production", "bg_production", "ttl_production")), 
-                measure = factor(measure, levels = c("alpha", "gamma", "beta", "synchrony")),
-                pop_n = factor(as.numeric(pop_n), ordered = TRUE)) %>% 
-  dplyr::filter(part %in% c("ag_production", "bg_production", "ttl_production"), 
-                measure %in% c("alpha", "gamma", "beta")) %>% 
-  tibble::tibble()
+df_phase <- import_data(path = file_path_phase)
 
-df_noise <- readr::read_rds(file_path_noise) %>% 
-  purrr::map_dfr(function(j) {
-    dplyr::left_join(x = j$cv, y = j$production, by = c("part", "pop_n", "move_meta_sd", "noise_sd"), 
-                     suffix = c(".cv", ".prod")) %>% 
-      dplyr::mutate(value.move = mean(j$moved$moved, na.rm = TRUE))
-  }) %>% 
-  dplyr::mutate(part = factor(part, levels = c("ag_biomass", "bg_biomass", "ttl_biomass",
-                                               "ag_production", "bg_production", "ttl_production")), 
-                measure = factor(measure, levels = c("alpha", "gamma", "beta", "synchrony")),
-                pop_n = factor(as.numeric(pop_n), ordered = TRUE)) %>% 
-  dplyr::filter(part %in% c("ag_production", "bg_production", "ttl_production"), 
-                measure %in% c("alpha", "gamma", "beta")) %>% 
-  tibble::tibble()
+df_noise <- import_data(path = file_path_noise)
 
 df_total <- dplyr::bind_rows(phase = df_phase, noise = df_noise, .id = "scenario") %>% 
   dplyr::filter(measure %in% c("alpha", "gamma")) %>% 
@@ -78,21 +55,21 @@ df_total <- dplyr::bind_rows(phase = df_phase, noise = df_noise, .id = "scenario
 df_total_sum <- dplyr::group_by(df_total, scenario, part, measure, pop_n) %>% 
   dplyr::summarise(cv_mn = mean(cv), cv_sd = sd(cv), .groups = "drop")
 
-dplyr::filter(df_total, measure == "alpha") %>% 
-  dplyr::group_by(part, scenario) %>% 
-  dplyr::summarise(mean = mean(cv))
+dplyr::filter(df_total) %>% 
+  dplyr::group_by(scenario, part, measure, pop_n) %>% 
+  dplyr::summarise(mean = mean(cv), min = min(cv), max = max(cv), groups = "drop") %>% 
+  dplyr::mutate(range = max - min) %>% 
+  dplyr::group_by(scenario, part, measure) %>% 
+  dplyr::summarise(range = mean(range)) %>% 
+  dplyr::mutate(range = round(range, 3)) %>% 
+  dplyr::filter(scenario == "phase", measure == "gamma")
 
 #### Setup ggplot ####
 
-# colors_pop <- c("8_phase" = "#19365d", "8_noise" = "#59849c",
-#                 "16_phase" = "#165942", "16_noise" = "#738549",
-#                 "32_phase" = "#af4c2b", "32_noise" = "#e08b6f",
-#                 "64_phase" = "#57355b", "64_noise" = "#ab83a4")
-
-colors_pop <- c("8 Indiv.; Phase" = "#b24422", "8 Indiv.; Noise" = "#c44d76",
+colors_pop <- c("8 Indiv.; Phase" = "#447861", "8 Indiv.; Noise" = "#7caf5c",
                 "16 Indiv.; Phase" = "#13315f", "16 Indiv.; Noise" = "#4457a5",
                 "32 Indiv.; Phase" = "#59386c", "32 Indiv.; Noise" = "#b1a1cc",
-                "64 Indiv.; Phase" = "#447861", "64 Indiv.; Noise" = "#7caf5c")
+                "64 Indiv.; Phase" = "#b24422", "64 Indiv.; Noise" = "#c44d76")
 
 size_base <- 10
 
@@ -125,4 +102,4 @@ gg_cv_densities <- ggplot(df_total, aes(x = cv, y = density)) +
 
 suppoRt::save_ggplot(plot = gg_cv_densities, filename = paste0("06-cv-densities-", amplitude, extension),
                      path = "04_Figures/", width = width, height = height * 0.85,
-                     units = units, dpi = dpi, overwrite = overwrite)
+                     units = units, dpi = dpi, overwrite = FALSE)

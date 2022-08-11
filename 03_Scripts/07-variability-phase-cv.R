@@ -11,6 +11,7 @@
 #### Load setup ####
 
 source("05_Various/setup.R")
+source("05_Various/import_data.R")
 
 extension <- ".pdf"
 
@@ -20,19 +21,7 @@ amplitude <- "095"
 
 file_path <- paste0("02_Data/05-variability-phase-", amplitude, ".rds")
 
-df_results <- readr::read_rds(file_path) %>% 
-  purrr::map_dfr(function(j) {
-    dplyr::left_join(x = j$cv, y = j$production, by = c("part", "pop_n", "move_meta_sd", "phase_sd"), 
-                     suffix = c(".cv", ".prod")) %>% 
-      dplyr::mutate(value.move = mean(j$moved$moved, na.rm = TRUE))
-  }) %>% 
-  dplyr::mutate(part = factor(part, levels = c("ag_biomass", "bg_biomass", "ttl_biomass",
-                                               "ag_production", "bg_production", "ttl_production")), 
-                measure = factor(measure, levels = c("alpha", "gamma", "beta", "synchrony")),
-                pop_n = factor(as.numeric(pop_n), ordered = TRUE)) %>% 
-  dplyr::filter(part %in% c("ag_production", "bg_production", "ttl_production"), 
-                measure %in% c("alpha", "gamma", "beta")) %>% 
-  tibble::tibble()
+df_results <- import_data(path = file_path)
 
 #### Setup globals ####
 
@@ -97,5 +86,5 @@ gg_move_cv_overall <- cowplot::plot_grid(plotlist = list_gg_parts, nrow = 3, nco
 
 suppoRt::save_ggplot(plot = gg_move_cv_overall, filename = paste0("07-phase-cv-", amplitude, extension),
                      path = "04_Figures/", width = width, height = height,
-                     units = units, dpi = dpi, overwrite = overwrite)
+                     units = units, dpi = dpi, overwrite = FALSE)
 
