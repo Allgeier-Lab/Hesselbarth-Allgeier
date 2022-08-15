@@ -55,15 +55,6 @@ df_total <- dplyr::bind_rows(phase = df_phase, noise = df_noise, .id = "scenario
 df_total_sum <- dplyr::group_by(df_total, scenario, part, measure, pop_n) %>% 
   dplyr::summarise(cv_mn = mean(cv), cv_sd = sd(cv), .groups = "drop")
 
-dplyr::filter(df_total) %>% 
-  dplyr::group_by(scenario, part, measure, pop_n) %>% 
-  dplyr::summarise(mean = mean(cv), min = min(cv), max = max(cv), groups = "drop") %>% 
-  dplyr::mutate(range = max - min) %>% 
-  dplyr::group_by(scenario, part, measure) %>% 
-  dplyr::summarise(range = mean(range)) %>% 
-  dplyr::mutate(range = round(range, 3)) %>% 
-  dplyr::filter(scenario == "phase", measure == "gamma")
-
 #### Setup ggplot ####
 
 colors_pop <- c("8 Indiv.; Phase" = "#447861", "8 Indiv.; Noise" = "#7caf5c",
