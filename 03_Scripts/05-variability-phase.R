@@ -14,6 +14,9 @@ source("05_Various/setup.R")
 
 #### Adapt parameters ####
 
+# number of local metaecosystems
+n <- 9
+
 #### Stable values #### 
 
 list_stable <- arrR::get_req_nutrients(bg_biomass = list_starting$bg_biomass,
@@ -122,6 +125,6 @@ suppoRt::rslurm_missing(x = sbatch_cv)
 cv_result <- rslurm::get_slurm_out(sbatch_cv, outtype = "raw")
 
 suppoRt::save_rds(object = cv_result, path = "02_Data/", overwrite = FALSE,
-                  filename = paste0("05-variability-phase-", stringr::str_remove(amplitude_mn, pattern = "\\."), ".rds"))
+                  filename = paste0("05-variability-phase-", n, ".rds"))
 
 rslurm::cleanup_files(sbatch_cv)

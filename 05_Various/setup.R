@@ -33,9 +33,12 @@ iterations <- 50
 # set min_per_i
 min_per_i <- 120
 
-# ru<- the model for n years
+# the model for n years
 years <- 50
 max_i <- (60 * 24 * 365 * years) / min_per_i
+
+# set frequency to once a year
+frequency <- years
 
 # run seagrass only 1 day
 days_seagrass <- 1
@@ -50,11 +53,6 @@ save_each <- (24 / (min_per_i / 60)) * days_save
 # years used to filter
 years_filter <- 10
 
-# set frequency of input peaks
-
-# number of local metaecosystems
-n <- 5
-
 # setup extent and grain
 dimensions <- c(50, 50)
 
@@ -62,6 +60,9 @@ grain <- 1
 
 # use log size distribution (or not)
 use_log <- FALSE
+
+# mean amplitude
+amplitude_mn <- 0.95
 
 nutrient_input <- 4.584905e-05 # see 00_input-nutr-fish.R
 

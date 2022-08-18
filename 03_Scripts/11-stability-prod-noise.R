@@ -16,9 +16,9 @@ source("05_Various/import_data.R")
 
 #### Load/wrangle simulated data ####
 
-amplitude <- "095"
+n <- 5
 
-df_results <- import_data(path = paste0("02_Data/05-variability-noise-", amplitude, ".rds"))
+df_results <- import_data(path = paste0("02_Data/05-variability-noise-", n, ".rds"))
 
 #### Fit regression model ####
 

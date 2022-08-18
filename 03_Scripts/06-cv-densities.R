@@ -13,13 +13,13 @@
 source("05_Various/setup.R")
 source("05_Various/import_data.R")
 
-amplitude <- "095"
-
 #### Load/wrangle simulated data ####
 
-df_phase <- import_data(path = paste0("02_Data/05-variability-phase-", amplitude, ".rds"))
+n <- 5
 
-df_noise <- import_data(path =  paste0("02_Data/05-variability-noise-", amplitude, ".rds"))
+df_phase <- import_data(path = paste0("02_Data/05-variability-phase-", n, ".rds"))
+
+df_noise <- import_data(path =  paste0("02_Data/05-variability-noise-", n, ".rds"))
 
 df_total <- dplyr::bind_rows(phase = df_phase, noise = df_noise, .id = "scenario") %>% 
   dplyr::filter(part %in% c("ag_production", "bg_production", "ttl_production"),

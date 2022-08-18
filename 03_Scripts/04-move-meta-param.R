@@ -127,6 +127,6 @@ gg_probs_moved <- ggplot(data = move_meta_result_sum, aes(x = move_meta_sd, y = 
   labs(x = "Biotic connectivity variability", y = "Mean cross-system movement") +
   theme_classic(base_size = 10.0) 
 
-suppoRt::save_ggplot(plot = gg_probs_moved, filename = "04-param-connect.pdf",
+suppoRt::save_ggplot(plot = gg_probs_moved, filename = paste0("04-param-connect", extension),
                      path = "04_Figures/", width = width, height = height * 1/3,
                      units = units, dpi = dpi, overwrite = FALSE)

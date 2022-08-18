@@ -216,4 +216,3 @@ dplyr::select(result$fishpop, id, x, y, behavior) %>%
   theme(legend.position = "none")
 
 table(result$fishpop$behavior)
-
