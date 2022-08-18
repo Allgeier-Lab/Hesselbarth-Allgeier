@@ -13,26 +13,20 @@
 source("05_Various/setup.R")
 source("05_Various/import_data.R")
 
-extension <- ".pdf"
-
 #### Load/wrangle simulated data ####
 
 amplitude <- "095"
 
-file_path_phase <- paste0("02_Data/05-variability-phase-", amplitude, ".rds")
+df_phase <- import_data(path = paste0("02_Data/05-variability-phase-", amplitude, ".rds"))
 
-file_path_noise <- paste0("02_Data/05-variability-noise-", amplitude, ".rds")
+df_noise <- import_data(path = paste0("02_Data/05-variability-noise-", amplitude, ".rds"))
 
-df_phase <- import_data(path = file_path_phase)
-
-df_noise <- import_data(path = file_path_noise)
-
-df_total <- dplyr::bind_rows(phase = df_phase, noise = df_noise, .id = "scenario") %>% 
-  dplyr::filter(measure %in% c("alpha", "gamma"))
+df_total <- dplyr::bind_rows(phase = df_phase, noise = df_noise, .id = "scenario")
 
 #### Fit regression model ####
 
-df_regression <- dplyr::filter(df_total, measure %in% c("alpha", "gamma")) %>%
+df_regression <- dplyr::filter(df_total, part %in% c("ag_production", "bg_production", "ttl_production"), 
+                               measure %in% c("alpha", "gamma")) %>%
   dplyr::group_by(scenario, part, measure, pop_n) %>%
   dplyr::group_split() %>%
   purrr::map_dfr(function(df_temp) {
@@ -78,8 +72,6 @@ gg_coef <- ggplot(data = dplyr::filter(df_regression, term != "Intercept"),
   
   # adding geoms
   geom_hline(yintercept = 0.0, linetype = 2, color = "grey") +
-  # geom_col(aes(x = pop_n, y = estimate, fill = scenario), 
-  #          position = position_dodge(width = width_pos), width = 0.8, color = NA) +
   geom_linerange(aes(x = pop_n, ymin = 0.0, ymax = estimate, color = scenario),
                  position = position_dodge(width = width_pos), size = size_line) +
   geom_point(aes(x = pop_n, y = estimate, fill = scenario, color = scenario, shape = direction),

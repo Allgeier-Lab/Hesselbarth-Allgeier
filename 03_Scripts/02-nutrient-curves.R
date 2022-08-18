@@ -12,8 +12,6 @@
 
 source("05_Various/setup.R")
 
-extension <- ".pdf"
-
 #### Adapt parameters ####
 
 amplitude_mn <- 0.95

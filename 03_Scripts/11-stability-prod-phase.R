@@ -13,19 +13,16 @@
 source("05_Various/setup.R")
 source("05_Various/import_data.R")
 
-extension <- ".pdf"
-
 #### Load/wrangle simulated data ####
 
 amplitude <- "095"
 
-file_path <- paste0("02_Data/05-variability-phase-", amplitude, ".rds")
-
-df_results <- import_data(path = file_path)
+df_results <- import_data(path = paste0("02_Data/05-variability-phase-", amplitude, ".rds"))
 
 #### Fit regression model ####
 
-df_regression <- dplyr::filter(df_results, measure %in% c("alpha", "gamma")) %>%
+df_regression <- dplyr::filter(df_results, part %in% c("ag_production", "bg_production", "ttl_production"), 
+                               measure %in% c("alpha", "gamma")) %>%
   dplyr::group_by(part, measure, pop_n) %>%
   dplyr::group_split() %>%
   purrr::map_dfr(function(df_temp) {
@@ -39,7 +36,7 @@ df_regression <- dplyr::filter(df_results, measure %in% c("alpha", "gamma")) %>%
                     pop_n = unique(df_temp$pop_n), .before = term) %>% 
       dplyr::mutate(term = dplyr::case_when(term == "(Intercept)" ~ "Intercept", TRUE ~ term), 
                     p.value = dplyr::case_when(p.value < 0.001 ~ "***", p.value < 0.01 ~ "**",
-                                               p.value < 0.05 ~  "*", p.value >= 0.05 ~ ""),
+                                               p.value < 0.05 ~  "*", p.value >= 0.05 ~ "n.s."),
                     direction = dplyr::case_when(term != "Intercept" & estimate < 0.0 ~ "increase", 
                                                  term != "Intercept" & estimate > 0.0 ~ "decrease", 
                                                  term == "Intercept" ~ as.character(NA)))
@@ -54,7 +51,7 @@ size_point <- 1.0
 size_line <- 0.75
 size_base <- 10.0
 
-alpha <- 0.1
+alpha <- 0.25
 
 #### Create ggplot ####
 
@@ -75,17 +72,17 @@ gg_scatter_list <- dplyr::filter(df_results, measure %in% c("alpha", "gamma")) %
       
       # set scales
       scale_color_manual(name = "Population size", values = colors_pop) +
-      # scale_x_continuous(limits = function(x) range(x), labels = function(x) round(exp(x), 2),
-      #                    breaks = function(x) seq(quantile(x, 0.1), quantile(x, 0.9), length.out = 4)) +
-      # scale_y_continuous(limits = function(x) range(x), labels = function(x) round(exp(x), 1),
-      #                    breaks = function(x) seq(quantile(x, 0.1), quantile(x, 0.9), length.out = 4)) +
+      scale_x_continuous(limits = function(x) range(x), labels = function(x) round(exp(x), 2),
+                         breaks = function(x) seq(quantile(x, 0.1), quantile(x, 0.9), length.out = 4)) +
+      scale_y_continuous(limits = function(x) range(x), labels = function(x) round(exp(x), 1),
+                         breaks = function(x) seq(quantile(x, 0.1), quantile(x, 0.9), length.out = 4)) +
       
       # labels and themes
       labs(x = "", y = "") +
       theme_classic(base_size = 10.0) + 
       theme(legend.position = "none", plot.title = element_text(size = 8.0), 
             strip.background = element_blank(), strip.text = element_blank(),
-            plot.margin = margin(t = 5.5, r = 5.5, b = 5.5, l = 5.5, unit = "pt"))
+            plot.margin = margin(t = 5.5, r = 5.5, b = 0.0, l = 5.5, unit = "pt"))
     
   })
 

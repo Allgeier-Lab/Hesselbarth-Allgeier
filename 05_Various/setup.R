@@ -86,7 +86,9 @@ width <- 210
 height <- 297
 
 # set pixels
-dpi <- 600
+dpi <- 900
+
+extension <- ".pdf"
 
 #### HPC settings ####
 

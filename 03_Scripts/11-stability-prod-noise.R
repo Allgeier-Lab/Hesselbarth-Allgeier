@@ -13,19 +13,17 @@
 source("05_Various/setup.R")
 source("05_Various/import_data.R")
 
-extension <- ".pdf"
 
 #### Load/wrangle simulated data ####
 
 amplitude <- "095"
 
-file_path <- paste0("02_Data/05-variability-noise-", amplitude, ".rds")
-
-df_results <- import_data(path = file_path)
+df_results <- import_data(path = paste0("02_Data/05-variability-noise-", amplitude, ".rds"))
 
 #### Fit regression model ####
 
-df_regression <- dplyr::filter(df_results, measure %in% c("alpha", "gamma")) %>%
+df_regression <- dplyr::filter(df_results, part %in% c("ag_production", "bg_production", "ttl_production"), 
+                               measure %in% c("alpha", "gamma")) %>%
   dplyr::group_by(part, measure, pop_n) %>%
   dplyr::group_split() %>%
   purrr::map_dfr(function(df_temp) {
@@ -54,7 +52,7 @@ size_point <- 1.0
 size_line <- 0.75
 size_base <- 10.0
 
-alpha <- 0.1
+alpha <- 0.25
 
 #### Create ggplot ####
 

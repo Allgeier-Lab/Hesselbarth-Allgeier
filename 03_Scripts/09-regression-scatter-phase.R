@@ -13,15 +13,11 @@
 source("05_Various/setup.R")
 source("05_Various/import_data.R")
 
-extension <- ".pdf"
-
 #### Load/wrangle simulated data ####
 
 amplitude <- "095"
 
-file_path <- paste0("02_Data/05-variability-phase-", amplitude, ".rds")
-
-df_results <- import_data(path = file_path)
+df_results <- import_data(path = paste0("02_Data/05-variability-phase-", amplitude, ".rds"))
 
 #### Setup ggplot ####
 
@@ -31,16 +27,17 @@ size_point <- 1.0
 size_line <- 0.75
 size_base <- 10.0
 
-alpha <- 0.1
+alpha <- 0.25
 
 #### Create ggplot ####
 
-gg_scatter_list <- dplyr::filter(df_results, measure %in% c("alpha", "gamma")) %>%
+gg_scatter_list <- dplyr::filter(df_results, part %in% c("ag_production", "bg_production", "ttl_production"), 
+                                 measure %in% c("alpha", "gamma")) %>%
   dplyr::group_by(part, measure) %>%
   dplyr::group_split() %>%
   purrr::map(function(df_temp) {
     
-    df_temp_long <- tidyr::pivot_longer(df_temp, cols = c(move_meta_sd, phase_sd), 
+    df_temp_long <- tidyr::pivot_longer(df_temp, cols = c(biotic, abiotic), 
                                         names_to = "variability", values_to = "value.var")
     
     # init ggplot
@@ -52,10 +49,10 @@ gg_scatter_list <- dplyr::filter(df_results, measure %in% c("alpha", "gamma")) %
       
       # facet wrapping
       facet_wrap(. ~ variability, ncol = 2, scales = "fixed",
-                 labeller = labeller(variability = c(move_meta_sd = ifelse(test = unique(df_temp$part) == "ag_production", 
-                                                                           yes = "Biotic", no = ""), 
-                                                     phase_sd = ifelse(test = unique(df_temp$part) == "ag_production", 
-                                                                       yes = "Abiotic", no = "")))) +
+                 labeller = labeller(variability = c(biotic = ifelse(test = unique(df_temp$part) == "ag_production", 
+                                                                     yes = "Biotic", no = ""), 
+                                                     abiotic = ifelse(test = unique(df_temp$part) == "ag_production", 
+                                                                      yes = "Abiotic", no = "")))) +
       
       # set scales
       scale_color_manual(name = "Population size", values = colors_pop) +
@@ -77,7 +74,7 @@ gg_scatter_list <- dplyr::filter(df_results, measure %in% c("alpha", "gamma")) %
     
   })
 
-gg_dummy <- ggplot(data = df_results, aes(x = move_meta_sd, y = value.cv, color = pop_n)) + 
+gg_dummy <- ggplot(data = df_results, aes(x = biotic, y = value.cv, color = pop_n)) + 
   geom_point(shape = 1, alpha = alpha) + 
   geom_smooth(formula = y ~ x, method = "lm", se = FALSE, size = size_line) +
   scale_color_manual(name = "Population size", values = colors_pop) +
@@ -97,6 +94,6 @@ gg_combined <- cowplot::plot_grid(gg_combined, cowplot::get_legend(gg_dummy),
 
 #### Save ggplot ####
 
-suppoRt::save_ggplot(plot = gg_combined, filename = paste0("11-phase-", amplitude, extension),
+suppoRt::save_ggplot(plot = gg_combined, filename = paste0("09-phase-", amplitude, extension),
                      path = "04_Figures/", width = height, height = width * 0.65,
                      units = units, dpi = dpi, overwrite = FALSE)

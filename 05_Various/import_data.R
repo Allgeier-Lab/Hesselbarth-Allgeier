@@ -4,6 +4,7 @@ import_data <- function(path) {
     purrr::map_dfr(function(j) {
       dplyr::left_join(x = j$cv, y = j$prod, by = c("part", "measure", "pop_n", "biotic", "abiotic"), 
                        suffix = c(".cv", ".prod")) %>% 
+        dplyr::rename("value.cv.sd" = "sd", "value.cv.mn" = "mean") %>% 
         dplyr::mutate(value.move = mean(j$moved$moved, na.rm = TRUE))
     }) %>% 
     dplyr::mutate(part = factor(part, levels = c("ag_biomass", "bg_biomass", "ttl_biomass",

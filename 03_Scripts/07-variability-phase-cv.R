@@ -13,15 +13,11 @@
 source("05_Various/setup.R")
 source("05_Various/import_data.R")
 
-extension <- ".pdf"
-
 #### Load/wrangle simulated data ####
 
 amplitude <- "095"
 
-file_path <- paste0("02_Data/05-variability-phase-", amplitude, ".rds")
-
-df_results <- import_data(path = file_path)
+df_results <- import_data(path = paste0("02_Data/05-variability-phase-", amplitude, ".rds"))
 
 #### Setup globals ####
 
