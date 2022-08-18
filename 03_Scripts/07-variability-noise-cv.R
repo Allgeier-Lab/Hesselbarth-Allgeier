@@ -6,7 +6,7 @@
 ##    www.github.com/mhesselbarth             ##
 ##--------------------------------------------##
 
-# Purpose: Results of connectivity experiment for movement and phase variabilities
+# Purpose: Results of connectivity experiment for movement and noise variabilities
 
 #### Load setup ####
 
@@ -27,11 +27,12 @@ df_results <- import_data(path = file_path)
 
 size_base <- 8.0
 
-colors_pop <- c("8" = "#ebcc60", "16" = "#459b75", "32" = "#374a98", "64" = "#913f98")
+colors_pop <- c("8" = "#447861", "16" = "#13315f", "32" = "#59386c", "64" = "#b24422")
 
 #### Density ####
 
-gg_density <- dplyr::filter(df_results, measure %in% c("alpha", "gamma")) %>% 
+gg_density <- dplyr::filter(df_results, measure %in% c("alpha", "gamma"), 
+                            part %in% c("ag_production", "bg_production", "ttl_production")) %>% 
   ggplot(aes(x = value.cv, y = ..density.., fill = pop_n, color = pop_n)) + 
   geom_density(alpha = 0.5) + 
   facet_wrap(. ~ part + measure, scales = "free", ncol = 2, nrow = 3, 
@@ -54,11 +55,11 @@ list_gg_parts <- purrr::map(c("ag_production", "bg_production", "ttl_production"
     list_gg_pop <- purrr::map(c(8, 16, 32, 64), function(pop_i) {
       
       dplyr::filter(df_results, part == part_i, measure == measure_i, pop_n == pop_i) %>% 
-        dplyr::mutate(move_meta_sd = cut(move_meta_sd, breaks = seq(0.1, 1, 0.1),labels = FALSE), 
-                      noise_sd = cut(noise_sd, breaks = seq(0.1, 1, 0.1), labels = FALSE)) %>% 
-        dplyr::group_by(move_meta_sd, noise_sd) %>%
+        dplyr::mutate(biotic = cut(biotic, breaks = seq(0.1, 1, 0.1),labels = FALSE), 
+                      abiotic = cut(abiotic, breaks = seq(0.1, 1, 0.1), labels = FALSE)) %>% 
+        dplyr::group_by(biotic, abiotic) %>%
         dplyr::summarise(value.cv = mean(value.cv), .groups = "drop") %>%
-        ggplot(aes(x = noise_sd, y = move_meta_sd, fill = value.cv)) +
+        ggplot(aes(x = biotic, y = abiotic, fill = value.cv)) +
         geom_tile() + 
         scale_fill_gradientn(colors = MetBrewer::met.brewer("Demuth", n = 255, type = "continuous")) +
         scale_x_continuous(breaks = c(1, 5, 9), labels = c(0.1, 0.5, 1.0)) +
@@ -69,12 +70,12 @@ list_gg_parts <- purrr::map(c("ag_production", "bg_production", "ttl_production"
               axis.title = element_blank(), axis.line = element_blank(), 
               panel.border = element_rect(size = 0.5, fill = NA))
       
-      })
+    })
     
     cowplot::plot_grid(plotlist = list_gg_pop, ncol = 2, nrow = 2) + 
-      cowplot::draw_label(label = expression(italic(noise_sd)), x = 0.5, y = 0, 
+      cowplot::draw_label(label = "Biotic", x = 0.5, y = 0, 
                           vjust = 0.5, angle = 0, size = size_base) +
-      cowplot::draw_label(label = expression(italic(move_meta_sd)), x = 0, y = 0.5, 
+      cowplot::draw_label(label = "Abiotic", x = 0, y = 0.5, 
                           vjust = 0.0, angle = 90, size = size_base) + 
       theme(plot.margin = unit(c(t = 0.5, r = 0.5, b = 0.5, l = 0.5), "cm"))
     
@@ -87,4 +88,3 @@ gg_move_cv_overall <- cowplot::plot_grid(plotlist = list_gg_parts, nrow = 3, nco
 suppoRt::save_ggplot(plot = gg_move_cv_overall, filename = paste0("07-noise-cv-", amplitude, extension),
                      path = "04_Figures/", width = width, height = height,
                      units = units, dpi = dpi, overwrite = FALSE)
-

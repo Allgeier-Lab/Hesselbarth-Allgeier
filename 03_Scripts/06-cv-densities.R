@@ -28,7 +28,8 @@ df_phase <- import_data(path = file_path_phase)
 df_noise <- import_data(path = file_path_noise)
 
 df_total <- dplyr::bind_rows(phase = df_phase, noise = df_noise, .id = "scenario") %>% 
-  dplyr::filter(measure %in% c("alpha", "gamma")) %>% 
+  dplyr::filter(part %in% c("ag_production", "bg_production", "ttl_production"),
+                measure %in% c("alpha", "gamma")) %>% 
   dplyr::group_by(scenario, part, measure, pop_n) %>%
   dplyr::group_split() %>% 
   purrr::map_dfr(function(i) {
@@ -39,7 +40,8 @@ df_total <- dplyr::bind_rows(phase = df_phase, noise = df_noise, .id = "scenario
     data.frame(scenario = unique(i$scenario), part = unique(i$part), 
                measure = unique(i$measure), pop_n = unique(i$pop_n), 
                cv = density_temp$x, density = density_temp$y)
-    }) %>% 
+    
+  }) %>% 
   tidyr::unite("color_id", pop_n, scenario, remove = FALSE) %>% 
   dplyr::mutate(color_id = factor(color_id, 
                                   levels = c("8_phase", "8_noise", "16_phase", "16_noise",

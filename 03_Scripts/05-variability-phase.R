@@ -26,21 +26,7 @@ list_starting$detritus_pool <- list_stable$detritus_pool
 
 #### Setup experiment ####
 
-reps <- 500
-
-matrix_lhs <- lhs::improvedLHS(n = reps, k = 2, dup = 2)
-
-matrix_lhs[, 1] <- qunif(matrix_lhs[, 1], 0.1, 1.0) 
-
-matrix_lhs[, 2] <- qunif(matrix_lhs[, 2], 0.1, 1.0) 
-
-table(cut(matrix_lhs[, 1], breaks = seq(0.1, 1, 0.1)),
-      cut(matrix_lhs[, 2], breaks = seq(0.1, 1, 0.1)))
-
-df_experiment <- tibble::tibble(move_meta_sd = matrix_lhs[, 1], 
-                                phase_sd = matrix_lhs[, 2]) %>% 
-  dplyr::slice(rep(x = 1:dplyr::n(), times = 4)) %>% 
-  dplyr::mutate(pop_n =  rep(x = c(8, 16, 32, 64), each = reps))
+df_experiment <- readRDS("02_Data/00_df_experiment.rds")
 
 amplitude_mn <- 0.95
 
@@ -48,12 +34,12 @@ frequency <- years
 
 #### Init HPC function ####
 
-foo_hpc <- function(pop_n, move_meta_sd, phase_sd) {
+foo_hpc <- function(pop_n, biotic, abiotic) {
   
   list_starting$pop_n <- pop_n
   
   # update move meta_sd parameters
-  list_parameters$move_meta_sd <- move_meta_sd
+  list_parameters$move_meta_sd <- biotic
   
   # setup metaecosystems
   metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = matrix_reef,
@@ -64,7 +50,7 @@ foo_hpc <- function(pop_n, move_meta_sd, phase_sd) {
   # simulate nutrient input
   input_temp <- meta.arrR::simulate_nutrient_sine(n = n, max_i = max_i, frequency = frequency, 
                                                   input_mn = nutrient_input, amplitude_mn = amplitude_mn,
-                                                  phase_sd = phase_sd, verbose = FALSE)
+                                                  phase_sd = abiotic, verbose = FALSE)
   
   # run model
   result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = list_parameters,
@@ -99,10 +85,15 @@ foo_hpc <- function(pop_n, move_meta_sd, phase_sd) {
       
     })
   
+  # calculate lagged production over time
+  prod_time <- meta.arrR::summarize_meta(result = result_temp, biomass = FALSE, production = TRUE, 
+                                         lag = c(FALSE, TRUE))[["production"]]
+  
   # combine to result data.frame and list
-  list(moved = dplyr::mutate(moved, pop_n = pop_n, move_meta_sd = move_meta_sd, phase_sd = phase_sd), 
-       cv = dplyr::mutate(dplyr::bind_rows(cv), pop_n = pop_n, move_meta_sd = move_meta_sd, phase_sd = phase_sd), 
-       prod = dplyr::mutate(dplyr::bind_rows(prod), pop_n = pop_n, move_meta_sd = move_meta_sd, phase_sd = phase_sd))
+  list(moved = dplyr::mutate(moved, pop_n = pop_n, biotic = biotic, abiotic = abiotic), 
+       cv = dplyr::mutate(dplyr::bind_rows(cv), pop_n = pop_n, biotic = biotic, abiotic = abiotic), 
+       prod = dplyr::mutate(dplyr::bind_rows(prod), pop_n = pop_n, biotic = biotic, abiotic = abiotic), 
+       prod_time = dplyr::mutate(prod_time, pop_n = pop_n, biotic = biotic, abiotic = abiotic))
   
 }
 
@@ -130,10 +121,7 @@ suppoRt::rslurm_missing(x = sbatch_cv)
 
 cv_result <- rslurm::get_slurm_out(sbatch_cv, outtype = "raw")
 
-suppoRt::save_rds(object = cv_result, 
-                  filename = paste0("05-variability-phase-", 
-                                    stringr::str_remove(amplitude_mn, pattern = "\\."), 
-                                    ".rds"),
-                  path = "02_Data/", overwrite = overwrite)
+suppoRt::save_rds(object = cv_result, path = "02_Data/", overwrite = FALSE,
+                  filename = paste0("05-variability-phase-", stringr::str_remove(amplitude_mn, pattern = "\\."), ".rds"))
 
 rslurm::cleanup_files(sbatch_cv)
