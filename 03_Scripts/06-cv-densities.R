@@ -87,6 +87,6 @@ gg_cv_densities <- ggplot(df_total, aes(x = cv, y = density)) +
 
 #### Save ggplot ####
 
-suppoRt::save_ggplot(plot = gg_cv_densities, filename = paste0("06-cv-densities-", amplitude, extension),
+suppoRt::save_ggplot(plot = gg_cv_densities, filename = paste0("06-cv-densities-", n, extension),
                      path = "04_Figures/", width = width, height = height * 0.85,
                      units = units, dpi = dpi, overwrite = FALSE)

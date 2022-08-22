@@ -94,6 +94,6 @@ gg_combined <- cowplot::plot_grid(gg_combined, cowplot::get_legend(gg_dummy),
 
 #### Save ggplot ####
 
-suppoRt::save_ggplot(plot = gg_combined, filename = paste0("09-noise-", amplitude, extension),
+suppoRt::save_ggplot(plot = gg_combined, filename = paste0("09-noise-", n, extension),
                      path = "04_Figures/", width = height, height = width * 0.65,
                      units = units, dpi = dpi, overwrite = FALSE)

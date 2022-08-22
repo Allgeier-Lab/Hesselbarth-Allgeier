@@ -108,6 +108,6 @@ gg_coef <- ggplot(data = dplyr::filter(df_regression, term != "Intercept"),
 
 #### Save plot ####
 
-suppoRt::save_ggplot(plot = gg_coef, filename = paste0("12-both-", amplitude, extension),
+suppoRt::save_ggplot(plot = gg_coef, filename = paste0("12-both-", n, extension),
                      path = "04_Figures/", width = width, height = height * 0.5,
                      units = units, dpi = dpi, overwrite = FALSE)

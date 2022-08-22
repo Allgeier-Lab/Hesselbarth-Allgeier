@@ -17,46 +17,56 @@ source("05_Various/import_data.R")
 
 n <- 5
 
-df_results <- import_data(path = paste0("02_Data/05-variability-phase-", n, ".rds"))
+df_results <- import_data(path = paste0("02_Data/05-variability-phase-", n, "-yearly.rds"))
 
 #### Split data #### 
 
 df_list <- dplyr::filter(df_results, part %in% c("ag_production", "bg_production", "ttl_production"), 
-              measure %in% c("alpha", "gamma")) %>%
+                         measure %in% c("alpha", "gamma")) %>%
   dplyr::group_by(part, measure, pop_n) %>%
   dplyr::group_split()
 
 #### Fit regression model ####
 
 df_regression <- purrr::map_dfr(df_list, function(df_temp) {
-
-    df_temp$value.cv <- log(df_temp$value.cv) - mean(log(df_temp$value.cv))
-
-    lm_temp <- lm(value.cv ~ log(biotic) * log(abiotic), data = df_temp)
-
-    broom::tidy(lm_temp) %>%
-      dplyr::mutate(part = unique(df_temp$part), measure = unique(df_temp$measure),
-                    pop_n = unique(df_temp$pop_n), .before = term) %>% 
-      dplyr::mutate(term = c("Intercept", "Biotic", "Abiotic", "Interaction"))
-  })
+  
+  df_temp$value.cv <- log(df_temp$value.cv) - mean(log(df_temp$value.cv))
+  
+  df_temp$biotic <- log(df_temp$biotic)
+  df_temp$abiotic <- log(df_temp$abiotic)
+  
+  lm_temp <- lm(value.cv ~ biotic * abiotic, data = df_temp)
+  
+  broom::tidy(lm_temp) %>%
+    dplyr::mutate(part = unique(df_temp$part), measure = unique(df_temp$measure),
+                  pop_n = unique(df_temp$pop_n), .before = term) %>% 
+    dplyr::mutate(term = c("Intercept", "Biotic", "Abiotic", "Interaction")) %>% 
+    dplyr::mutate(p.value = dplyr::case_when(p.value < 0.001 ~ "***", p.value < 0.01 ~ "**",
+                                             p.value < 0.05 ~  "*", p.value >= 0.05 ~ ""))
+  
+})
 
 #### Relative importance R2 ####
 
 df_importance <- purrr::map_dfr(df_list, function(df_temp) {
   
+  print(paste(unique(df_temp$part), unique(df_temp$measure), unique(df_temp$pop_n)))
+  
   df_temp$value.cv <- log(df_temp$value.cv) - mean(log(df_temp$value.cv))
   
-  lm_temp <- lm(value.cv ~ log(biotic) * log(abiotic), data = df_temp)
+  df_temp$biotic <- log(df_temp$biotic)
+  df_temp$abiotic <- log(df_temp$abiotic)
   
-  rel_r2 <- relaimpo::boot.relimp(lm_temp, type = "lmg", b = 1000, level = 0.95, fixed = FALSE) %>%
-    relaimpo::booteval.relimp(bty = "bca")
+  lm_temp <- lm(value.cv ~ biotic * abiotic, data = df_temp)
+  
+  rel_r2 <- relaimpo::boot.relimp(lm_temp, type = "lmg", b = 500, level = 0.95, fixed = FALSE) %>%
+    relaimpo::booteval.relimp(bty = "basic")
   
   tibble::tibble(
     part = unique(df_temp$part), measure = unique(df_temp$measure), pop_n = unique(df_temp$pop_n),
-    beta = factor(x = c("Biotic", "Abiotic", "Interaction", "Residual"),
+    beta = factor(x = c("Biotic", "Abiotic", "Interaction", "Residual"), 
                   levels  = c("Residual", "Biotic", "Abiotic", "Interaction")),
-    mean = c(rel_r2@lmg, 1 - sum(rel_r2@lmg)), lower = c(rel_r2@lmg.lower, NA), higher = c(rel_r2@lmg.upper, NA),
-    p_value = ifelse(c(summary(lm_temp)$coefficients[c(2:4), 4], NA) < 0.05, yes = "signif.", no = "n.s.")
+    mean = c(rel_r2@lmg, 1 - sum(rel_r2@lmg)), lower = c(rel_r2@lmg.lower, NA), higher = c(rel_r2@lmg.upper, NA)
   )
 })
 
@@ -75,10 +85,7 @@ gg_list <- purrr::map(c("alpha", "gamma"), function(measure_i) {
   
   purrr::map(c("ag_production", "bg_production", "ttl_production"), function(part_i) {
     
-    df_regression_temp <- dplyr::filter(df_regression, measure == measure_i, part == part_i) %>% 
-      dplyr::select(-c(std.error, statistic)) %>% 
-      dplyr::mutate(p.value = dplyr::case_when(p.value < 0.001 ~ "***", p.value < 0.01 ~ "**",
-                                               p.value < 0.05 ~  "*", p.value >= 0.05 ~ ""))
+    df_regression_temp <- dplyr::filter(df_regression, measure == measure_i, part == part_i)
     
     df_importance_temp <- dplyr::filter(df_importance, measure == measure_i, part == part_i)
     
@@ -163,6 +170,6 @@ gg_combined <- cowplot::plot_grid(gg_combined, cowplot::get_legend(gg_dummy),
 
 #### Save plot ####
 
-suppoRt::save_ggplot(plot = gg_combined, filename = paste0("08-phase-", amplitude, extension),
+suppoRt::save_ggplot(plot = gg_combined, filename = paste0("08-phase-", n, extension),
                      path = "04_Figures/", width = height, height = width * 0.7,
                      units = units, dpi = dpi, overwrite = FALSE)
