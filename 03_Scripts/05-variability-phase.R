@@ -14,8 +14,16 @@ source("05_Various/setup.R")
 
 #### Adapt parameters ####
 
-# number of local metaecosystems
-n <- 9
+# # number of local metaecosystems
+# n <- 5 # 5 9
+# mem_per_cpu <- "7G" # "7G" "15G"
+# time <- "02:00:00" # hh:mm::ss # "02:00:00" "05:00:00"
+
+# # save results only every m days
+# days_save <- 125 # which(max_i %% ((24 / (min_per_i / 60)) * (1:365)) == 0) 25 125
+# save_each <- (24 / (min_per_i / 60)) * days_save
+
+# max_i %% save_each
 
 #### Stable values #### 
 
@@ -60,11 +68,9 @@ foo_hpc <- function(pop_n, biotic, abiotic) {
                                                 nutrients_input = input_temp, movement = "behav",
                                                 max_i = max_i, min_per_i = min_per_i,
                                                 seagrass_each = seagrass_each, save_each = save_each, 
-                                                verbose = FALSE)
-  
-  # filter model run
-  result_temp <- meta.arrR::filter_meta(x = result_temp, filter = c((max_i / years) * years_filter, max_i), 
-                                        reset = TRUE, verbose = FALSE)
+                                                verbose = FALSE) %>% 
+    meta.arrR::filter_meta(filter = c((max_i / years) * years_filter, max_i), 
+                           reset = TRUE, verbose = FALSE)
   
   # get moved counts
   moved <- dplyr::bind_rows(result_temp$fishpop) %>% 
@@ -112,8 +118,8 @@ sbatch_cv <- rslurm::slurm_apply(f = foo_hpc, params = df_experiment,
                                  nodes = nrow(df_experiment), cpus_per_node = 1, 
                                  slurm_options = list("account" = account, 
                                                       "partition" = "standard",
-                                                      "time" = "02:00:00", ## hh:mm::ss
-                                                      "mem-per-cpu" = "7G",
+                                                      "time" = time,
+                                                      "mem-per-cpu" = mem_per_cpu,
                                                       "exclude" = exclude_nodes),
                                  pkgs = c("arrR", "dplyr", "meta.arrR", "purrr", "tidyr"),
                                  rscript_path = rscript_path, submit = FALSE)
