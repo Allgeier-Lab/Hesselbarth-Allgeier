@@ -6,7 +6,7 @@
 ##    www.github.com/mhesselbarth             ##
 ##--------------------------------------------##
 
-# Purpose: Relationship between movement parameters and mean cross-meta-ecosystem movement
+# Purpose: Relationship between biotic variability and mean cross-meta-ecosystem movement
 
 #### Load setup ####
 
@@ -16,13 +16,13 @@ source("05_Various/setup.R")
 
 #### Stable values #### 
 
-list_stable <- arrR::get_req_nutrients(bg_biomass = list_starting$bg_biomass,
-                                       ag_biomass = list_starting$ag_biomass,
-                                       parameters = list_parameters)
+stable_values_list <- arrR::get_req_nutrients(bg_biomass = starting_values_list$bg_biomass,
+                                       ag_biomass = starting_values_list$ag_biomass,
+                                       parameters = parameters_list)
 
-list_starting$nutrients_pool <- list_stable$nutrients_pool
+starting_values_list$nutrients_pool <- stable_values_list$nutrients_pool
 
-list_starting$detritus_pool <- list_stable$detritus_pool
+starting_values_list$detritus_pool <- stable_values_list$detritus_pool
 
 #### Setup experiment ####
 
@@ -32,22 +32,22 @@ matrix_lhs <- lhs::improvedLHS(n = reps, k = 1, dup = 2)
 
 matrix_lhs[, 1] <- qunif(matrix_lhs[, 1], 0.1, 1.0) 
 
-df_experiment <- tibble::tibble(move_meta_sd = matrix_lhs[, 1]) %>% 
+experiment_df <- tibble::tibble(move_meta_sd = matrix_lhs[, 1]) %>% 
   dplyr::slice(rep(x = 1:dplyr::n(), times = 10))
 
 # setup metaecosystems
-metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = matrix_reef,
-                                       starting_values = list_starting, parameters = list_parameters,
+metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = reef_matrix,
+                                       starting_values = starting_values_list, parameters = parameters_list,
                                        dimensions = dimensions, grain = grain, use_log = use_log, 
                                        verbose = FALSE)
 
 foo_hpc <- function(move_meta_sd) {
   
-  list_parameters$move_meta_sd <- move_meta_sd
+  parameters_list$move_meta_sd <- move_meta_sd
   
   # create new attributed matrix
   attr_replace <- meta.arrR:::setup_attributes(fishpop = metasyst_temp$fishpop, 
-                                               parameters = list_parameters, max_i = max_i)
+                                               parameters = parameters_list, max_i = max_i)
   
   # replace matrix
   metasyst_temp$fishpop_attr[, 3] <- attr_replace[, 3]
@@ -57,7 +57,7 @@ foo_hpc <- function(move_meta_sd) {
                                                   input_mn = nutrient_input, verbose = FALSE)
   
   # run model
-  result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = list_parameters,
+  result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = parameters_list,
                                                 nutrients_input = input_temp, movement = "behav",
                                                 max_i = max_i, min_per_i = min_per_i,
                                                 seagrass_each = seagrass_each,
@@ -76,12 +76,12 @@ foo_hpc <- function(move_meta_sd) {
 
 #### Submit HPC ####
 
-globals <- c("list_parameters", "metasyst_temp", "max_i", "n", "years", "nutrient_input", 
+globals <- c("parameters_list", "metasyst_temp", "max_i", "n", "years", "nutrient_input", 
              "min_per_i", "seagrass_each", "save_each")
 
-sbatch_move_meta <- rslurm::slurm_apply(f = foo_hpc, params = df_experiment, 
+sbatch_move_meta <- rslurm::slurm_apply(f = foo_hpc, params = experiment_df, 
                                         global_objects = globals, jobname = "move_meta_param",
-                                        nodes = nrow(df_experiment), cpus_per_node = 1, 
+                                        nodes = nrow(experiment_df), cpus_per_node = 1, 
                                         slurm_options = list("account" = account, 
                                                              "partition" = "standard",
                                                              "time" = "01:00:00", ## hh:mm::ss
@@ -95,14 +95,14 @@ suppoRt::rslurm_missing(x = sbatch_move_meta)
 
 move_meta_result <- rslurm::get_slurm_out(sbatch_move_meta, outtype = "table")
 
-suppoRt::save_rds(object = move_meta_result, filename = "04-move-meta-param.rds",
+suppoRt::save_rds(object = move_meta_result, filename = "biotic-vs-connectivity.rds",
                   path = "02_Data/", overwrite = overwrite)
 
 rslurm::cleanup_files(sbatch_move_meta)
 
 #### Load results ####
 
-move_meta_result <- readr::read_rds("02_Data/04-move-meta-param.rds")
+move_meta_result <- readr::read_rds("02_Data/biotic-vs-connectivity.rds")
 
 #### Summarize results ####
 
@@ -127,6 +127,6 @@ gg_probs_moved <- ggplot(data = move_meta_result_sum, aes(x = move_meta_sd, y = 
   labs(x = "Biotic connectivity variability", y = "Mean cross-system movement") +
   theme_classic(base_size = 10.0) 
 
-suppoRt::save_ggplot(plot = gg_probs_moved, filename = paste0("04-param-connect", extension),
-                     path = "04_Figures/", width = width, height = height * 1/3,
+suppoRt::save_ggplot(plot = gg_probs_moved, filename = paste0("Figure-A1", extension),
+                     path = "04_Figures/Appendix", width = width, height = height * 1/3,
                      units = units, dpi = dpi, overwrite = FALSE)

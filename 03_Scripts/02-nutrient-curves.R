@@ -20,29 +20,31 @@ frequency <- years
 
 #### Stable values #### 
 
-list_stable <- arrR::get_req_nutrients(bg_biomass = list_starting$bg_biomass,
-                                       ag_biomass = list_starting$ag_biomass,
-                                       parameters = list_parameters)
+stable_values_list <- arrR::get_req_nutrients(bg_biomass = starting_values_list$bg_biomass,
+                                              ag_biomass = starting_values_list$ag_biomass,
+                                              parameters = parameters_list)
 
-list_starting$nutrients_pool <- list_stable$nutrients_pool
+starting_values_list$nutrients_pool <- stable_values_list$nutrients_pool
 
-list_starting$detritus_pool <- list_stable$detritus_pool
+starting_values_list$detritus_pool <- stable_values_list$detritus_pool
 
 #### Simulate nutrient inputs variability ####
 
-variability <- 0.75
+variability <- 0.5
+
+n <- 5
 
 # simulate nutrient input
-df_input_null <- meta.arrR::simulate_nutrient_sine(n = n, max_i = max_i, frequency = frequency, 
-                                                   input_mn = nutrient_input, amplitude_mn = amplitude_mn)
+input_values_null <- meta.arrR::simulate_nutrient_sine(n = n, max_i = max_i, frequency = frequency, 
+                                                       input_mn = nutrient_input, amplitude_mn = amplitude_mn)
 
-df_input_sine <- meta.arrR::simulate_nutrient_sine(n = n, max_i = max_i, frequency = frequency, 
-                                                   input_mn = nutrient_input, amplitude_mn = amplitude_mn, 
-                                                   phase_sd = variability)
+input_values_sine <- meta.arrR::simulate_nutrient_sine(n = n, max_i = max_i, frequency = frequency, 
+                                                       input_mn = nutrient_input, amplitude_mn = amplitude_mn, 
+                                                       phase_sd = variability)
 
-df_input_noise <- meta.arrR::simulate_nutrient_noise(n = n, max_i = max_i, frequency = frequency, 
-                                                    input_mn = nutrient_input, amplitude_mn = amplitude_mn, 
-                                                    noise_sd = variability)
+input_values_noise <- meta.arrR::simulate_nutrient_noise(n = n, max_i = max_i, frequency = frequency, 
+                                                         input_mn = nutrient_input, amplitude_mn = amplitude_mn, 
+                                                         noise_sd = variability)
 
 #### Individuals plots ####
 
@@ -60,7 +62,7 @@ line_color <- MetBrewer::met.brewer(name = "Java", n = n, type = "discrete")
 
 base_size <- 7.5
 
-gg_input_null <- meta.arrR::get_input_df(df_input_null, gamma = FALSE, long = TRUE) %>% 
+gg_input_null <- meta.arrR::get_input_df(input_values_null, gamma = FALSE, long = TRUE) %>% 
   dplyr::filter(timestep < max_i / filter_factor) %>% 
   ggplot(aes(x = timestep, y = value)) +
   geom_hline(yintercept = nutrient_input, linetype = 2, color = "grey") +
@@ -77,7 +79,7 @@ gg_input_null <- meta.arrR::get_input_df(df_input_null, gamma = FALSE, long = TR
   theme(legend.position = "none", plot.margin = unit(c(t = 5.5, r = 5.5, b = 0.0, l = 5.5), "pt"), 
         axis.text = element_text(color = "black"))
 
-gg_input_sine <- meta.arrR::get_input_df(df_input_sine, gamma = FALSE, long = TRUE) %>% 
+gg_input_sine <- meta.arrR::get_input_df(input_values_sine, gamma = FALSE, long = TRUE) %>% 
   dplyr::filter(timestep < max_i / filter_factor) %>% 
   ggplot(aes(x = timestep, y = value, color = meta)) +
   geom_hline(yintercept = nutrient_input, linetype = 2, color = "grey") +
@@ -92,7 +94,7 @@ gg_input_sine <- meta.arrR::get_input_df(df_input_sine, gamma = FALSE, long = TR
   theme(legend.position = "none", plot.margin = unit(c(t = 0.0, r = 1.5, b = 5.5, l = 5.5), "pt"), 
         axis.text = element_text(color = "black"))
 
-gg_input_noise <- meta.arrR::get_input_df(df_input_noise, gamma = FALSE, long = TRUE) %>% 
+gg_input_noise <- meta.arrR::get_input_df(input_values_noise, gamma = FALSE, long = TRUE) %>% 
   dplyr::filter(timestep < max_i / filter_factor) %>% 
   ggplot(aes(x = timestep, y = value, color = meta)) +
   geom_hline(yintercept = nutrient_input, linetype = 2, color = "grey") +
@@ -117,6 +119,6 @@ gg_input_overall <- cowplot::plot_grid(gg_input_null, gg_input_var, nrow = 2,
 
 #### Save result ####
 
-suppoRt::save_ggplot(plot = gg_input_overall, filename = paste0("02-nutrient-curves", extension),
+suppoRt::save_ggplot(plot = gg_input_overall, filename = paste0("Figure-1", extension),
                      path = "04_Figures/", width = width, height = height * 0.35,
                      units = units, dpi = dpi, overwrite = FALSE)

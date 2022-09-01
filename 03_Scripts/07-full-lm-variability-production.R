@@ -11,25 +11,29 @@
 #### Load setup ####
 
 source("05_Various/setup.R")
-source("05_Various/import_data.R")
+source("01_Functions/import_data.R")
 
-#### Load/wrangle simulated data ####
+#### Load simulated data ####
 
 n <- 5
 
-phase_df <- import_data(path = paste0("02_Data/05-variability-phase-", n, ".rds"))
+results_phase_df <- import_data(path = paste0("02_Data/result-phase-", n, ".rds"))
 
-noise_df <- import_data(path =  paste0("02_Data/05-variability-noise-", n, ".rds"))
+results_noise_df <- import_data(path = paste0("02_Data/result-noise-", n, ".rds"))
 
-combined_df <- dplyr::bind_rows(phase = phase_df, noise = noise_df, .id = "scenario")
+results_combined_df <- dplyr::bind_rows(phase = results_phase_df, noise = results_noise_df, 
+                                        .id = "scenario")
 
-combined_list <- dplyr::filter(combined_df, part %in% c("ag_production", "bg_production", "ttl_production"),
-                               measure %in% c("alpha", "gamma")) %>% 
+#### Wrangle data ####
+
+results_combined_list <- dplyr::filter(results_combined_df, 
+                                       part %in% c("ag_production", "bg_production", "ttl_production"), 
+                                       measure %in% c("alpha", "gamma")) %>% 
   dplyr::group_by(scenario, part, measure) %>% 
   dplyr::group_split() %>% 
   purrr::map(function(temp_df) {
-   
-    temp_df$value.cv <- log(temp_df$value.cv) - mean(log(temp_df$value.cv))
+    
+    temp_df$value.prod <- log(temp_df$value.prod) - mean(log(temp_df$value.prod))
     
     temp_df$biotic <- log(temp_df$biotic)
     temp_df$abiotic <- log(temp_df$abiotic)
@@ -37,18 +41,18 @@ combined_list <- dplyr::filter(combined_df, part %in% c("ag_production", "bg_pro
     
     return(temp_df)
     
-})
+  })
 
-names(combined_list) <- purrr::map_chr(combined_list, function(i) {
+names(results_combined_list) <- purrr::map_chr(results_combined_list, function(i) {
   paste(unique(i$scenario), unique(i$part), unique(i$measure), sep = "-")
 })
 
 #### Run linear regression model ####
 
-estimators_df <- purrr::map_dfr(combined_list, function(temp_df) {
-    
-    lm(value.cv ~ biotic + abiotic + pop_n + biotic:abiotic + biotic:pop_n + abiotic:pop_n,
-       data = temp_df, na.action = "na.fail") %>% 
+estimators_df <- purrr::map_dfr(results_combined_list, function(temp_df) {
+  
+  lm(value.prod ~ biotic + abiotic + pop_n + biotic:abiotic + biotic:pop_n + abiotic:pop_n,
+     data = temp_df, na.action = "na.fail") %>% 
     broom::tidy()}, .id = "id") %>% 
   tidyr::separate(col = id, into = c("scenario", "part", "measure"), sep = "-") %>% 
   dplyr::mutate(estimate = dplyr::case_when(p.value < 0.05 ~ estimate,
@@ -61,9 +65,9 @@ estimators_df <- purrr::map_dfr(combined_list, function(temp_df) {
 
 #### Model dredge ####
 
-dredge_df <- purrr::map_dfr(combined_list, function(temp_df) {
+dredge_df <- purrr::map_dfr(results_combined_list, function(temp_df) {
   
-  lm(value.cv ~ biotic + abiotic + pop_n + biotic:abiotic + biotic:pop_n + abiotic:pop_n,
+  lm(value.prod ~ biotic + abiotic + pop_n + biotic:abiotic + biotic:pop_n + abiotic:pop_n,
      data = temp_df, na.action = "na.fail") %>% 
     MuMIn::dredge() %>% 
     as.data.frame() %>% 

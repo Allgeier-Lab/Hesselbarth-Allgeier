@@ -6,22 +6,24 @@
 ##    www.github.com/mhesselbarth             ##
 ##--------------------------------------------##
 
-# Purpose: Create total result figure including regression parameters and relative importance
+# Purpose: Densities of CV values
 
 #### Load setup ####
 
 source("05_Various/setup.R")
-source("05_Various/import_data.R")
+source("01_Functions/import_data.R")
 
-#### Load/wrangle simulated data ####
+#### Load data####
 
 n <- 5
 
-df_phase <- import_data(path = paste0("02_Data/05-variability-phase-", n, ".rds"))
+phase_df <- import_data(path = paste0("02_Data/result-phase-", n, ".rds"))
 
-df_noise <- import_data(path =  paste0("02_Data/05-variability-noise-", n, ".rds"))
+noise_df <- import_data(path =  paste0("02_Data/result-noise-", n, ".rds"))
 
-df_total <- dplyr::bind_rows(phase = df_phase, noise = df_noise, .id = "scenario") %>% 
+#### Wrangle data ####
+
+combined_df <- dplyr::bind_rows(phase = phase_df, noise = noise_df, .id = "scenario") %>% 
   dplyr::filter(part %in% c("ag_production", "bg_production", "ttl_production"),
                 measure %in% c("alpha", "gamma")) %>% 
   dplyr::group_by(scenario, part, measure, pop_n) %>%
@@ -48,21 +50,22 @@ df_total <- dplyr::bind_rows(phase = df_phase, noise = df_noise, .id = "scenario
 
 #### Calculate means #### 
 
-df_total_sum <- dplyr::group_by(df_total, scenario, part, measure, pop_n) %>% 
+combined_df_sum <- dplyr::group_by(combined_df, scenario, part, measure, pop_n) %>% 
   dplyr::summarise(cv_mn = mean(cv), cv_sd = sd(cv), .groups = "drop")
 
 #### Setup ggplot ####
 
-colors_pop <- c("8 Indiv.; Phase" = "#447861", "8 Indiv.; Noise" = "#7caf5c",
-                "16 Indiv.; Phase" = "#13315f", "16 Indiv.; Noise" = "#4457a5",
-                "32 Indiv.; Phase" = "#59386c", "32 Indiv.; Noise" = "#b1a1cc",
-                "64 Indiv.; Phase" = "#b24422", "64 Indiv.; Noise" = "#c44d76")
+colors_pop <- c("8 Indiv.; Phase" = "#92c6de", "8 Indiv.; Noise" = "#0069aa",
+                "16 Indiv.; Phase" = "#9cde81", "16 Indiv.; Noise" = "#00992a",
+                "32 Indiv.; Phase" = "#c9a6cf", "32 Indiv.; Noise" = "#662e8e",
+                "64 Indiv.; Phase" = "#ffba68", "64 Indiv.; Noise" = "#ff771c",
+                "128 Indiv.; Phase" = "#ff908f", "128 Indiv.; Noise" = "#f32222")
 
 size_base <- 10
 
 #### Create ggplot ####
 
-gg_cv_densities <- ggplot(df_total, aes(x = cv, y = density)) +
+gg_cv_densities <- ggplot(combined_df, aes(x = cv, y = density)) +
   geom_line(aes(color = color_id, linetype = scenario)) + 
   geom_area(aes(fill = color_id), alpha = 0.25) +
   facet_wrap(. ~ part + measure, nrow = 3, ncol = 2,  scales = "free",
@@ -87,6 +90,6 @@ gg_cv_densities <- ggplot(df_total, aes(x = cv, y = density)) +
 
 #### Save ggplot ####
 
-suppoRt::save_ggplot(plot = gg_cv_densities, filename = paste0("06-cv-densities-", n, extension),
-                     path = "04_Figures/", width = width, height = height * 0.85,
+suppoRt::save_ggplot(plot = gg_cv_densities, filename = paste0("Figure-A2", extension),
+                     path = "04_Figures/Appendix/", width = width, height = height * 0.85,
                      units = units, dpi = dpi, overwrite = FALSE)

@@ -7,7 +7,7 @@
 ##--------------------------------------------##
 
 #### default parameters ####
-list_parameters <- list(
+parameters_list <- list(
   
   # belowground biomass
   bg_biomass_min = 275.89,
@@ -26,11 +26,11 @@ list_parameters <- list(
   # seagrass
   seagrass_thres = -1/4,
   seagrass_slope = 2.0,
-  seagrass_slough = 0.001,
+  seagrass_slough = 0.001, # 0.001
   
   # nutrients
   nutrients_diffusion = 2/3,
-  nutrients_loss = 0.02367659, # see 00_input-nutr-fish.R
+  nutrients_loss = 0.01, # 0.02423493
   
   # detritus
   detritus_mineralization = 0.001,
@@ -72,13 +72,13 @@ list_parameters <- list(
 
 #### default starting values ####
 
-# ag <- list_parameters$ag_biomass_min +
-#   (list_parameters$ag_biomass_max - list_parameters$ag_biomass_min) * 1/3
+# ag <- parameters_list$ag_biomass_min +
+#   (parameters_list$ag_biomass_max - parameters_list$ag_biomass_min) * 1/3
 # 
-# bg <- list_parameters$bg_biomass_min +
-#   (list_parameters$bg_biomass_max - list_parameters$bg_biomass_min) * 1/3
+# bg <- parameters_list$bg_biomass_min +
+#   (parameters_list$bg_biomass_max - parameters_list$bg_biomass_min) * 1/3
 
-list_starting <- list(
+starting_values_list <- list(
   
   # biomass (mean field data)
   bg_biomass = 547.01948, # bg,
@@ -92,18 +92,19 @@ list_starting <- list(
   pop_n = 8,
   pop_mean_size = 9.0,
   pop_sd_size = 10.0
+  
 )
 
-((list_starting$bg_biomass - list_parameters$bg_biomass_min) /
-  (list_parameters$bg_biomass_max - list_parameters$bg_biomass_min)) * 100
+((starting_values_list$bg_biomass - parameters_list$bg_biomass_min) /
+  (parameters_list$bg_biomass_max - parameters_list$bg_biomass_min)) * 100
 
-((list_starting$ag_biomass - list_parameters$ag_biomass_min) /
-    (list_parameters$ag_biomass_max - list_parameters$ag_biomass_min)) * 100
+((starting_values_list$ag_biomass - parameters_list$ag_biomass_min) /
+    (parameters_list$ag_biomass_max - parameters_list$ag_biomass_min)) * 100
 
 #### save results ####
 
-suppoRt::save_rds(object = list_parameters, filename = "list_parameters.rds", 
+suppoRt::save_rds(object = parameters_list, filename = "parameter-values.rds", 
                   path = "02_Data/", overwrite = TRUE)
 
-suppoRt::save_rds(object = list_starting, filename = "list_starting.rds", 
+suppoRt::save_rds(object = starting_values_list, filename = "starting-values.rds", 
                   path = "02_Data/", overwrite = TRUE)

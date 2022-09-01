@@ -16,7 +16,7 @@ source("05_Various/setup.R")
 
 set.seed(42)
 
-reps <- 250
+reps <- 100
 
 matrix_lhs <- lhs::improvedLHS(n = reps, k = 2, dup = 2)
 
@@ -27,27 +27,29 @@ matrix_lhs[, 2] <- qunif(matrix_lhs[, 2], 0.1, 1.0)
 table(cut(matrix_lhs[, 1], breaks = seq(0.1, 1, 0.1)),
       cut(matrix_lhs[, 2], breaks = seq(0.1, 1, 0.1)))
 
-df_experiment <- tibble::tibble(biotic = matrix_lhs[, 1], 
+experiment_df <- tibble::tibble(biotic = matrix_lhs[, 1], 
                                 abiotic = matrix_lhs[, 2]) %>% 
-  dplyr::slice(rep(x = 1:dplyr::n(), times = 4)) %>% 
-  dplyr::mutate(pop_n = rep(x = c(8, 16, 32, 64), each = reps))
+  dplyr::slice(rep(x = 1:dplyr::n(), times = 5)) %>% 
+  dplyr::mutate(pop_n = rep(x = c(8, 16, 32, 64, 128), each = reps))
+
+nrow(experiment_df)
 
 #### Check parameter space ####
 
-ggplot(data = df_experiment) + 
+ggplot(data = experiment_df) + 
   geom_point(aes(x = biotic, y = abiotic)) + 
   geom_hline(yintercept = 0.1, color = "grey", linetype = 2) + geom_hline(yintercept = 1.0, color = "grey", linetype = 2) + 
   geom_vline(xintercept = 0.1, color = "grey", linetype = 2) + geom_vline(xintercept = 1.0, color = "grey", linetype = 2) + 
   coord_equal() + 
   theme_classic()
 
-purrr::walk(unique(df_experiment$pop_n), function(i) {
+purrr::walk(unique(experiment_df$pop_n), function(i) {
   
-  df_temp <- dplyr::filter(df_experiment, pop_n == i)
+  temp_df <- dplyr::filter(experiment_df, pop_n == i)
   
   tab_temp <- table(
-    cut(df_temp$biotic, breaks = seq(0.1, 1, 0.1)),
-    cut(df_temp$abiotic, breaks = seq(0.1, 1, 0.1))
+    cut(temp_df$biotic, breaks = seq(0.1, 1, 0.2)),
+    cut(temp_df$abiotic, breaks = seq(0.1, 1, 0.2))
   )
   
   if (sum(tab_temp == 0) > 0) warning(paste0(i, "; No parameter for some combination"))
@@ -59,5 +61,5 @@ purrr::walk(unique(df_experiment$pop_n), function(i) {
 
 #### Save experiment ####
 
-suppoRt::save_rds(object = df_experiment, filename = "00_df_experiment.rds", 
+suppoRt::save_rds(object = experiment_df, filename = "experiment-parameters.rds", 
                   path = "02_Data/", overwrite = FALSE)

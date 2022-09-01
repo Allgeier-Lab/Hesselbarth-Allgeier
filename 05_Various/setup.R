@@ -12,8 +12,9 @@ library(arrR)
 
 library(broom)
 library(cowplot)
-library(ggforce)
 library(lhs)
+library(MetBrewer)
+library(MuMIn)
 library(relaimpo)
 library(rslurm)
 library(suppoRt) # remotes::install_github("mhesselbarth/suppoRt")
@@ -21,9 +22,9 @@ library(tidyverse)
 
 #### Load data ####
 
-list_starting <- readRDS("02_Data/list_starting.rds")
+starting_values_list <- readRDS("02_Data/starting-values.rds")
 
-list_parameters <- readRDS("02_Data/list_parameters.rds")
+parameters_list <- readRDS("02_Data/parameter-values.rds")
 
 #### Basic parameters ####
 
@@ -51,7 +52,7 @@ save_each <- (24 / (min_per_i / 60)) * days_save
 # max_i %% save_each
 
 # years used to filter
-years_filter <- 10
+years_filter <- 40
 
 # setup extent and grain
 dimensions <- c(50, 50)
@@ -64,18 +65,12 @@ use_log <- FALSE
 # mean amplitude
 amplitude_mn <- 0.95
 
-nutrient_input <- 4.584905e-05 # see 00_input-nutr-fish.R
+nutrient_input <- 4.693026e-05 # see 00_input-nutr-fish.R
 
 #### Setup reef cells ####
 
-matrix_reef <- matrix(data = c(-1, 0, 0, 1, 1, 0, 0, -1, 0, 0), 
+reef_matrix <- matrix(data = c(-1, 0, 0, 1, 1, 0, 0, -1, 0, 0), 
                       ncol = 2, byrow = TRUE)
-
-#### Setup treatment levels ####
-
-amplitude_levels <- c(0.05, 0.5, 0.95)
-
-enrichment_levels <- c(0.75, 1.0, 1.25)
 
 #### Plotting defaults ####
 
@@ -103,7 +98,7 @@ message("\nUsing R v", stringr::str_split(rscript_path, pattern = "/", simplify 
 
 # # exclude slow nodes
 # exclude_nodes <- "gl[3368-3371]"
-exclude_nodes <- "gl3069"
+# exclude_nodes <- "gl3069"
 
 #### Remove some basic parameters ####
 

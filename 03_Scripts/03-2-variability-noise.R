@@ -14,43 +14,41 @@ source("05_Various/setup.R")
 
 #### Adapt parameters ####
 
-# # number of local metaecosystems
-# n <- 5 # 5 9
-# mem_per_cpu <- "7G" # "7G" "15G"
-# time <- "02:00:00" # hh:mm::ss # "02:00:00" "05:00:00"
+# number of local metaecosystems
+n <- 5 # 5 9
+mem_per_cpu <- "7G" # "7G" "15G"
+time <- "02:00:00" # hh:mm::ss # "02:00:00" "05:00:00"
 
 # # save results only every m days
 # days_save <- 125 # which(max_i %% ((24 / (min_per_i / 60)) * (1:365)) == 0)
 # save_each <- (24 / (min_per_i / 60)) * days_save
 
-# max_i %% save_each
-
 #### Stable values #### 
 
-list_stable <- arrR::get_req_nutrients(bg_biomass = list_starting$bg_biomass,
-                                       ag_biomass = list_starting$ag_biomass,
-                                       parameters = list_parameters)
+stable_values_list <- arrR::get_req_nutrients(bg_biomass = starting_values_list$bg_biomass,
+                                              ag_biomass = starting_values_list$ag_biomass,
+                                              parameters = parameters_list)
 
-list_starting$nutrients_pool <- list_stable$nutrients_pool
+starting_values_list$nutrients_pool <- stable_values_list$nutrients_pool
 
-list_starting$detritus_pool <- list_stable$detritus_pool
+starting_values_list$detritus_pool <- stable_values_list$detritus_pool
 
 #### Setup experiment ####
 
-df_experiment <- readRDS("02_Data/00_df_experiment.rds")
+experiment_df <- readRDS("02_Data/00_experiment_df.rds")
 
 #### Init HPC function ####
 
 foo_hpc <- function(pop_n, biotic, abiotic) {
   
-  list_starting$pop_n <- pop_n
+  starting_values_list$pop_n <- pop_n
   
   # update move meta_sd parameters
-  list_parameters$move_meta_sd <- biotic
+  parameters_list$move_meta_sd <- biotic
   
   # setup metaecosystems
-  metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = matrix_reef,
-                                         starting_values = list_starting, parameters = list_parameters,
+  metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = reef_matrix,
+                                         starting_values = starting_values_list, parameters = parameters_list,
                                          dimensions = dimensions, grain = grain, 
                                          use_log = FALSE, verbose = FALSE)
   
@@ -60,7 +58,7 @@ foo_hpc <- function(pop_n, biotic, abiotic) {
                                                    noise_sd = abiotic, verbose = FALSE)
   
   # run model
-  result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = list_parameters,
+  result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = parameters_list,
                                                 nutrients_input = input_temp, movement = "behav",
                                                 max_i = max_i, min_per_i = min_per_i,
                                                 seagrass_each = seagrass_each, save_each = save_each, 
@@ -104,19 +102,18 @@ foo_hpc <- function(pop_n, biotic, abiotic) {
 
 #### Submit HPC
 
-globals <- c("n", "max_i", "matrix_reef", "list_starting", "list_parameters", "dimensions", "grain", # setup_meta
+globals <- c("n", "max_i", "reef_matrix", "starting_values_list", "parameters_list", "dimensions", "grain", # setup_meta
              "frequency", "nutrient_input", "amplitude_mn", # simulate_nutrient_noise
              "min_per_i", "seagrass_each", "save_each", # run_simulation_meta
              "years", "years_filter") # filter_meta 
 
-sbatch_cv <- rslurm::slurm_apply(f = foo_hpc, params = df_experiment, 
+sbatch_cv <- rslurm::slurm_apply(f = foo_hpc, params = experiment_df, 
                                  global_objects = globals, jobname = "noise_sd",
-                                 nodes = nrow(df_experiment), cpus_per_node = 1, 
+                                 nodes = nrow(experiment_df), cpus_per_node = 1, 
                                  slurm_options = list("account" = account, 
                                                       "partition" = "standard",
                                                       "time" = time,
-                                                      "mem-per-cpu" = mem_per_cpu,
-                                                      "exclude" = exclude_nodes),
+                                                      "mem-per-cpu" = mem_per_cpu),
                                  pkgs = c("arrR", "dplyr", "meta.arrR", "purrr", "tidyr"),
                                  rscript_path = rscript_path, submit = FALSE)
 
@@ -127,6 +124,6 @@ suppoRt::rslurm_missing(x = sbatch_cv)
 cv_result <- rslurm::get_slurm_out(sbatch_cv, outtype = "raw")
 
 suppoRt::save_rds(object = cv_result, path = "02_Data/", overwrite = FALSE,
-                  filename = paste0("05-variability-noise-", n, "-yearly.rds"))
+                  filename = paste0("result-noise-", n, ".rds"))
 
 rslurm::cleanup_files(sbatch_cv)
