@@ -113,9 +113,9 @@ gg_coef_scenario <- purrr::map(c(phase = "phase", noise = "noise"), function(sce
 #### Save plot ####
 
 suppoRt::save_ggplot(plot = gg_coef_scenario$phase, filename = paste0("Figure-4", extension),
-                     path = "04_Figures/", width = width, height = height,
+                     path = "04_Figures/", width = width, height = height * 0.85,
                      units = units, dpi = dpi, overwrite = FALSE)
 
 suppoRt::save_ggplot(plot = gg_coef_scenario$noise, filename = paste0("Figure-5", extension),
-                     path = "04_Figures/", width = width, height = height,
+                     path = "04_Figures/", width = width, height = height * 0.85,
                      units = units, dpi = dpi, overwrite = FALSE)

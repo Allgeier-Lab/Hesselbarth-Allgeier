@@ -120,7 +120,7 @@ gg_scenario_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scena
       regression_temp_df <- dplyr::filter(regression_df, scenario == scenario_i,
                                           measure == measure_i, part == part_i, response == "cv")
       
-      importance_temp_df <- dplyr::filter(df_importance,  scenario == scenario_i,
+      importance_temp_df <- dplyr::filter(importance_df,  scenario == scenario_i,
                                           measure == measure_i, part == part_i, response == "cv")
       
       gg_regression <- ggplot(data = regression_temp_df) + 
@@ -203,7 +203,7 @@ gg_scenario_frac <- purrr::map(c(phase = "phase", noise = "noise"), function(sce
       regression_temp_df <- dplyr::filter(regression_df, scenario == scenario_i,
                                           measure == measure_i, part == part_i, response != "cv")
       
-      importance_temp_df <- dplyr::filter(df_importance, scenario == scenario_i,
+      importance_temp_df <- dplyr::filter(importance_df, scenario == scenario_i,
                                           measure == measure_i, part == part_i, response != "cv")
       
       w <- 0.5
@@ -294,9 +294,9 @@ suppoRt::save_ggplot(plot = gg_scenario_cv$noise, filename = paste0("Figure-3", 
 # separated
 
 suppoRt::save_ggplot(plot = gg_scenario_frac$phase, filename = paste0("Figure-A3", extension),
-                     path = "04_Figures/Appendix/", width = height, height = width * 0.7,
+                     path = "04_Figures/Appendix/", width = width, height = height * 0.85,
                      units = units, dpi = dpi, overwrite = FALSE)
 
 suppoRt::save_ggplot(plot = gg_scenario_frac$noise, filename = paste0("Figure-A4", extension),
-                     path = "04_Figures/Appendix/", width = width, height = height,
+                     path = "04_Figures/Appendix/", width = width, height = height * 0.85,
                      units = units, dpi = dpi, overwrite = FALSE)

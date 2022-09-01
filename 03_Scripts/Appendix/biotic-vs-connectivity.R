@@ -12,7 +12,11 @@
 
 source("05_Various/setup.R")
 
+n <- 5
+
 #### Adapt parameters ####
+
+parameters_list$nutrients_loss <- 0.0
 
 #### Stable values #### 
 
@@ -52,16 +56,14 @@ foo_hpc <- function(move_meta_sd) {
   # replace matrix
   metasyst_temp$fishpop_attr[, 3] <- attr_replace[, 3]
   
-  # simulate nutrient input h
-  input_temp <- meta.arrR::simulate_nutrient_sine(n = n, max_i = max_i, frequency = years, 
-                                                  input_mn = nutrient_input, verbose = FALSE)
-  
   # run model
   result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = parameters_list,
-                                                nutrients_input = input_temp, movement = "behav",
+                                                nutrients_input = 0.0, movement = "behav",
                                                 max_i = max_i, min_per_i = min_per_i,
                                                 seagrass_each = seagrass_each,
-                                                save_each = save_each, verbose = FALSE)
+                                                save_each = save_each, verbose = FALSE) %>% 
+    meta.arrR::filter_meta(filter = c((max_i / years) * years_filter, max_i), 
+                           reset = TRUE, verbose = FALSE)
   
   # get moved counts
   dplyr::bind_rows(result_temp$fishpop) %>% 
@@ -76,11 +78,12 @@ foo_hpc <- function(move_meta_sd) {
 
 #### Submit HPC ####
 
-globals <- c("parameters_list", "metasyst_temp", "max_i", "n", "years", "nutrient_input", 
-             "min_per_i", "seagrass_each", "save_each")
+globals <- c("metasyst_temp", "parameters_list", "max_i", # setup_attributes
+             "min_per_i", "seagrass_each", "save_each", # run_simulation_meta
+             "years", "years_filter") # filter_meta
 
 sbatch_move_meta <- rslurm::slurm_apply(f = foo_hpc, params = experiment_df, 
-                                        global_objects = globals, jobname = "move_meta_param",
+                                        global_objects = globals, jobname = "move_meta",
                                         nodes = nrow(experiment_df), cpus_per_node = 1, 
                                         slurm_options = list("account" = account, 
                                                              "partition" = "standard",
@@ -96,7 +99,7 @@ suppoRt::rslurm_missing(x = sbatch_move_meta)
 move_meta_result <- rslurm::get_slurm_out(sbatch_move_meta, outtype = "table")
 
 suppoRt::save_rds(object = move_meta_result, filename = "biotic-vs-connectivity.rds",
-                  path = "02_Data/", overwrite = overwrite)
+                  path = "02_Data/", overwrite = FALSE)
 
 rslurm::cleanup_files(sbatch_move_meta)
 
@@ -124,9 +127,12 @@ gg_probs_moved <- ggplot(data = move_meta_result_sum, aes(x = move_meta_sd, y = 
   geom_point(shape = 19) +
   scale_x_continuous(limits = c(0.1, 1), breaks = seq(from = 0.1, to = 1.0, by = 0.1)) +
   scale_color_manual(name = "Parameter", values = c("#d0413d", "#0c214e")) + 
-  labs(x = "Biotic connectivity variability", y = "Mean cross-system movement") +
+  labs(x = "Biotic variability", y = "Mean cross-system movement (connectivity)") +
   theme_classic(base_size = 10.0) 
+
+#### Save ggplot ####
 
 suppoRt::save_ggplot(plot = gg_probs_moved, filename = paste0("Figure-A1", extension),
                      path = "04_Figures/Appendix", width = width, height = height * 1/3,
                      units = units, dpi = dpi, overwrite = FALSE)
+
