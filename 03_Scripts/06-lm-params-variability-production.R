@@ -40,26 +40,29 @@ regression_df <- purrr::map_dfr(list(phase = results_phase_df, noise = results_n
         lm_temp <- lm(as.formula(paste0("value.prod ~ ", paste0(x))), data = y) 
         
         broom::tidy(lm_temp) %>% 
-          dplyr::mutate(part = unique(temp_df$part), measure = unique(temp_df$measure), pop_n = unique(temp_df$pop_n), 
-                        .before = term) %>% 
-          dplyr::mutate(p.value = dplyr::case_when(p.value < 0.001 ~ "***", p.value < 0.01 ~ "**", p.value < 0.05 ~ "*", 
-                                                   p.value >= 0.05 ~ ""), 
+          dplyr::mutate(part = unique(temp_df$part), measure = unique(temp_df$measure), 
+                        pop_n = unique(temp_df$pop_n), .before = term, 
                         r2 = summary(lm_temp)$adj.r.squared) %>% 
           dplyr::filter(term != "(Intercept)")
       }, .id = "explanatory")
     }) %>% 
     dplyr::mutate(p.value = dplyr::case_when(p.value < 0.001 ~ "***", p.value < 0.01 ~ "**",
                                              p.value < 0.05 ~  "*", p.value >= 0.05 ~ ""),
-                  direction = dplyr::case_when(term != "(Intercept)" & estimate < 0.0 ~ "negative", 
-                                               term != "(Intercept)" & estimate > 0.0 ~ "positive", 
-                                               term == "(Intercept)" ~ as.character(NA)), 
-                  term = dplyr::case_when(term == "value.cv" ~ "cv", term != "value.cv" ~ term))
-}, .id = "scenario")
+                  direction = dplyr::case_when(estimate < 0.0 ~ "negative", 
+                                               estimate > 0.0 ~ "positive"), 
+                  term = dplyr::case_when(term == "value.cv" ~ "cv", term != "value.cv" ~ term))},
+  .id = "scenario") %>% 
+  dplyr::mutate(scenario = factor(scenario, levels = c("phase", "noise")), 
+                explanatory = factor(explanatory, levels = c("cv", "separated")), 
+                term = factor(term, levels = c("cv", "biotic", "abiotic", "biotic:abiotic")),
+                direction = factor(direction, levels = c("positive", "negative")))
 
 #### Setup ggplot ####
 
-color_term <- c("biotic" = "#00af73", "abiotic" = "#006d9a", "biotic:abiotic" = "#ffaa3a", 
-                "cv" = "#ff3b18")
+# color_term <- c("biotic" = "#00af73", "abiotic" = "#006d9a", "biotic:abiotic" = "#ffaa3a", 
+#                 "cv" = "#ff3b18")
+
+color_term <- c("biotic" = "#00af73", "abiotic" = "#006d9a", "biotic:abiotic" = "#ffaa3a")
 
 size_point <- 5
 size_line <- 0.75
@@ -74,7 +77,8 @@ width_pos <- 0.65
 
 gg_coef_scenario <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i) {
   
-  ggplot(data = dplyr::filter(regression_df, scenario == scenario_i, term != "(Intercept)")) + 
+  ggplot(data = dplyr::filter(regression_df, scenario == scenario_i, term %in% c("biotic", "abiotic", 
+                                                                                 "biotic:abiotic"))) + 
     
     # adding geoms
     geom_hline(yintercept = 0.0, linetype = 2, color = "grey") +
@@ -92,8 +96,10 @@ gg_coef_scenario <- purrr::map(c(phase = "phase", noise = "noise"), function(sce
                                    measure = c("alpha" = "Local", "gamma" = "Meta-ecosystem"))) +
     
     # set scales and labs
-    scale_color_manual(name = "", values = color_term) +
-    scale_fill_manual(name = "", values = color_term) +
+    scale_color_manual(name = "", values = color_term, 
+                       labels = c("Biotic connectivity", "Abiotic subsidies", "Interaction Connectivity:Subsidies")) +
+    scale_fill_manual(name = "", values = color_term, 
+                      labels = c("Biotic connectivity", "Abiotic subsidies", "Interaction Connectivity:Subsidies")) +
     scale_shape_manual(name = "", values = c("negative" = 25, "positive" = 24)) +
     coord_flip() +
     scale_x_discrete(limits = rev(levels(regression_df$pop_n))) +
@@ -101,21 +107,23 @@ gg_coef_scenario <- purrr::map(c(phase = "phase", noise = "noise"), function(sce
                        breaks = function(x) seq(quantile(x, 0.1), quantile(x, 0.9), length.out = 4)) +
     
     # setup theme
-    labs(x = "", y = "") +
+    labs(x = "Population size", y = "Parameter estimate") +
     guides(color = guide_legend(order = 1, override.aes = list(shape = 17)), 
            fill = "none", shape = guide_legend(order = 2)) +
     theme_classic(base_size = size_base) + 
     theme(legend.position = "bottom", plot.title = element_text(size = 8.0), 
-          panel.border = element_rect(size = 0.5, fill = NA),
+          axis.line = element_blank(), panel.border = element_rect(size = 0.5, fill = NA),
           strip.background = element_blank(), strip.text = element_text(hjust = 0))
 })
 
 #### Save plot ####
 
+overwrite <- FALSE
+
 suppoRt::save_ggplot(plot = gg_coef_scenario$phase, filename = paste0("Figure-4", extension),
                      path = "04_Figures/", width = width, height = height * 0.85,
-                     units = units, dpi = dpi, overwrite = FALSE)
+                     units = units, dpi = dpi, overwrite = overwrite)
 
 suppoRt::save_ggplot(plot = gg_coef_scenario$noise, filename = paste0("Figure-5", extension),
                      path = "04_Figures/", width = width, height = height * 0.85,
-                     units = units, dpi = dpi, overwrite = FALSE)
+                     units = units, dpi = dpi, overwrite = overwrite)
