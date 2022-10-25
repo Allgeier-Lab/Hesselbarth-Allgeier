@@ -22,39 +22,39 @@ results_phase_df <- import_data(path = paste0("02_Data/result-phase-", n, ".rds"
 results_noise_df <- import_data(path = paste0("02_Data/result-noise-", n, ".rds"))
 
 results_combined_df <- dplyr::bind_rows(phase = results_phase_df, noise = results_noise_df, 
-                                        .id = "scenario") %>% 
+                                        .id = "scenario") |> 
   dplyr::mutate(scenario = factor(scenario, levels = c("phase", "noise")))
 
 #### Split data #### 
 
 results_combined_list <- dplyr::filter(results_combined_df, 
                                        part %in% c("ag_production", "bg_production", "ttl_production"), 
-                                       measure %in% c("alpha", "gamma")) %>%
-  dplyr::group_by(scenario, part, measure, pop_n) %>%
+                                       measure %in% c("alpha", "gamma")) |>
+  dplyr::group_by(scenario, part, measure, pop_n) |>
   dplyr::group_split()
 
 #### Fit regression model ####
 
 regression_df <- purrr::map_dfr(results_combined_list, function(temp_df) {
   
-  temp_df_stand <- dplyr::select(temp_df, value.cv, value.cv.sd, value.cv.mn, biotic, abiotic) %>% 
-    dplyr::mutate(across(.fns = function(x) log(x))) %>%
+  temp_df_stand <- dplyr::select(temp_df, value.cv, value.cv.sd, value.cv.mn, biotic, abiotic) |> 
+    dplyr::mutate(across(.fns = function(x) log(x))) |>
     dplyr::mutate(across(.fns = function(x) (x - mean(x)) / sd(x)))
   
   purrr::map_dfr(c(cv = "value.cv", sd = "value.cv.sd", mn = "value.cv.mn"), y = temp_df_stand, function(x, y) {
     
     lm_temp <- lm(as.formula(paste0(x, " ~ biotic * abiotic")), data = y) 
 
-    broom::tidy(lm_temp) %>% 
+    broom::tidy(lm_temp) |> 
       dplyr::mutate(scenario = unique(temp_df$scenario), part = unique(temp_df$part), 
                     measure = unique(temp_df$measure), pop_n = unique(temp_df$pop_n), 
-                    .before = term) %>% 
+                    .before = term) |> 
       dplyr::mutate(p.value = dplyr::case_when(p.value < 0.001 ~ "***", p.value < 0.01 ~ "**", 
                                                p.value < 0.05 ~ "*", p.value >= 0.05 ~ ""), 
-                    r2 = summary(lm_temp)$adj.r.squared) %>% 
+                    r2 = summary(lm_temp)$adj.r.squared) |> 
       dplyr::filter(term != "(Intercept)")
     }, .id = "response")
-  }) %>% 
+  }) |> 
   dplyr::mutate(response = factor(response, levels = c("cv", "mn", "sd")), 
                 term = factor(term, levels = c("biotic", "abiotic", "biotic:abiotic")))
 
@@ -65,15 +65,15 @@ importance_df <- purrr::map_dfr(results_combined_list, function(temp_df) {
   message("\r> ", unique(temp_df$scenario), "; ", unique(temp_df$part), "; ",
           unique(temp_df$measure), "; ", unique(temp_df$pop_n), "\t\t", appendLF = FALSE)
   
-  temp_df_stand <- dplyr::select(temp_df, value.cv, value.cv.sd, value.cv.mn, biotic, abiotic) %>% 
-    dplyr::mutate(across(.fns = function(x) log(x))) %>%
+  temp_df_stand <- dplyr::select(temp_df, value.cv, value.cv.sd, value.cv.mn, biotic, abiotic) |> 
+    dplyr::mutate(across(.fns = function(x) log(x))) |>
     dplyr::mutate(across(.fns = function(x) (x - mean(x)) / sd(x)))
   
   purrr::map_dfr(c(cv = "value.cv", sd = "value.cv.sd", mn = "value.cv.mn"), y = temp_df_stand, function(x, y) {
     
     lm_temp <- lm(as.formula(paste0(x, " ~ biotic * abiotic")), data = y) 
     
-    rel_r2 <- relaimpo::boot.relimp(lm_temp, type = "lmg", b = 500, level = 0.95, fixed = FALSE) %>%
+    rel_r2 <- relaimpo::boot.relimp(lm_temp, type = "lmg", b = 100, level = 0.95, fixed = FALSE) |>
       relaimpo::booteval.relimp(bty = "basic")
     
     tibble::tibble(
@@ -82,7 +82,7 @@ importance_df <- purrr::map_dfr(results_combined_list, function(temp_df) {
       beta = c(rel_r2@namen[-1], "residual"), mean = c(rel_r2@lmg, 1 - sum(rel_r2@lmg)), 
       lower = c(rel_r2@lmg.lower, NA), higher = c(rel_r2@lmg.upper, NA)
     )}, .id = "response")
-  }) %>% 
+  }) |> 
   dplyr::mutate(beta = factor(beta, levels = c("residual", "biotic:abiotic", "abiotic", "biotic")))
 
 #### Setup ggplot ####
@@ -96,20 +96,20 @@ w <- 0.5
 color_scale <- c("biotic" = "#41b282", "abiotic" = "#007aa1", "biotic:abiotic" = "#fcb252", "residual" = "grey")
 
 gg_dummy <- data.frame(beta = c("biotic", "abiotic", "biotic:abiotic", "residual"),
-                       mean = c(1, 1, 1, 1)) %>% 
-  dplyr::mutate(beta = factor(beta, levels = c("biotic", "abiotic", "biotic:abiotic", "residual"))) %>% 
+                       mean = c(1, 1, 1, 1)) |> 
+  dplyr::mutate(beta = factor(beta, levels = c("biotic", "abiotic", "biotic:abiotic", "residual"))) |> 
   ggplot() + 
   geom_col(aes(x = beta, y = mean, fill = beta)) + 
   scale_fill_manual(name = "", values = color_scale, 
-                    labels = c("Biotic connectivity", "Abiotic subsidies", "Interaction Connectivity:Subsidies", "Residuals")) +
+                    labels = c("Consumer behavior", "Abiotic subsidies", "Interaction Behavior:Subsidies", "Residuals")) +
   guides(fill = guide_legend(order = 1), colour = guide_legend(order = 2)) +
   theme_classic(base_size = size_base) + 
   theme(legend.position = "bottom")
 
 #### Create ggplot cv ####
 
-y_range_cv <- dplyr::filter(regression_df, response == "cv") %>% 
-  dplyr::pull(estimate) %>% 
+y_range_cv <- dplyr::filter(regression_df, response == "cv") |> 
+  dplyr::pull(estimate) |> 
   range()
 
 gg_scenario_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i) {
@@ -178,13 +178,13 @@ gg_scenario_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scena
               strip.background = element_blank(), strip.text = element_blank(), 
               plot.margin = margin(t = 5.5, r = 5.5, b = 5.5, l = 0.0, unit = "pt"))
       
-      cowplot::plot_grid(gg_regression, gg_relimp, ncol = 2, rel_widths = c(0.5, 0.5)) %>% 
+      cowplot::plot_grid(gg_regression, gg_relimp, ncol = 2, rel_widths = c(0.5, 0.5)) |> 
         cowplot::ggdraw(xlim = c(0, 1.05)) +
         cowplot::draw_label(label = label_part, x = 1.0, y = 0.75, vjust = -0.5, angle = 270, 
                             size = size_base * 0.8)
       
     })
-  }) %>% purrr::flatten()
+  }) |> purrr::flatten()
   
   gg_cv_combined <- cowplot::plot_grid(plotlist = gg_cv_list, nrow = 3, ncol = 2, byrow = FALSE)
   
@@ -202,8 +202,8 @@ gg_scenario_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scena
 
 #### Create ggplot sd and mean ####
 
-y_range_frac <- dplyr::filter(regression_df, response != "cv") %>% 
-  dplyr::pull(estimate) %>% 
+y_range_frac <- dplyr::filter(regression_df, response != "cv") |> 
+  dplyr::pull(estimate) |> 
   range()
 
 gg_scenario_frac <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i) {
@@ -278,13 +278,13 @@ gg_scenario_frac <- purrr::map(c(phase = "phase", noise = "noise"), function(sce
               strip.background = element_blank(), strip.text = element_blank(), 
               plot.margin = margin(t = 5.5, r = 5.5, b = 5.5, l = 0.0, unit = "pt"))
       
-      cowplot::plot_grid(gg_regression, gg_relimp, ncol = 2, rel_widths = c(0.5, 0.5)) %>% 
+      cowplot::plot_grid(gg_regression, gg_relimp, ncol = 2, rel_widths = c(0.5, 0.5)) |> 
         cowplot::ggdraw(xlim = c(0, 1.05)) +
         cowplot::draw_label(label = label_part, x = 1.0, y = 0.8, vjust = -0.5, angle = 270, 
                             size = size_base * 0.8)
       
     })
-  }) %>% purrr::flatten()
+  }) |> purrr::flatten()
   
   gg_frac_combined <- cowplot::plot_grid(plotlist = gg_frac_list, nrow = 3, ncol = 2, byrow = FALSE)
   
@@ -302,25 +302,23 @@ gg_scenario_frac <- purrr::map(c(phase = "phase", noise = "noise"), function(sce
 
 #### Save plot ####
 
-overwrite <- T
+overwrite <- FALSE
 
 # CV
-
-suppoRt::save_ggplot(plot = gg_scenario_cv$phase, filename = paste0("Figure-2", extension),
-                     path = "04_Figures/", width = height, height = width * 0.7,
-                     units = units, dpi = dpi, overwrite = overwrite)
+# suppoRt::save_ggplot(plot = gg_scenario_cv$phase, filename = paste0("Figure-2", extension),
+#                      path = "04_Figures/", width = height, height = width * 0.7,
+#                      units = units, dpi = dpi, overwrite = overwrite)
 
 suppoRt::save_ggplot(plot = gg_scenario_cv$noise, filename = paste0("Figure-3", extension),
-                     path = "04_Figures/", width = height, height = width * 0.7,
+                     path = "04_Figures/", width = height, height = width * 0.75,
                      units = units, dpi = dpi, overwrite = overwrite)
 
 # separated
 
-suppoRt::save_ggplot(plot = gg_scenario_frac$phase, filename = paste0("Figure-A3", extension),
-                     path = "04_Figures/Appendix/", width = width, height = height * 0.85,
-                     units = units, dpi = dpi, overwrite = overwrite)
+# suppoRt::save_ggplot(plot = gg_scenario_frac$phase, filename = paste0("Figure-A3", extension),
+#                      path = "04_Figures/Appendix/", width = width, height = height * 0.85,
+#                      units = units, dpi = dpi, overwrite = overwrite)
 
-suppoRt::save_ggplot(plot = gg_scenario_frac$noise, filename = paste0("Figure-A4", extension),
-                     path = "04_Figures/Appendix/", width = width, height = height * 0.85,
-                     units = units, dpi = dpi, overwrite = overwrite)
-
+# suppoRt::save_ggplot(plot = gg_scenario_frac$noise, filename = paste0("Figure-A4", extension),
+#                      path = "04_Figures/Appendix/", width = width, height = height * 0.85,
+#                      units = units, dpi = dpi, overwrite = overwrite)

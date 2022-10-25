@@ -6,7 +6,7 @@
 ##    www.github.com/mhesselbarth             ##
 ##--------------------------------------------##
 
-# Purpose: Simulation experiment of movement parameters and CV/Production
+# Purpose: Run simulation experiment for phase variability
 
 #### Load setup ####
 
@@ -68,15 +68,15 @@ foo_hpc <- function(pop_n, biotic, abiotic) {
                                                 nutrients_input = input_temp, movement = "behav",
                                                 max_i = max_i, min_per_i = min_per_i,
                                                 seagrass_each = seagrass_each, save_each = save_each, 
-                                                verbose = FALSE) %>% 
+                                                verbose = FALSE)|> 
     meta.arrR::filter_meta(filter = c((max_i / years) * years_filter, max_i), 
                            reset = TRUE, verbose = FALSE)
   
   # get moved counts
-  moved <- dplyr::bind_rows(result_temp$fishpop) %>% 
-    dplyr::filter(timestep == max_i) %>% 
-    dplyr::left_join(y = as.data.frame(metasyst_temp$fishpop_attr), by = "id") %>% 
-    dplyr::select(id, moved, move_prob) %>% 
+  moved <- dplyr::bind_rows(result_temp$fishpop)|> 
+    dplyr::filter(timestep == max_i)|> 
+    dplyr::left_join(y = as.data.frame(metasyst_temp$fishpop_attr), by = "id")|> 
+    dplyr::select(id, moved, move_prob)|> 
     dplyr::arrange(id)
   
   # calc cv
@@ -84,12 +84,12 @@ foo_hpc <- function(pop_n, biotic, abiotic) {
   
   # calculate biomass/production
   prod <- meta.arrR::summarize_meta(result = result_temp, biomass = TRUE, production = TRUE, 
-                                    lag = c(FALSE, FALSE)) %>% 
+                                    lag = c(FALSE, FALSE))|> 
     purrr::map(function(i) { 
-      dplyr::filter(i, timestep == max_i) %>% 
-        tidyr::pivot_longer(-c(meta, timestep), names_to = "part") %>% 
-        dplyr::group_by(part) %>% 
-        dplyr::summarise(alpha = mean(value), gamma = sum(value)) %>% 
+      dplyr::filter(i, timestep == max_i)|> 
+        tidyr::pivot_longer(-c(meta, timestep), names_to = "part")|> 
+        dplyr::group_by(part)|> 
+        dplyr::summarise(alpha = mean(value), gamma = sum(value))|> 
         tidyr::pivot_longer(-part, names_to = "measure", values_to = "value")
       
     })

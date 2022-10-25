@@ -12,6 +12,7 @@ library(arrR)
 
 library(broom)
 library(cowplot)
+library(ggpmisc)
 library(lhs)
 library(MetBrewer)
 library(MuMIn)

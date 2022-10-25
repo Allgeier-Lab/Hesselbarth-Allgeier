@@ -55,8 +55,8 @@ regression_df <- purrr::map_dfr(results_combined_list, function(temp_df) {
                 term = factor(term, levels = c("cv", "biotic", "abiotic", "biotic:abiotic")),
                 p.value = dplyr::case_when(p.value < 0.001 ~ "***", p.value < 0.01 ~ "**",
                                            p.value < 0.05 ~  "*", p.value >= 0.05 ~ ""),
-                direction = dplyr::case_when(estimate < 0.0 ~ "negative", 
-                                             estimate > 0.0 ~ "positive"))
+                direction = dplyr::case_when(estimate < 0.0 ~ "decrease", 
+                                             estimate > 0.0 ~ "increase"))
 #### Relative importance R2 ####
 
 importance_df <- purrr::map_dfr(results_combined_list, function(temp_df) {
@@ -70,7 +70,7 @@ importance_df <- purrr::map_dfr(results_combined_list, function(temp_df) {
   
   lm_temp <- lm(value.prod ~ biotic * abiotic, data = temp_df_stand) 
   
-  rel_r2 <- relaimpo::boot.relimp(lm_temp, type = "lmg", b = 500, level = 0.95, fixed = FALSE) %>%
+  rel_r2 <- relaimpo::boot.relimp(lm_temp, type = "lmg", b = 100, level = 0.95, fixed = FALSE) %>%
     relaimpo::booteval.relimp(bty = "basic")
  
   tibble::tibble(
@@ -120,10 +120,10 @@ gg_coef_scenario <- ggplot(data = dplyr::filter(regression_df, term %in% c("biot
   
   # set scales and labs
   scale_color_manual(name = "", values = color_term[-4], 
-                     labels = c("Biotic connectivity", "Abiotic subsidies", "Interaction Connectivity:Subsidies")) +
+                     labels = c("Consumer behavior", "Abiotic subsidies", "Interaction Behavior:Subsidies", "Residuals")) +
   scale_fill_manual(name = "", values = color_term[-4], 
-                    labels = c("Biotic connectivity", "Abiotic subsidies", "Interaction Connectivity:Subsidies")) +
-  scale_shape_manual(name = "", values = c("negative" = 25, "positive" = 24)) +
+                    labels = c("Consumer behavior", "Abiotic subsidies", "Interaction Behavior:Subsidies", "Residuals")) +
+  scale_shape_manual(name = "", values = c("decrease" = 25, "increase" = 24)) +
   coord_flip() +
   scale_x_discrete(limits = rev(levels(regression_df$pop_n))) +
   scale_y_continuous(limits = function(x) range(x), labels = function(x) round(x, 2),
@@ -170,11 +170,11 @@ overwrite <- FALSE
 # Coef
 
 suppoRt::save_ggplot(plot = gg_coef_scenario, filename = paste0("Figure-4", extension),
-                     path = "04_Figures/", width = width, height = height * 0.85,
+                     path = "04_Figures/", width = width, height = height * 0.75,
                      units = units, dpi = dpi, overwrite = overwrite)
 
 # Rel importance
 
-suppoRt::save_ggplot(plot = gg_relimp_scenario, filename = paste0("Figure-A5", extension),
-                     path = "04_Figures/Appendix/", width = width, height = height * 0.85,
-                     units = units, dpi = dpi, overwrite = overwrite)
+# suppoRt::save_ggplot(plot = gg_relimp_scenario, filename = paste0("Figure-A5", extension),
+#                      path = "04_Figures/Appendix/", width = width, height = height * 0.85,
+#                      units = units, dpi = dpi, overwrite = overwrite)

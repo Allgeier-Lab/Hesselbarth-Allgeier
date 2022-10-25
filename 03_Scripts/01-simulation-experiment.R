@@ -28,8 +28,8 @@ table(cut(matrix_lhs[, 1], breaks = seq(0.1, 1, 0.1)),
       cut(matrix_lhs[, 2], breaks = seq(0.1, 1, 0.1)))
 
 experiment_df <- tibble::tibble(biotic = matrix_lhs[, 1], 
-                                abiotic = matrix_lhs[, 2]) %>% 
-  dplyr::slice(rep(x = 1:dplyr::n(), times = 5)) %>% 
+                                abiotic = matrix_lhs[, 2]) |> 
+  dplyr::slice(rep(x = 1:dplyr::n(), times = 5)) |> 
   dplyr::mutate(pop_n = rep(x = c(8, 16, 32, 64, 128), each = reps))
 
 nrow(experiment_df)

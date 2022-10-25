@@ -117,22 +117,46 @@ move_meta_result_sum <- dplyr::mutate(move_meta_result) %>%
   dplyr::mutate(lo = dplyr::case_when(mean - sd > 0 ~ mean - sd,
                                       mean - sd < 0 ~ 0), hi = mean + sd)
 
+#### Setup ggplot ####
+
+breaks_x <- seq(from = 0, to = max_i / filter_factor, by = max_i / years)
+# labels_x <- paste(seq(from = 0, to = years / filter_factor, by = 1), "years")
+
+line_size <- 0.25
+
+point_size <- 0.5
+
+base_size <- 7.5
+
 #### Create figure moved ####
 
+# gg_probs_moved <- ggplot(data = move_meta_result_sum, aes(x = move_meta_sd, y = mean)) +
+#   geom_hline(yintercept = 0, linetype = 2, color = "grey") + 
+#   # geom_ribbon(aes(ymin = quant_lo, ymax = quant_hi), alpha = 0.2, fill = "#fff178") +
+#   geom_smooth(se = FALSE, linetype = 1, size = 0.75, color = "#32b2da") +
+#   geom_errorbar(aes(ymin = lo, ymax = hi)) +
+#   geom_point(shape = 19) +
+#   scale_x_continuous(limits = c(0.1, 1), breaks = seq(from = 0.1, to = 1.0, by = 0.1)) +
+#   scale_color_manual(name = "Parameter", values = c("#d0413d", "#0c214e")) + 
+#   labs(x = "Biotic variability", y = "Mean cross-system movement (connectivity)") +
+#   theme_classic(base_size = 10.0)
+
 gg_probs_moved <- ggplot(data = move_meta_result_sum, aes(x = move_meta_sd, y = mean)) +
-  geom_hline(yintercept = 0, linetype = 2, color = "grey") + 
-  # geom_ribbon(aes(ymin = quant_lo, ymax = quant_hi), alpha = 0.2, fill = "#fff178") +
-  geom_smooth(se = FALSE, linetype = 1, size = 0.75, color = "#32b2da") +
-  geom_errorbar(aes(ymin = lo, ymax = hi)) +
-  geom_point(shape = 19) +
+  geom_errorbar(aes(ymin = lo, ymax = hi), size = 0.25, color = "#1e466e", alpha = 0.75) +
+  geom_smooth(se = FALSE, linetype = 1, size = line_size, color = "#1e466e") + # #32b2da
+  geom_point(shape = 19, size = point_size, color = "#1e466e") +
   scale_x_continuous(limits = c(0.1, 1), breaks = seq(from = 0.1, to = 1.0, by = 0.1)) +
   scale_color_manual(name = "Parameter", values = c("#d0413d", "#0c214e")) + 
-  labs(x = "Biotic variability", y = "Mean cross-system movement (connectivity)") +
-  theme_classic(base_size = 10.0) 
+  labs(x = "Diversity consumer behavior", y = "Connectivity") +
+  theme_classic(base_size = base_size) +
+  theme(axis.text = element_blank())
 
 #### Save ggplot ####
 
-suppoRt::save_ggplot(plot = gg_probs_moved, filename = paste0("Figure-A1", extension),
-                     path = "04_Figures/Appendix", width = width, height = height * 1/3,
-                     units = units, dpi = dpi, overwrite = FALSE)
+# suppoRt::save_ggplot(plot = gg_probs_moved, filename = paste0("Figure-A1", extension),
+#                      path = "04_Figures/Appendix", width = width, height = height * 1/3,
+#                      units = units, dpi = dpi, overwrite = FALSE)
 
+suppoRt::save_ggplot(plot = gg_probs_moved, filename = "Figure-1-connect.png",
+                     path = "04_Figures/", width = 85 / 2, height = 35,
+                     units = units, dpi = dpi, overwrite = FALSE)

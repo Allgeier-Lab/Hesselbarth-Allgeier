@@ -6,7 +6,7 @@
 ##    www.github.com/mhesselbarth             ##
 ##--------------------------------------------##
 
-# Purpose:
+# Purpose: Create figure of connectivity for increasing variability
 
 #### Load setup ####
 
@@ -54,15 +54,15 @@ result_list <- purrr::map(c(low = min(experiment_df$biotic), medium = quantile(x
   # run model
   result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = parameters_list,
                                                 movement = "behav", max_i = max_i, min_per_i = min_per_i,
-                                                seagrass_each = seagrass_each, save_each = save_each) # %>% 
+                                                seagrass_each = seagrass_each, save_each = save_each) # |> 
     # meta.arrR::filter_meta(filter = c((max_i / years) * years_filter, max_i), 
     #                        reset = TRUE, verbose = FALSE)
   
   abundance_df <- meta.arrR::get_abundance(result_temp)
   
   # get moved counts
-  moved_df <- dplyr::bind_rows(result_temp$fishpop) %>% 
-    dplyr::select(timestep, id, moved) %>% 
+  moved_df <- dplyr::bind_rows(result_temp$fishpop) |>
+    dplyr::select(timestep, id, moved) |> 
     dplyr::arrange(id)
   
   return(list(abundance = abundance_df, moved = moved_df))
@@ -77,9 +77,9 @@ moved_df <- dplyr::bind_rows(low = result_list$low$moved, medium = result_list$m
 
 #### Summarize data ####
 
-moved_sum_df <- dplyr::group_by(moved_df, variability, timestep) %>% 
+moved_sum_df <- dplyr::group_by(moved_df, variability, timestep) |> 
   dplyr::summarise(moved_mn = mean(moved), moved_low = mean(moved) - sd(moved),
-                   moved_hi = mean(moved) + sd(moved),.groups = "drop") %>% 
+                   moved_hi = mean(moved) + sd(moved),.groups = "drop") |> 
   dplyr::mutate(variability = factor(variability, levels = c("low", "medium", "high")))
 
 #### Setup plots ####
