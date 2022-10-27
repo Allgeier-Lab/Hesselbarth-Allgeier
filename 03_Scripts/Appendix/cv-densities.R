@@ -23,22 +23,22 @@ noise_df <- import_data(path =  paste0("02_Data/result-noise-", n, ".rds"))
 
 #### Wrangle data ####
 
-combined_df <- dplyr::bind_rows(phase = phase_df, noise = noise_df, .id = "scenario") %>% 
+combined_df <- dplyr::bind_rows(phase = phase_df, noise = noise_df, .id = "scenario") |> 
   dplyr::filter(part %in% c("ag_production", "bg_production", "ttl_production"),
-                measure %in% c("alpha", "gamma")) %>% 
-  dplyr::group_by(scenario, part, measure, pop_n) %>%
+                measure %in% c("alpha", "gamma")) |> 
+  dplyr::group_by(scenario, part, measure, pop_n) |> 
   dplyr::group_split() %>% 
   purrr::map_dfr(function(i) {
     
-    density_temp <- dplyr::pull(i, value.cv) %>% 
+    density_temp <- dplyr::pull(i, value.cv) |> 
       density()
     
     data.frame(scenario = unique(i$scenario), part = unique(i$part), 
                measure = unique(i$measure), pop_n = unique(i$pop_n), 
                cv = density_temp$x, density = density_temp$y)
     
-  }) %>% 
-  tidyr::unite("color_id", pop_n, scenario, remove = FALSE) %>% 
+  }) |> 
+  tidyr::unite("color_id", pop_n, scenario, remove = FALSE) |> 
   dplyr::mutate(color_id = factor(color_id, 
                                   levels = c("8_phase", "8_noise", "16_phase", "16_noise",
                                              "32_phase", "32_noise", "64_phase", "64_noise"), 
@@ -50,7 +50,7 @@ combined_df <- dplyr::bind_rows(phase = phase_df, noise = noise_df, .id = "scena
 
 #### Calculate means #### 
 
-combined_df_sum <- dplyr::group_by(combined_df, scenario, part, measure, pop_n) %>% 
+combined_df_sum <- dplyr::group_by(combined_df, scenario, part, measure, pop_n) |> 
   dplyr::summarise(cv_mn = mean(cv), cv_sd = sd(cv), .groups = "drop")
 
 #### Setup ggplot ####
@@ -84,12 +84,12 @@ gg_cv_densities <- ggplot(combined_df, aes(x = cv, y = density)) +
   guides(linetype = guide_legend(nrow = 2, order = 1)) +
   labs(x = "Coefficient of variation", y = "Density") +
   theme_classic(base_size = size_base) +
-  theme(legend.position = "bottom",
+  theme(strip.background = element_blank(), strip.text = element_text(hjust = 0.0), 
         axis.line = element_blank(), panel.border = element_rect(size = 0.5, fill = NA), 
-        strip.background = element_blank(), strip.text = element_text(hjust = 0.0))
+        legend.position = "bottom",)
 
 #### Save ggplot ####
 
-suppoRt::save_ggplot(plot = gg_cv_densities, filename = paste0("Figure-A2", extension),
-                     path = "04_Figures/Appendix/", width = width, height = height * 0.85,
-                     units = units, dpi = dpi, overwrite = FALSE)
+# suppoRt::save_ggplot(plot = gg_cv_densities, filename = paste0("Figure-A2", extension),
+#                      path = "04_Figures/Appendix/", width = width, height = height * 0.85,
+#                      units = units, dpi = dpi, overwrite = FALSE)

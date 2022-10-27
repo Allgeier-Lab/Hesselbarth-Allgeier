@@ -52,23 +52,23 @@ foo <- function(itr) {
   result_temp <- arrR::run_simulation(seafloor = input_seafloor, fishpop = input_fishpop,
                                       parameters = parameters_list, movement = "behav",
                                       max_i = max_i, min_per_i = min_per_i, seagrass_each = seagrass_each, 
-                                      save_each = save_each, verbose = FALSE) %>% 
+                                      save_each = save_each, verbose = FALSE) |> 
     arrR::filter_mdlrn(filter = c((max_i / years) * years_filter, max_i))
   
   # calculate total excretion per time step averaged over all time steps
-  excretion_ttl <- dplyr::select(result_temp$fishpop, timestep, id, excretion) %>% 
+  excretion_ttl <- dplyr::select(result_temp$fishpop, timestep, id, excretion) |> 
     dplyr::group_by(timestep) %>% 
-    dplyr::summarise(excretion = sum(excretion, na.rm = TRUE), .groups = "drop") %>% 
+    dplyr::summarise(excretion = sum(excretion, na.rm = TRUE), .groups = "drop") |> 
     dplyr::mutate(excretion_last = dplyr::lag(excretion), 
-                  excretion_diff = (excretion - excretion_last) / save_each) %>% 
+                  excretion_diff = (excretion - excretion_last) / save_each) |> 
     dplyr::pull(excretion_diff) %>% 
     mean(na.rm = TRUE)
   
   # calculate mean consumption per individual and time step
-  consumption_mn <- dplyr::select(result_temp$fishpop, timestep, id, consumption) %>% 
+  consumption_mn <- dplyr::select(result_temp$fishpop, timestep, id, consumption) |> 
     dplyr::group_by(id) %>% 
     dplyr::mutate(consumption_last = dplyr::lag(consumption), 
-                  consumption_diff = (consumption - consumption_last) / save_each) %>% 
+                  consumption_diff = (consumption - consumption_last) / save_each) |> 
     dplyr::pull(consumption_diff) %>% 
     mean(na.rm = TRUE)
   

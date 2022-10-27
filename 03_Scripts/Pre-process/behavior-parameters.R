@@ -46,9 +46,8 @@ seagrass_each <- (24 / (min_per_i / 60)) * days_seagrass
 
 values <- c(0.01, 0.025, 0.05, 0.075, 0.1, 0.15, 0.2)
 
-input_df <- expand.grid(pop_reserves_max = values, 
-                        pop_reserves_consump = values, 
-                        pop_reserves_thres_mean = values) %>% 
+input_df <- expand.grid(pop_reserves_max = values, pop_reserves_consump = values, 
+                        pop_reserves_thres_mean = values) |> 
   dplyr::slice(rep(1:dplyr::n(), each = 5))  
 
 foo <- function(pop_reserves_max, pop_reserves_consump, pop_reserves_thres_mean) {
@@ -133,10 +132,10 @@ behavior_states <- readr::read_rds("02_Data/behavior-states.rds")
 cutoff <- 3.5
 
 (behavior_states_mn <- dplyr::group_by(behavior_states, pop_reserves_max, pop_reserves_consump, 
-                                      pop_reserves_thres_mean) %>% 
-  dplyr::summarise(shelter = mean(shelter), forage = mean(forage), .groups = "drop") %>% 
+                                      pop_reserves_thres_mean) |> 
+  dplyr::summarise(shelter = mean(shelter), forage = mean(forage), .groups = "drop") |> 
   dplyr::mutate(shelter = shelter * min_per_i / 60, forage = forage * min_per_i / 60, 
-                diff_shelter = abs(12 - shelter),  diff_forage = abs(12 - forage)) %>% 
+                diff_shelter = abs(12 - shelter),  diff_forage = abs(12 - forage)) |> 
   dplyr::filter(diff_shelter <= cutoff, diff_forage <= cutoff))
 
 #### Run model for longer time with parametrization ####
@@ -179,30 +178,30 @@ plot(result)
 plot(result, summarize = TRUE)
 # plot(result, what = "fishpop", verbose = FALSE)
 
-dplyr::filter(result$seafloor, timestep == max_i) %>% 
-  dplyr::select(x, y, consumption, excretion) %>% 
-  tidyr::pivot_longer(-c(x, y)) %>% 
-  dplyr::mutate(value = log(value)) %>% 
+dplyr::filter(result$seafloor, timestep == max_i) |> 
+  dplyr::select(x, y, consumption, excretion) |> 
+  tidyr::pivot_longer(-c(x, y)) |> 
+  dplyr::mutate(value = log(value)) |> 
   ggplot(aes(x = x, y = y)) +
   geom_raster(aes(fill = value)) + 
   facet_wrap(. ~ name) + 
   scale_fill_gradientn(name = "nutr", colours = c("#368AC0", "#F4B5BD", "#EC747F"), 
                        na.value = "#9B964A") +
-  coord_equal() + 
+  coord_fixed(ratio = 1) + 
   theme_classic()
 
-dplyr::filter(result$seafloor, timestep == max_i) %>% 
-  dplyr::select(x, y, consumption, excretion) %>% 
-  dplyr::mutate(net = excretion - consumption) %>% 
-  dplyr::mutate(net = log(net + abs(min(net)))) %>%
+dplyr::filter(result$seafloor, timestep == max_i) |> 
+  dplyr::select(x, y, consumption, excretion) |> 
+  dplyr::mutate(net = excretion - consumption) |> 
+  dplyr::mutate(net = log(net + abs(min(net)))) |> 
   ggplot(aes(x = x, y = y)) +
   geom_raster(aes(fill = net)) + 
   scale_fill_gradientn(name = "net(nutr)", colours = c("#368AC0", "#F4B5BD", "#EC747F"), 
                        na.value = "#9B964A") +
-  coord_equal() + 
+  coord_fixed(ratio = 1) + 
   theme_classic()
 
-dplyr::select(result$fishpop, id, x, y, behavior) %>% 
+dplyr::select(result$fishpop, id, x, y, behavior) |> 
   ggplot(aes(x = x, y = y)) + 
   geom_point(aes(col = factor(behavior)), shape = 1 ) + 
   geom_polygon(data = data.frame(x = c(result$extent[1], result$extent[2], 
@@ -211,7 +210,7 @@ dplyr::select(result$fishpop, id, x, y, behavior) %>%
                                        result$extent[4], result$extent[4])), 
                aes(x = x, y = y), fill = "blue", col = NA, alpha = 0.15) +
   facet_wrap(. ~ behavior) + 
-  coord_equal() + 
+  coord_fixed(ratio = 1) + 
   theme_classic() + 
   theme(legend.position = "none")
 

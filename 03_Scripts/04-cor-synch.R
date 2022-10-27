@@ -6,7 +6,7 @@
 ##    www.github.com/mhesselbarth             ##
 ##--------------------------------------------##
 
-# Purpose: Calculate correlations between variability, cv, and synchrony
+# Purpose: Create resulting figure of variability and synchrony
 
 #### Load setup ####
 
@@ -35,28 +35,28 @@ color_scale_var <- c("biotic" = "#41b282", "abiotic" = "#007aa1")
 
 # color_scale_scl <- c("alpha" = "#cbcbcb", "gamma" = "#32b2da")
 
-gg_dummy_var <- data.frame(beta = c("biotic", "abiotic"),
-                           mean = c(1, 1)) |> 
-  dplyr::mutate(beta = factor(beta, levels = c("biotic", "abiotic"))) |> 
+gg_dummy_var <- data.frame(variability = c("biotic", "abiotic", "biotic", "abiotic"),
+                           mean = c(1, 2, 3, 4)) |> 
+  dplyr::mutate(variability = factor(variability, levels = c("biotic", "abiotic"))) |>
   ggplot() + 
-  geom_point(aes(x = beta, y = mean, color = beta)) + 
-  geom_line(aes(x = beta, y = mean, color = beta)) + 
+  geom_point(aes(x = variability, y = mean, color = variability)) + 
+  geom_line(aes(x = variability, y = mean, color = variability)) + 
   scale_color_manual(name = "", values = color_scale_var, 
-                    labels = c("Consumer behavior", "Abiotic subsidies")) +
+                    labels = c("biotic" = "Consumer behavior", "abiotic" = "Abiotic subsidies")) +
   guides(fill = guide_legend(order = 1), colour = guide_legend(order = 2)) +
   theme_classic(base_size = size_base) + 
   theme(legend.position = "bottom")
 
-# gg_dummy_scl <- data.frame(beta = c("alpha", "gamma"),
-#                            mean = c(1, 1)) |> 
-#   dplyr::mutate(beta = factor(beta, levels = c("alpha", "gamma"))) |> 
-#   ggplot() + 
-#   geom_point(aes(x = beta, y = mean, color = beta)) + 
-#   geom_line(aes(x = beta, y = mean, color = beta)) + 
-#   scale_color_manual(name = "", values = color_scale_scl, 
-#                      labels = c("Local scale", "Meta-ecosystem scale")) +
+# gg_dummy_scl <- data.frame(scale = c("alpha", "gamma", "alpha", "gamma"),
+#                            mean = c(1, 2, 3, 4)) |>
+#   dplyr::mutate(scale = factor(scale, levels = c("alpha", "gamma"))) |>
+#   ggplot() +
+#   geom_point(aes(x = scale, y = mean, color = scale)) +
+#   geom_line(aes(x = scale, y = mean, color = scale)) +
+#   scale_color_manual(name = "", values = color_scale_scl,
+#                      labels = c("alhpa" = "Local scale","gamma" = "Meta-ecosystem scale")) +
 #   guides(fill = guide_legend(order = 1), colour = guide_legend(order = 2)) +
-#   theme_classic(base_size = size_base) + 
+#   theme_classic(base_size = size_base) +
 #   theme(legend.position = "bottom")
 
 #### Reshape data ####
@@ -68,16 +68,18 @@ results_var_synch_df <- dplyr::select(results_combined_df, scenario, part, measu
   tidyr::pivot_longer(cols = c(biotic, abiotic), names_to = "variability", values_to = "value.var") |> 
   tidyr::unite(col = "treatment", part, pop_n, remove = FALSE) |> 
   dplyr::mutate(treatment = stringr::str_remove(treatment, pattern = "_production"), 
-                treatment = factor(treatment, levels = factor_lvls))
+                treatment = factor(treatment, levels = factor_lvls), 
+                variability = factor(variability, levels = c("biotic", "abiotic")))
 
-# results_cv_synch_df <- dplyr::select(results_combined_df, scenario, part, measure, pop_n, value.cv) |> 
-#   dplyr::filter(part %in% c("ag_production", "bg_production", "ttl_production"), measure != "beta") |> 
-#   dplyr::mutate(row_id = rep(x = 1:(dplyr::n() / 3), each = 3)) |> 
-#   tidyr::pivot_wider(names_from = measure, values_from = value.cv) |> 
-#   tidyr::pivot_longer(cols = c(alpha, gamma), names_to = "measure") |> 
-#   tidyr::unite(col = "treatment", part, pop_n, remove = FALSE) |> 
-#   dplyr::mutate(treatment = stringr::str_remove(treatment, pattern = "_production"), 
-#                 treatment = factor(treatment, levels = factor_lvls))
+# results_cv_synch_df <- dplyr::select(results_combined_df, scenario, part, measure, pop_n, value.cv) |>
+#   dplyr::filter(part %in% c("ag_production", "bg_production", "ttl_production"), measure != "beta") |>
+#   dplyr::mutate(row_id = rep(x = 1:(dplyr::n() / 3), each = 3)) |>
+#   tidyr::pivot_wider(names_from = measure, values_from = value.cv) |>
+#   tidyr::pivot_longer(cols = c(alpha, gamma), names_to = "measure") |>
+#   tidyr::unite(col = "treatment", part, pop_n, remove = FALSE) |>
+#   dplyr::mutate(treatment = stringr::str_remove(treatment, pattern = "_production"),
+#                 treatment = factor(treatment, levels = factor_lvls), 
+#                 measure = factor(measure, levels = c("alpha", "gamma")))
 
 #### Create ggplot variability vs. synchrony ####
 
@@ -98,8 +100,7 @@ gg_var_synch <- purrr::map(c("phase", "noise"), function(i) {
       geom_smooth(method = "lm", formula = "y ~ x", se = FALSE, size = 0.5) +
       
       # adding labels
-      ggpmisc::stat_poly_eq(formula = y ~ x, aes(label = paste(..eq.label.., ..adj.rr.label..,
-                                                                    sep = "~~~")),
+      ggpmisc::stat_poly_eq(formula = y ~ x, aes(label = paste(..eq.label.., ..adj.rr.label.., sep = "~~")),
                             parse = TRUE, coef.digits = 2, rr.digits = 2, size = 2.0, 
                             geom = "label_npc", alpha = 1.0, vstep = 0.2, hstep = 0.0) +
       
@@ -115,7 +116,6 @@ gg_var_synch <- purrr::map(c("phase", "noise"), function(i) {
       
       # themes
       labs(x = "", y = "") +
-      # labs(title = label_part, subtitle = label_pop_n) +
       theme_classic(base_size = size_base) + 
       theme(strip.background = element_blank(), strip.text = element_text(hjust = 0), 
             legend.position = "none",
@@ -130,7 +130,7 @@ gg_var_synch <- purrr::map(c("phase", "noise"), function(i) {
   gg_combined <- cowplot::plot_grid(plotlist = gg_part, nrow = 3)
   
   gg_combined <- cowplot::ggdraw(gg_combined, xlim = c(-0.05, 1.0), ylim = c(-0.05, 1.0)) + 
-    cowplot::draw_label("Variability", x = 0.5, y = 0, vjust = 0.5, angle = 0, size = size_base) + 
+    cowplot::draw_label("Diversity / Variability", x = 0.5, y = 0, vjust = 0.5, angle = 0, size = size_base) + 
     cowplot::draw_label("Synchrony", x = 0.0, y = 0.5, vjust = -0.5, angle = 90, size = size_base)
   
   cowplot::plot_grid(gg_combined, cowplot::get_legend(gg_dummy_var),
@@ -206,7 +206,7 @@ names(gg_var_synch) <- c("phase", "noise")
 
 suppoRt::save_ggplot(plot = gg_var_synch$noise, filename = paste0("Figure-2", extension),
                      path = "04_Figures/", width = height, height = width * 0.75,
-                     units = units, dpi = dpi, overwrite = T)
+                     units = units, dpi = dpi, overwrite = FALSE)
 
 # suppoRt::save_ggplot(plot = gg_var_synch$phase, filename = paste0("Figure-2", extension),
 #                      path = "04_Figures/Appendix/", width = height, height = width * 0.75,

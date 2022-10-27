@@ -6,7 +6,7 @@
 ##    www.github.com/mhesselbarth             ##
 ##--------------------------------------------##
 
-# Purpose: Create total result figure including regression parameters and relative importance
+# Purpose: Create total result figure of variability and cv
 
 #### Load setup ####
 
@@ -83,7 +83,8 @@ importance_df <- purrr::map_dfr(results_combined_list, function(temp_df) {
       lower = c(rel_r2@lmg.lower, NA), higher = c(rel_r2@lmg.upper, NA)
     )}, .id = "response")
   }) |> 
-  dplyr::mutate(beta = factor(beta, levels = c("residual", "biotic:abiotic", "abiotic", "biotic")))
+  dplyr::mutate(response = factor(response, levels = c("cv", "mn", "sd")),
+                beta = factor(beta, levels = c("residual", "biotic:abiotic", "abiotic", "biotic")))
 
 #### Setup ggplot ####
 
@@ -101,7 +102,8 @@ gg_dummy <- data.frame(beta = c("biotic", "abiotic", "biotic:abiotic", "residual
   ggplot() + 
   geom_col(aes(x = beta, y = mean, fill = beta)) + 
   scale_fill_manual(name = "", values = color_scale, 
-                    labels = c("Consumer behavior", "Abiotic subsidies", "Interaction Behavior:Subsidies", "Residuals")) +
+                    labels = c("biotic" = "Consumer behavior", "abiotic" = "Abiotic subsidies", 
+                               "biotic:abiotic" = "Interaction Behavior:Subsidies", "residual" = "Residuals")) +
   guides(fill = guide_legend(order = 1), colour = guide_legend(order = 2)) +
   theme_classic(base_size = size_base) + 
   theme(legend.position = "bottom")
@@ -128,7 +130,7 @@ gg_scenario_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scena
       
       if (part_i == "ag_production" & measure_i == "gamma") label_part <-  "Aboveground"
       if (part_i == "bg_production" & measure_i == "gamma") label_part <-  "Belowground"
-      if (part_i == "ttl_production" & measure_i == "gamma") label_part <- "Total         "
+      if (part_i == "ttl_production" & measure_i == "gamma") label_part <- "Total      "
       
       gg_regression <- ggplot(data = regression_temp_df) + 
         
@@ -156,9 +158,9 @@ gg_scenario_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scena
         # labels and themes
         labs(x = "", y = "") +
         theme_classic(base_size = size_base) + 
-        theme(legend.position = "none",
+        theme(strip.background = element_blank(), strip.text = element_blank(), 
               axis.line = element_blank(), panel.border = element_rect(size = 0.5, fill = NA),
-              strip.background = element_blank(), strip.text = element_blank(), 
+              legend.position = "none",
               plot.margin = margin(t = 5.5, r = 0.0, b = 5.5, l = 5.5, unit = "pt"))
       
       gg_relimp <- ggplot(data = importance_temp_df) + 
@@ -173,9 +175,9 @@ gg_scenario_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scena
         # labels and themes
         labs(x = "", y = "") +
         theme_classic(base_size = size_base) + 
-        theme(legend.position = "none",
+        theme(strip.background = element_blank(), strip.text = element_blank(), 
               axis.line = element_blank(), panel.border = element_rect(size = 0.5, fill = NA),
-              strip.background = element_blank(), strip.text = element_blank(), 
+              legend.position = "none",
               plot.margin = margin(t = 5.5, r = 5.5, b = 5.5, l = 0.0, unit = "pt"))
       
       cowplot::plot_grid(gg_regression, gg_relimp, ncol = 2, rel_widths = c(0.5, 0.5)) |> 
@@ -253,9 +255,9 @@ gg_scenario_frac <- purrr::map(c(phase = "phase", noise = "noise"), function(sce
         # labels and themes
         labs(x = "", y = "") +
         theme_classic(base_size = size_base) + 
-        theme(legend.position = "none",
+        theme(strip.background = element_blank(), strip.text = element_blank(), 
               axis.line = element_blank(), panel.border = element_rect(size = 0.5, fill = NA),
-              strip.background = element_blank(), strip.text = element_blank(), 
+              legend.position = "none",
               plot.margin = margin(t = 5.5, r = 0.0, b = 5.5, l = 5.5, unit = "pt"))
       
       gg_relimp <- ggplot(data = importance_temp_df) + 
@@ -273,9 +275,9 @@ gg_scenario_frac <- purrr::map(c(phase = "phase", noise = "noise"), function(sce
         # labels and themes
         labs(x = "", y = "") +
         theme_classic(base_size = size_base) + 
-        theme(legend.position = "none",
+        theme(strip.background = element_blank(), strip.text = element_blank(), 
               axis.line = element_blank(), panel.border = element_rect(size = 0.5, fill = NA),
-              strip.background = element_blank(), strip.text = element_blank(), 
+              legend.position = "none",
               plot.margin = margin(t = 5.5, r = 5.5, b = 5.5, l = 0.0, unit = "pt"))
       
       cowplot::plot_grid(gg_regression, gg_relimp, ncol = 2, rel_widths = c(0.5, 0.5)) |> 
@@ -302,7 +304,7 @@ gg_scenario_frac <- purrr::map(c(phase = "phase", noise = "noise"), function(sce
 
 #### Save plot ####
 
-overwrite <- FALSE
+# overwrite <- FALSE
 
 # CV
 # suppoRt::save_ggplot(plot = gg_scenario_cv$phase, filename = paste0("Figure-2", extension),
@@ -311,7 +313,7 @@ overwrite <- FALSE
 
 suppoRt::save_ggplot(plot = gg_scenario_cv$noise, filename = paste0("Figure-3", extension),
                      path = "04_Figures/", width = height, height = width * 0.75,
-                     units = units, dpi = dpi, overwrite = overwrite)
+                     units = units, dpi = dpi, overwrite = FALSE)
 
 # separated
 

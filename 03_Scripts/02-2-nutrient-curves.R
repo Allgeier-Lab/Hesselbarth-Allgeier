@@ -41,7 +41,8 @@ input_values_noise <- meta.arrR::simulate_nutrient_noise(n = n, max_i = max_i, f
                                                          noise_sd = variability) |>  
   
   meta.arrR::get_input_df(gamma = FALSE, long = TRUE) |> 
-  dplyr::filter(timestep > (max_i / years) * years_filter)
+  dplyr::filter(timestep > (max_i / years) * years_filter) |> 
+  dplyr::mutate(meta = factor(meta))
 
 input_values_meta <- dplyr::group_by(input_values_noise, timestep) |> 
   dplyr::summarise(value = sum(value)) |> 

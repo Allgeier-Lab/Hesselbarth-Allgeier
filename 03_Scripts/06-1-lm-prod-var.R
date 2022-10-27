@@ -6,7 +6,7 @@
 ##    www.github.com/mhesselbarth             ##
 ##--------------------------------------------##
 
-# Purpose: 
+# Purpose: Create total result figure of variability and cumulative PP
 
 #### Load setup ####
 
@@ -120,9 +120,11 @@ gg_coef_scenario <- ggplot(data = dplyr::filter(regression_df, term %in% c("biot
   
   # set scales and labs
   scale_color_manual(name = "", values = color_term[-4], 
-                     labels = c("Consumer behavior", "Abiotic subsidies", "Interaction Behavior:Subsidies", "Residuals")) +
+                     labels = c("biotic" = "Consumer behavior", "abiotic" =  "Abiotic subsidies", 
+                                "biotic:abiotic" =  "Interaction Behavior:Subsidies", "residuals" = "Residuals")) +
   scale_fill_manual(name = "", values = color_term[-4], 
-                    labels = c("Consumer behavior", "Abiotic subsidies", "Interaction Behavior:Subsidies", "Residuals")) +
+                    labels = c("biotic" = "Consumer behavior", "abiotic" =  "Abiotic subsidies", 
+                               "biotic:abiotic" =  "Interaction Behavior:Subsidies", "residuals" = "Residuals")) +
   scale_shape_manual(name = "", values = c("decrease" = 25, "increase" = 24)) +
   coord_flip() +
   scale_x_discrete(limits = rev(levels(regression_df$pop_n))) +
@@ -134,9 +136,10 @@ gg_coef_scenario <- ggplot(data = dplyr::filter(regression_df, term %in% c("biot
   guides(color = guide_legend(order = 1, override.aes = list(shape = 17)), 
          fill = "none", shape = guide_legend(order = 2)) +
   theme_classic(base_size = size_base) + 
-  theme(legend.position = "bottom", plot.title = element_text(size = 8.0), 
-        axis.line = element_blank(), panel.border = element_rect(size = 0.5, fill = NA),
-        strip.background = element_blank(), strip.text = element_text(hjust = 0))
+  theme(axis.line = element_blank(), panel.border = element_rect(size = 0.5, fill = NA),
+        strip.background = element_blank(), strip.text = element_text(hjust = 0),
+        legend.position = "bottom", 
+        plot.margin = margin(t = 5.5, r = 5.5, b = 5.5, l = 5.5, unit = "pt"))
 
 #### Create ggplot relative importance ####
 
@@ -158,9 +161,9 @@ gg_relimp_scenario <- ggplot(data = importance_df) +
   # setup theme
   labs(x = "Population size", y = "Parameter estimate") +
   theme_classic(base_size = size_base) + 
-  theme(legend.position = "bottom",
+  theme(strip.background = element_blank(), strip.text = element_text(hjust = 0), 
         axis.line = element_blank(), panel.border = element_rect(size = 0.5, fill = NA),
-        strip.background = element_blank(), strip.text = element_text(hjust = 0), 
+        legend.position = "bottom",
         plot.margin = margin(t = 5.5, r = 5.5, b = 5.5, l = 5.5, unit = "pt"))
 
 #### Save plot ####
@@ -170,8 +173,8 @@ overwrite <- FALSE
 # Coef
 
 suppoRt::save_ggplot(plot = gg_coef_scenario, filename = paste0("Figure-4", extension),
-                     path = "04_Figures/", width = width, height = height * 0.75,
-                     units = units, dpi = dpi, overwrite = overwrite)
+                     path = "04_Figures/", width = width, height = height * 0.65,
+                     units = units, dpi = dpi, overwrite = FALSE)
 
 # Rel importance
 

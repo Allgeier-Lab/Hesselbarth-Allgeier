@@ -40,7 +40,8 @@ ggplot(data = experiment_df) +
   geom_point(aes(x = biotic, y = abiotic)) + 
   geom_hline(yintercept = 0.1, color = "grey", linetype = 2) + geom_hline(yintercept = 1.0, color = "grey", linetype = 2) + 
   geom_vline(xintercept = 0.1, color = "grey", linetype = 2) + geom_vline(xintercept = 1.0, color = "grey", linetype = 2) + 
-  coord_equal() + 
+  labs(x = "Diversity consumer behavior", y = "Variability nutrient subsidies") +
+  coord_fixed(ratio = 1) + 
   theme_classic()
 
 purrr::walk(unique(experiment_df$pop_n), function(i) {
