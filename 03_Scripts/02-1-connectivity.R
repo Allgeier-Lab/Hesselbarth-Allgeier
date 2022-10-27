@@ -110,9 +110,9 @@ move_meta_result <- readr::read_rds("02_Data/biotic-vs-connectivity.rds")
 #### Summarize results ####
 
 move_meta_result_sum <- dplyr::mutate(move_meta_result) |> 
-  dplyr::group_by(move_meta_sd) %>% 
-  dplyr::summarise(mean = mean(moved), sd = sd(moved), 
-                   quant_lo = quantile(moved, probs = 0.35), quant_hi = quantile(moved, probs = 0.65), 
+  dplyr::group_by(move_meta_sd) |> 
+  dplyr::summarise(mean = mean(moved), sd = sd(moved), sum = sum(moved),
+                   # quant_lo = quantile(moved, probs = 0.35), quant_hi = quantile(moved, probs = 0.65), 
                    .groups = "drop") |> 
   dplyr::mutate(lo = dplyr::case_when(mean - sd > 0 ~ mean - sd, mean - sd < 0 ~ 0), hi = mean + sd)
 
@@ -130,7 +130,7 @@ base_size <- 7.5
 #### Create figure moved ####
 
 gg_probs_moved <- ggplot(data = move_meta_result_sum, aes(x = move_meta_sd, y = mean)) +
-  geom_errorbar(aes(ymin = lo, ymax = hi), size = 0.25, color = "#1e466e", alpha = 0.75) +
+  geom_errorbar(aes(ymin = mean - sd, ymax = mean + sd), size = 0.25, color = "#1e466e", alpha = 0.75) +
   geom_smooth(se = FALSE, linetype = 1, size = line_size, color = "#1e466e") +
   geom_point(shape = 19, size = point_size, color = "#1e466e") +
   scale_x_continuous(limits = c(0.1, 1), breaks = seq(from = 0.1, to = 1.0, by = 0.1)) +

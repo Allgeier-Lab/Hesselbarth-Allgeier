@@ -204,13 +204,15 @@ names(gg_var_synch) <- c("phase", "noise")
 
 ##### Save plots ####
 
+overwrite <- FALSE
+
 suppoRt::save_ggplot(plot = gg_var_synch$noise, filename = paste0("Figure-2", extension),
                      path = "04_Figures/", width = height, height = width * 0.75,
-                     units = units, dpi = dpi, overwrite = FALSE)
+                     units = units, dpi = dpi, overwrite = overwrite)
 
-# suppoRt::save_ggplot(plot = gg_var_synch$phase, filename = paste0("Figure-2", extension),
-#                      path = "04_Figures/Appendix/", width = height, height = width * 0.75,
-#                      units = units, dpi = dpi, overwrite = FALSE)
+suppoRt::save_ggplot(plot = gg_var_synch$phase, filename = paste0("Figure-A1", extension),
+                     path = "04_Figures/Appendix/", width = height, height = width * 0.75,
+                     units = units, dpi = dpi, overwrite = overwrite)
 # 
 # ##--------------------------------------------##
 # ##    Author: Maximilian H.K. Hesselbarth     ##

@@ -126,7 +126,7 @@ gg_scenario_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scena
       importance_temp_df <- dplyr::filter(importance_df,  scenario == scenario_i,
                                           measure == measure_i, part == part_i, response == "cv")
       
-      label_part <- ""
+      # label_part <- ""
       
       if (part_i == "ag_production" & measure_i == "gamma") label_part <-  "Aboveground"
       if (part_i == "bg_production" & measure_i == "gamma") label_part <-  "Belowground"
@@ -159,9 +159,9 @@ gg_scenario_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scena
         labs(x = "", y = "") +
         theme_classic(base_size = size_base) + 
         theme(strip.background = element_blank(), strip.text = element_blank(), 
-              axis.line = element_blank(), panel.border = element_rect(size = 0.5, fill = NA),
+              axis.line = element_blank(), panel.border = element_rect(size = 0.25, fill = NA),
               legend.position = "none",
-              plot.margin = margin(t = 5.5, r = 0.0, b = 5.5, l = 5.5, unit = "pt"))
+              plot.margin = margin(t = 5.5, r = 0.5, b = 5.5, l = 5.5, unit = "pt"))
       
       gg_relimp <- ggplot(data = importance_temp_df) + 
         
@@ -178,12 +178,12 @@ gg_scenario_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scena
         theme(strip.background = element_blank(), strip.text = element_blank(), 
               axis.line = element_blank(), panel.border = element_rect(size = 0.5, fill = NA),
               legend.position = "none",
-              plot.margin = margin(t = 5.5, r = 5.5, b = 5.5, l = 0.0, unit = "pt"))
+              plot.margin = margin(t = 5.5, r = 5.5, b = 5.5, l = 0.5, unit = "pt"))
       
       cowplot::plot_grid(gg_regression, gg_relimp, ncol = 2, rel_widths = c(0.5, 0.5)) |> 
         cowplot::ggdraw(xlim = c(0, 1.05)) +
         cowplot::draw_label(label = label_part, x = 1.0, y = 0.75, vjust = -0.5, angle = 270, 
-                            size = size_base * 0.8)
+                            size = size_base * 1.0)
       
     })
   }) |> purrr::flatten()
@@ -194,8 +194,8 @@ gg_scenario_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scena
     cowplot::draw_label("Population size", x = 0.5, y = 0, angle = 0, size = size_base) + 
     cowplot::draw_label("Parameter estimate / Relative importance [%]", x = 0.0, y = 0.5,
                         angle = 90, size = size_base) +
-    cowplot::draw_label("Local", x = 0.07, y = 1.0, angle = 0, size = size_base * 0.8) + 
-    cowplot::draw_label("Meta-ecosystem", x = 0.6, y = 1.0,  size = size_base * 0.8)
+    cowplot::draw_label("Local", x = 0.25, y = 1.0, angle = 0, size = size_base * 1.0) + 
+    cowplot::draw_label("Meta-ecosystem", x = 0.75, y = 1.0,  size = size_base * 1.0)
   
   cowplot::plot_grid(gg_cv_combined, cowplot::get_legend(gg_dummy),
                      nrow = 2, ncol = 1, rel_heights = c(0.95, 0.05))
@@ -224,7 +224,7 @@ gg_scenario_frac <- purrr::map(c(phase = "phase", noise = "noise"), function(sce
       
       if (part_i == "ag_production" & measure_i == "gamma") label_part <-  "Aboveground"
       if (part_i == "bg_production" & measure_i == "gamma") label_part <-  "Belowground"
-      if (part_i == "ttl_production" & measure_i == "gamma") label_part <- "Total         "
+      if (part_i == "ttl_production" & measure_i == "gamma") label_part <- "Total      "
      
       gg_regression <- ggplot(data = regression_temp_df) + 
         
@@ -255,10 +255,10 @@ gg_scenario_frac <- purrr::map(c(phase = "phase", noise = "noise"), function(sce
         # labels and themes
         labs(x = "", y = "") +
         theme_classic(base_size = size_base) + 
-        theme(strip.background = element_blank(), strip.text = element_blank(), 
-              axis.line = element_blank(), panel.border = element_rect(size = 0.5, fill = NA),
+        theme(strip.background = element_blank(), strip.text = element_text(hjust = 0), 
+              axis.line = element_blank(), panel.border = element_rect(size = 0.25, fill = NA),
               legend.position = "none",
-              plot.margin = margin(t = 5.5, r = 0.0, b = 5.5, l = 5.5, unit = "pt"))
+              plot.margin = margin(t = 5.5, r = 0.5, b = 5.5, l = 5.5, unit = "pt"))
       
       gg_relimp <- ggplot(data = importance_temp_df) + 
         
@@ -275,15 +275,15 @@ gg_scenario_frac <- purrr::map(c(phase = "phase", noise = "noise"), function(sce
         # labels and themes
         labs(x = "", y = "") +
         theme_classic(base_size = size_base) + 
-        theme(strip.background = element_blank(), strip.text = element_blank(), 
+        theme(strip.background = element_blank(), strip.text = element_text(hjust = 0), 
               axis.line = element_blank(), panel.border = element_rect(size = 0.5, fill = NA),
               legend.position = "none",
-              plot.margin = margin(t = 5.5, r = 5.5, b = 5.5, l = 0.0, unit = "pt"))
+              plot.margin = margin(t = 5.5, r = 5.5, b = 5.5, l = 0.5, unit = "pt"))
       
       cowplot::plot_grid(gg_regression, gg_relimp, ncol = 2, rel_widths = c(0.5, 0.5)) |> 
         cowplot::ggdraw(xlim = c(0, 1.05)) +
-        cowplot::draw_label(label = label_part, x = 1.0, y = 0.8, vjust = -0.5, angle = 270, 
-                            size = size_base * 0.8)
+        cowplot::draw_label(label = label_part, x = 1.0, y = 0.75, vjust = -0.5, angle = 270, 
+                            size = size_base * 1.0)
       
     })
   }) |> purrr::flatten()
@@ -294,8 +294,8 @@ gg_scenario_frac <- purrr::map(c(phase = "phase", noise = "noise"), function(sce
     cowplot::draw_label("Population size", x = 0.5, y = 0, angle = 0, size = size_base) + 
     cowplot::draw_label("Parameter estimate / Relative importance [%]", x = 0.0, y = 0.5,
                         angle = 90, size = size_base) +
-    cowplot::draw_label("Local", x = 0.07, y = 1.0, angle = 0, size = size_base * 0.8) + 
-    cowplot::draw_label("Meta-ecosystem", x = 0.6, y = 1.0,  size = size_base * 0.8)
+    cowplot::draw_label("Local", x = 0.25, y = 1.0, angle = 0, size = size_base * 1.0) + 
+    cowplot::draw_label("Meta-ecosystem", x = 0.75, y = 1.0,  size = size_base * 1.0)
   
   gg_frac_combined <- cowplot::plot_grid(gg_frac_combined, cowplot::get_legend(gg_dummy),
                                          nrow = 2, ncol = 1, rel_heights = c(0.95, 0.05))
@@ -304,23 +304,26 @@ gg_scenario_frac <- purrr::map(c(phase = "phase", noise = "noise"), function(sce
 
 #### Save plot ####
 
-# overwrite <- FALSE
+overwrite <- T
 
 # CV
-# suppoRt::save_ggplot(plot = gg_scenario_cv$phase, filename = paste0("Figure-2", extension),
-#                      path = "04_Figures/", width = height, height = width * 0.7,
-#                      units = units, dpi = dpi, overwrite = overwrite)
 
 suppoRt::save_ggplot(plot = gg_scenario_cv$noise, filename = paste0("Figure-3", extension),
                      path = "04_Figures/", width = height, height = width * 0.75,
                      units = units, dpi = dpi, overwrite = FALSE)
 
+suppoRt::save_ggplot(plot = gg_scenario_cv$phase, filename = paste0("Figure-A2", extension),
+                     path = "04_Figures/Appendix", width = height, height = width * 0.7,
+                     units = units, dpi = dpi, overwrite = overwrite)
+
 # separated
 
-# suppoRt::save_ggplot(plot = gg_scenario_frac$phase, filename = paste0("Figure-A3", extension),
-#                      path = "04_Figures/Appendix/", width = width, height = height * 0.85,
-#                      units = units, dpi = dpi, overwrite = overwrite)
+suppoRt::save_ggplot(plot = gg_scenario_frac$noise, filename = paste0("Figure-A3", extension),
+                     path = "04_Figures/Appendix/", width = width, height = height * 0.85,
+                     units = units, dpi = dpi, overwrite = overwrite)
 
-# suppoRt::save_ggplot(plot = gg_scenario_frac$noise, filename = paste0("Figure-A4", extension),
-#                      path = "04_Figures/Appendix/", width = width, height = height * 0.85,
-#                      units = units, dpi = dpi, overwrite = overwrite)
+
+suppoRt::save_ggplot(plot = gg_scenario_frac$phase, filename = paste0("Figure-A4", extension),
+                     path = "04_Figures/Appendix/", width = width, height = height * 0.85,
+                     units = units, dpi = dpi, overwrite = overwrite)
+
