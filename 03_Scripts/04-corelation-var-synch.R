@@ -96,7 +96,7 @@ gg_var_synch <- purrr::map(c("phase", "noise"), function(i) {
     p <- ggplot(data = data_temp, aes(x = value.var, y = value.cv, color = variability)) + 
       
       # adding geoms
-      geom_point(shape = 1, alpha = 0.5) + 
+      geom_point(shape = 1, alpha = 0.25) + 
       geom_smooth(method = "lm", formula = "y ~ x", se = FALSE, size = 0.5) +
       
       # adding labels
@@ -204,7 +204,7 @@ names(gg_var_synch) <- c("phase", "noise")
 
 ##### Save plots ####
 
-overwrite <- FALSE
+overwrite <- TRUE
 
 suppoRt::save_ggplot(plot = gg_var_synch$noise, filename = paste0("Figure-2", extension),
                      path = "04_Figures/", width = height, height = width * 0.75,

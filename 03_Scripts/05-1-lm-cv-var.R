@@ -99,9 +99,10 @@ color_scale <- c("biotic" = "#41b282", "abiotic" = "#007aa1", "biotic:abiotic" =
 gg_dummy <- data.frame(beta = c("biotic", "abiotic", "biotic:abiotic", "residual"),
                        mean = c(1, 1, 1, 1)) |> 
   dplyr::mutate(beta = factor(beta, levels = c("biotic", "abiotic", "biotic:abiotic", "residual"))) |> 
+  dplyr::filter(beta != "biotic:abiotic") |> 
   ggplot() + 
   geom_col(aes(x = beta, y = mean, fill = beta)) + 
-  scale_fill_manual(name = "", values = color_scale, 
+  scale_fill_manual(name = "", values = color_scale[-3], 
                     labels = c("biotic" = "Consumer behavior", "abiotic" = "Abiotic subsidies", 
                                "biotic:abiotic" = "Interaction Behavior:Subsidies", "residual" = "Residuals")) +
   guides(fill = guide_legend(order = 1), colour = guide_legend(order = 2)) +
@@ -121,10 +122,12 @@ gg_scenario_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scena
     purrr::map(c("ag_production", "bg_production", "ttl_production"), function(part_i) {
       
       regression_temp_df <- dplyr::filter(regression_df, scenario == scenario_i,
-                                          measure == measure_i, part == part_i, response == "cv")
+                                          measure == measure_i, part == part_i, response == "cv", 
+                                          term %in% c("biotic", "abiotic"))
       
       importance_temp_df <- dplyr::filter(importance_df,  scenario == scenario_i,
-                                          measure == measure_i, part == part_i, response == "cv")
+                                          measure == measure_i, part == part_i, response == "cv", 
+                                          beta %in% c("biotic", "abiotic", "residual"))
       
       
       if (measure_i == "gamma") { 
@@ -222,10 +225,12 @@ gg_scenario_frac <- purrr::map(c(phase = "phase", noise = "noise"), function(sce
     purrr::map(c("ag_production", "bg_production", "ttl_production"), function(part_i) {
       
       regression_temp_df <- dplyr::filter(regression_df, scenario == scenario_i,
-                                          measure == measure_i, part == part_i, response != "cv")
-      
+                                          measure == measure_i, part == part_i, response != "cv", 
+                                          term %in% c("biotic", "abiotic"))
+    
       importance_temp_df <- dplyr::filter(importance_df, scenario == scenario_i,
-                                          measure == measure_i, part == part_i, response != "cv")
+                                          measure == measure_i, part == part_i, response != "cv", 
+                                          beta %in% c("biotic", "abiotic", "residual"))
       
       if (measure_i == "gamma") { 
         if (part_i == "ag_production") {
@@ -325,18 +330,18 @@ suppoRt::save_ggplot(plot = gg_scenario_cv$noise, filename = paste0("Figure-3", 
                      path = "04_Figures/", width = height, height = width * 0.75,
                      units = units, dpi = dpi, overwrite = overwrite)
 
-suppoRt::save_ggplot(plot = gg_scenario_cv$phase, filename = paste0("Figure-A2", extension),
-                     path = "04_Figures/Appendix", width = height, height = width * 0.7,
-                     units = units, dpi = dpi, overwrite = overwrite)
+# suppoRt::save_ggplot(plot = gg_scenario_cv$phase, filename = paste0("Figure-A2", extension),
+#                      path = "04_Figures/Appendix", width = height, height = width * 0.7,
+#                      units = units, dpi = dpi, overwrite = overwrite)
 
 # separated
 
-suppoRt::save_ggplot(plot = gg_scenario_frac$noise, filename = paste0("Figure-A3", extension),
+suppoRt::save_ggplot(plot = gg_scenario_frac$noise, filename = paste0("Figure-A1", extension),
                      path = "04_Figures/Appendix/", width = width, height = height * 0.85,
                      units = units, dpi = dpi, overwrite = overwrite)
 
 
-suppoRt::save_ggplot(plot = gg_scenario_frac$phase, filename = paste0("Figure-A4", extension),
-                     path = "04_Figures/Appendix/", width = width, height = height * 0.85,
-                     units = units, dpi = dpi, overwrite = overwrite)
+# suppoRt::save_ggplot(plot = gg_scenario_frac$phase, filename = paste0("Figure-A4", extension),
+#                      path = "04_Figures/Appendix/", width = width, height = height * 0.85,
+#                      units = units, dpi = dpi, overwrite = overwrite)
 

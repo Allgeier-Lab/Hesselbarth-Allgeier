@@ -86,8 +86,8 @@ importance_df <- purrr::map_dfr(results_combined_list, function(temp_df) {
 # color_term <- c("biotic" = "#00af73", "abiotic" = "#006d9a", "biotic:abiotic" = "#ffaa3a", 
 #                 "cv" = "#ff3b18")
 
-color_term <- c("biotic" = "#00af73", "abiotic" = "#006d9a", "biotic:abiotic" = "#ffaa3a", 
-                "residuals" = "grey")
+color_term <- c("biotic" = "#00af73", "abiotic" = "#006d9a", 
+                "biotic:abiotic" = "#ffaa3a", "residuals" = "grey")
 
 size_point <- 5
 size_line <- 0.75
@@ -100,50 +100,58 @@ width_pos <- 0.65
 
 #### Create ggplot model parameters ####
 
-gg_coef_scenario <- ggplot(data = dplyr::filter(regression_df, term %in% c("biotic", "abiotic",
-                                                                           "biotic:abiotic"))) + 
+gg_coef_scenario <- purrr::map(c("phase", "noise"), function(scenario_i) {
   
-  # adding geoms
-  geom_hline(yintercept = 0.0, linetype = 2, color = "grey") +
-  geom_linerange(aes(x = pop_n, ymin = 0.0, ymax = estimate, color = term),
-                 position = position_dodge(width = width_pos), size = size_line) +
-  geom_point(aes(x = pop_n, y = estimate, fill = term, color = term, shape = direction),
-             position = position_dodge(width = width_pos), size = size_point * 0.75) +
-  geom_text(aes(x = pop_n, y = estimate, label = p.value, group = term), position = position_dodge(width = width_pos), 
-            vjust = 0.75, size = size_text, color = "white") +
+  ggplot(data = dplyr::filter(regression_df, scenario == scenario_i, 
+                              term %in% c("biotic", "abiotic"))) + 
+    
+    # adding geoms
+    geom_hline(yintercept = 0.0, linetype = 2, color = "grey") +
+    geom_linerange(aes(x = pop_n, ymin = 0.0, ymax = estimate, color = term),
+                   position = position_dodge(width = width_pos), size = size_line) +
+    geom_point(aes(x = pop_n, y = estimate, fill = term, color = term, shape = direction),
+               position = position_dodge(width = width_pos), size = size_point * 0.75) +
+    geom_text(aes(x = pop_n, y = estimate, label = p.value, group = term), position = position_dodge(width = width_pos), 
+              vjust = 0.75, size = size_text, color = "white") +
+    
+    # facet gridding
+    facet_grid(rows = dplyr::vars(part), # cols = dplyr::vars(scenario),
+               labeller = labeller(part = c("ag_production" = "Aboveground", "bg_production" = "Belowground", 
+                                            "ttl_production" = "Total"), 
+                                   scenario = c("phase" = "Phase scenario","noise" = "Noise scenario"))) +
+    
+    # set scales and labs
+    scale_color_manual(name = "", values = color_term[c(1,2)], 
+                       labels = c("biotic" = "Consumer behavior", "abiotic" =  "Abiotic subsidies", 
+                                  "biotic:abiotic" =  "Interaction Behavior:Subsidies", "residuals" = "Residuals")) +
+    scale_fill_manual(name = "", values =  color_term[c(1,2)],
+                      labels = c("biotic" = "Consumer behavior", "abiotic" =  "Abiotic subsidies", 
+                                 "biotic:abiotic" =  "Interaction Behavior:Subsidies", "residuals" = "Residuals")) +
+    scale_shape_manual(name = "", values = c("decrease" = 25, "increase" = 24)) +
+    coord_flip() +
+    scale_x_discrete(limits = rev(levels(regression_df$pop_n))) +
+    scale_y_continuous(limits = function(x) range(x), labels = function(x) round(x, 2),
+                       breaks = function(x) seq(quantile(x, 0.1), quantile(x, 0.9), length.out = 4)) +
+    
+    # setup theme
+    labs(x = "Population size", y = "Parameter estimate") +
+    guides(color = guide_legend(order = 1, override.aes = list(shape = 17)), 
+           fill = "none", shape = guide_legend(order = 2)) +
+    theme_classic(base_size = size_base) + 
+    theme(axis.line = element_blank(), panel.border = element_rect(size = 0.5, fill = NA),
+          strip.background = element_blank(), strip.text = element_text(hjust = 0.5),
+          legend.position = "bottom",
+          plot.margin = margin(t = 5.5, r = 5.5, b = 5.5, l = 5.5, unit = "pt"))
   
-  # facet gridding
-  facet_grid(rows = dplyr::vars(part), cols = dplyr::vars(scenario),
-             labeller = labeller(part = c("ag_production" = "Aboveground", "bg_production" = "Belowground", 
-                                          "ttl_production" = "Total"), 
-                                 scenario = c("phase" = "Phase scenario","noise" = "Noise scenario"))) +
-  
-  # set scales and labs
-  scale_color_manual(name = "", values = color_term[-4], 
-                     labels = c("biotic" = "Consumer behavior", "abiotic" =  "Abiotic subsidies", 
-                                "biotic:abiotic" =  "Interaction Behavior:Subsidies", "residuals" = "Residuals")) +
-  scale_fill_manual(name = "", values = color_term[-4], 
-                    labels = c("biotic" = "Consumer behavior", "abiotic" =  "Abiotic subsidies", 
-                               "biotic:abiotic" =  "Interaction Behavior:Subsidies", "residuals" = "Residuals")) +
-  scale_shape_manual(name = "", values = c("decrease" = 25, "increase" = 24)) +
-  coord_flip() +
-  scale_x_discrete(limits = rev(levels(regression_df$pop_n))) +
-  scale_y_continuous(limits = function(x) range(x), labels = function(x) round(x, 2),
-                     breaks = function(x) seq(quantile(x, 0.1), quantile(x, 0.9), length.out = 4)) +
-  
-  # setup theme
-  labs(x = "Population size", y = "Parameter estimate") +
-  guides(color = guide_legend(order = 1, override.aes = list(shape = 17)), 
-         fill = "none", shape = guide_legend(order = 2)) +
-  theme_classic(base_size = size_base) + 
-  theme(axis.line = element_blank(), panel.border = element_rect(size = 0.5, fill = NA),
-        strip.background = element_blank(), strip.text = element_text(hjust = 0),
-        legend.position = "bottom", 
-        plot.margin = margin(t = 5.5, r = 5.5, b = 5.5, l = 5.5, unit = "pt"))
+})
+
+names(gg_coef_scenario) <- c("phase", "noise")
 
 #### Create ggplot relative importance ####
 
-gg_relimp_scenario <- ggplot(data = importance_df) + 
+gg_relimp_scenario <- purrr::map(c("phase", "noise"), function(scenario_i) {
+  
+  ggplot(data = dplyr::filter(importance_df, scenario == scenario_i)) + 
     
   # relative importance bars
   geom_col(aes(x = pop_n, y = mean * 100, fill = beta)) + 
@@ -153,7 +161,7 @@ gg_relimp_scenario <- ggplot(data = importance_df) +
   scale_y_continuous(labels = function(x) paste0(x, "%")) + 
   
   # facet gridding
-  facet_grid(rows = dplyr::vars(part), cols = dplyr::vars(scenario),
+  facet_grid(rows = dplyr::vars(part), # cols = dplyr::vars(scenario),
              labeller = labeller(part = c("ag_production" = "Aboveground", "bg_production" = "Belowground", 
                                           "ttl_production" = "Total"), 
                                  scenario = c("phase" = "Phase scenario","noise" = "Noise scenario"))) +
@@ -161,23 +169,34 @@ gg_relimp_scenario <- ggplot(data = importance_df) +
   # setup theme
   labs(x = "Population size", y = "Parameter estimate") +
   theme_classic(base_size = size_base) + 
-  theme(strip.background = element_blank(), strip.text = element_text(hjust = 0), 
+  theme(strip.background = element_blank(), strip.text = element_text(hjust = 0.5), 
         axis.line = element_blank(), panel.border = element_rect(size = 0.5, fill = NA),
         legend.position = "bottom",
         plot.margin = margin(t = 5.5, r = 5.5, b = 5.5, l = 5.5, unit = "pt"))
+
+})
+
+names(gg_relimp_scenario) <- c("phase", "noise")
 
 #### Save plot ####
 
 overwrite <- FALSE
 
-# Coef
-
-suppoRt::save_ggplot(plot = gg_coef_scenario, filename = paste0("Figure-4", extension),
-                     path = "04_Figures/", width = width, height = height * 0.65,
-                     units = units, dpi = dpi, overwrite = FALSE)
+suppoRt::save_ggplot(plot = gg_coef_scenario$noise, filename = paste0("Figure-4", extension),
+                     path = "04_Figures/", width = width * 0.6, height = height * 0.65,
+                     units = units, dpi = dpi, overwrite = overwrite)
 
 # Rel importance
 
-# suppoRt::save_ggplot(plot = gg_relimp_scenario, filename = paste0("Figure-A5", extension),
-#                      path = "04_Figures/Appendix/", width = width, height = height * 0.85,
+# suppoRt::save_ggplot(plot = gg_coef_scenario$phase, filename = paste0("Figure-A5", extension),
+#                      path = "04_Figures/Appendix/", width = width * 0.65, height = height * 0.75,
 #                      units = units, dpi = dpi, overwrite = overwrite)
+
+suppoRt::save_ggplot(plot = gg_relimp_scenario$noise, filename = paste0("Figure-A2", extension),
+                     path = "04_Figures/Appendix/", width = width * 0.65, height = height * 0.65,
+                     units = units, dpi = dpi, overwrite = overwrite)
+
+# suppoRt::save_ggplot(plot = gg_relimp_scenario$phase, filename = paste0("Figure-A7", extension),
+#                      path = "04_Figures/Appendix/", width = width * 0.65, height = height * 0.75,
+#                      units = units, dpi = dpi, overwrite = overwrite)
+
