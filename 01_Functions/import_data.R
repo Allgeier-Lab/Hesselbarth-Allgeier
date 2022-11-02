@@ -5,7 +5,8 @@ import_data <- function(path) {
       dplyr::left_join(x = j$cv, y = j$prod, by = c("part", "measure", "pop_n", "biotic", "abiotic"), 
                        suffix = c(".cv", ".prod")) |> 
         dplyr::rename("value.cv.sd" = "sd", "value.cv.mn" = "mean") |> 
-        dplyr::mutate(value.move = mean(j$moved$moved, na.rm = TRUE))
+        dplyr::mutate(value.move = mean(j$moved$moved, na.rm = TRUE), 
+                      value.biomass = sum(j$fishpop_init$weight))
     }) |> 
     dplyr::mutate(part = factor(part, levels = c("ag_biomass", "bg_biomass", "ttl_biomass",
                                                  "ag_production", "bg_production", "ttl_production")), 

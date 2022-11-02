@@ -93,7 +93,8 @@ foo_hpc <- function(pop_n, biotic, abiotic) {
                                          lag = c(FALSE, TRUE))[["production"]]
   
   # combine to result data.frame and list
-  list(moved = dplyr::mutate(moved, pop_n = pop_n, biotic = biotic, abiotic = abiotic), 
+  list(fishpop_init = dplyr::mutate(dplyr::bind_rows(metasyst_temp$fishpop), pop_n = pop_n, biotic = biotic, abiotic = abiotic),
+       moved = dplyr::mutate(moved, pop_n = pop_n, biotic = biotic, abiotic = abiotic), 
        cv = dplyr::mutate(dplyr::bind_rows(cv), pop_n = pop_n, biotic = biotic, abiotic = abiotic), 
        prod = dplyr::mutate(dplyr::bind_rows(prod), pop_n = pop_n, biotic = biotic, abiotic = abiotic), 
        prod_time = dplyr::mutate(prod_time, pop_n = pop_n, biotic = biotic, abiotic = abiotic))
