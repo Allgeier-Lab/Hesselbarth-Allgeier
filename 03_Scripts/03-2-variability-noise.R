@@ -35,7 +35,7 @@ starting_values_list$detritus_pool <- stable_values_list$detritus_pool
 
 #### Setup experiment ####
 
-experiment_df <- readRDS("02_Data/00_experiment_df.rds")
+experiment_df <- readRDS("02_Data/experiment-parameters.rds")
 
 #### Init HPC function ####
 
