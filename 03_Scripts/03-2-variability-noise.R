@@ -17,7 +17,7 @@ source("05_Various/setup.R")
 # number of local metaecosystems
 n <- 5 # 5 9
 mem_per_cpu <- "7G" # "7G" "15G"
-time <- "02:00:00" # hh:mm::ss # "02:00:00" "05:00:00"
+time <- "04:00:00" # hh:mm::ss # "02:00:00" "05:00:00"
 
 # # save results only every m days
 # days_save <- 125 # which(max_i %% ((24 / (min_per_i / 60)) * (1:365)) == 0)
