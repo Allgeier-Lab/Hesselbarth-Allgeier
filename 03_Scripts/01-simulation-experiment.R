@@ -16,21 +16,19 @@ source("05_Various/setup.R")
 
 set.seed(42)
 
-reps <- 100
-
-matrix_lhs <- lhs::improvedLHS(n = reps, k = 2, dup = 2)
+matrix_lhs <- lhs::improvedLHS(n = iterations, k = 2, dup = 2)
 
 matrix_lhs[, 1] <- qunif(matrix_lhs[, 1], 0.1, 1.0) 
 
 matrix_lhs[, 2] <- qunif(matrix_lhs[, 2], 0.1, 1.0) 
 
-table(cut(matrix_lhs[, 1], breaks = seq(0.1, 1, 0.1)),
-      cut(matrix_lhs[, 2], breaks = seq(0.1, 1, 0.1)))
+table(cut(matrix_lhs[, 1], breaks = seq(0.1, 1, 0.2)),
+      cut(matrix_lhs[, 2], breaks = seq(0.1, 1, 0.2)))
 
 experiment_df <- tibble::tibble(biotic = matrix_lhs[, 1], 
                                 abiotic = matrix_lhs[, 2]) |> 
   dplyr::slice(rep(x = 1:dplyr::n(), times = 5)) |> 
-  dplyr::mutate(pop_n = rep(x = c(8, 16, 32, 64, 128), each = reps))
+  dplyr::mutate(pop_n = rep(x = c(8, 16, 32, 64, 128), each = iterations))
 
 nrow(experiment_df)
 

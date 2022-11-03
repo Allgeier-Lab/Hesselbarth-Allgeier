@@ -39,13 +39,19 @@ starting_values_list$detritus_pool <- stable_values_list$detritus_pool
 
 experiment_df <- readRDS("02_Data/experiment-parameters.rds")
 
+nutrient_input_cell <- readRDS("02_Data/nutrient_input_cell.rds")
+
+experiment_full_df <- dplyr::slice(experiment_df, rep(x = 1:dplyr::n(), times = 3)) |> 
+  dplyr::mutate(nutrient_input = rep(x = nutrient_input_cell$excretion_cell, 
+                                     each = nrow(experiment_df)))
+
 amplitude_mn <- 0.95
 
 frequency <- years
 
 #### Init HPC function ####
 
-foo_hpc <- function(pop_n, biotic, abiotic) {
+foo_hpc <- function(pop_n, biotic, abiotic, nutrient_input) {
   
   starting_values_list$pop_n <- pop_n
   
@@ -99,22 +105,22 @@ foo_hpc <- function(pop_n, biotic, abiotic) {
                                          lag = c(FALSE, TRUE))[["production"]]
   
   # combine to result data.frame and list
-  list(fishpop_init = dplyr::mutate(dplyr::bind_rows(metasyst_temp$fishpop), pop_n = pop_n, biotic = biotic, abiotic = abiotic), 
-       moved = dplyr::mutate(moved, pop_n = pop_n, biotic = biotic, abiotic = abiotic), 
-       cv = dplyr::mutate(dplyr::bind_rows(cv), pop_n = pop_n, biotic = biotic, abiotic = abiotic), 
-       prod = dplyr::mutate(dplyr::bind_rows(prod), pop_n = pop_n, biotic = biotic, abiotic = abiotic), 
-       prod_time = dplyr::mutate(prod_time, pop_n = pop_n, biotic = biotic, abiotic = abiotic))
+  list(fishpop_init = dplyr::mutate(dplyr::bind_rows(metasyst_temp$fishpop), pop_n = pop_n, biotic = biotic, abiotic = abiotic, nutrient_input = nutrient_input), 
+       moved = dplyr::mutate(moved, pop_n = pop_n, biotic = biotic, abiotic = abiotic, nutrient_input = nutrient_input), 
+       cv = dplyr::mutate(dplyr::bind_rows(cv), pop_n = pop_n, biotic = biotic, abiotic = abiotic, nutrient_input = nutrient_input), 
+       prod = dplyr::mutate(dplyr::bind_rows(prod), pop_n = pop_n, biotic = biotic, abiotic = abiotic, nutrient_input = nutrient_input), 
+       prod_time = dplyr::mutate(prod_time, pop_n = pop_n, biotic = biotic, abiotic = abiotic, nutrient_input = nutrient_input))
   
 }
 
 #### Submit HPC
 
 globals <- c("n", "max_i", "reef_matrix", "starting_values_list", "parameters_list", "dimensions", "grain", # setup_meta
-             "frequency", "nutrient_input", "amplitude_mn", # simulate_nutr_input
+             "frequency", "amplitude_mn", # simulate_nutr_input
              "min_per_i", "seagrass_each", "save_each", # run_simulation_meta
              "years", "years_filter") # filter_meta 
 
-sbatch_cv <- rslurm::slurm_apply(f = foo_hpc, params = experiment_df, 
+sbatch_cv <- rslurm::slurm_apply(f = foo_hpc, params = experiment_full_df, 
                                  global_objects = globals, jobname = "phase_sd",
                                  nodes = nrow(experiment_df), cpus_per_node = 1, 
                                  slurm_options = list("account" = account, 
