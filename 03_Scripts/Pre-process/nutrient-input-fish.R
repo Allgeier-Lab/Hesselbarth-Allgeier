@@ -116,6 +116,15 @@ rslurm::cleanup_files(sbatch_fish)
 
 result_rds <- readr::read_rds("02_Data/nutrient-input-fish.rds")
 
+
+ggplot(data = result_rds, aes(x = factor(pop_n, ordered = TRUE), y = excretion_ttl)) + 
+  geom_boxplot() + 
+  geom_jitter(alpha = 0.25) + 
+  labs(x = "Population size", y = "Total excretion") +
+  scale_y_continuous(breaks = function(x) seq(quantile(x, 0.1), quantile(x, 0.9), length.out = 4), 
+                     labels = function(x) round(x, 3)) +
+  theme_classic()
+
 nutrient_input_cell <- dplyr::group_by(result_rds, pop_n) |> 
   dplyr::summarise(excretion_ttl = mean(excretion_ttl), 
                    excretion_cell = excretion_ttl /  prod(dimensions)) |> 
