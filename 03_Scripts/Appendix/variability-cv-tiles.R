@@ -10,8 +10,8 @@
 
 #### Load setup ####
 
-source("05_Various/setup.R")
-source("01_Functions/import_data.R")
+source("01_Functions/setup.R")
+source("01_Functions/import-data.R")
 
 #### Load/wrangle simulated data ####
 

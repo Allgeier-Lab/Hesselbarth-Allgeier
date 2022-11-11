@@ -10,20 +10,12 @@
 
 #### Load setup ####
 
-source("05_Various/setup.R")
+source("01_Functions/setup.R")
 
 #### Adapt parameters ####
 
-# number of local metaecosystems
-n <- 5 # 5 9
 mem_per_cpu <- "7G" # "7G" "15G"
-time <- "04:00:00" # hh:mm::ss # "02:00:00" "05:00:00"
-
-# # save results only every m days
-# days_save <- 125 # which(max_i %% ((24 / (min_per_i / 60)) * (1:365)) == 0)
-# save_each <- (24 / (min_per_i / 60)) * days_save
-
-# max_i %% save_each
+time <- "05:00:00" # hh:mm::ss # "02:00:00" "05:00:00"
 
 #### Stable values #### 
 
@@ -39,15 +31,11 @@ starting_values_list$detritus_pool <- stable_values_list$detritus_pool
 
 experiment_df <- readRDS("02_Data/experiment-parameters.rds")
 
-nutrient_input_cell <- readRDS("02_Data/nutrient_input_cell.rds")
+nutrient_input_cell <- readRDS("02_Data/nutrient-input-cell.rds")
 
 experiment_full_df <- dplyr::slice(experiment_df, rep(x = 1:dplyr::n(), times = 3)) |> 
   dplyr::mutate(nutrient_input = rep(x = nutrient_input_cell$excretion_cell, 
                                      each = nrow(experiment_df)))
-
-amplitude_mn <- 0.95
-
-frequency <- years
 
 #### Init HPC function ####
 
@@ -71,8 +59,8 @@ foo_hpc <- function(pop_n, biotic, abiotic, nutrient_input) {
   
   # run model
   result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = parameters_list,
-                                                nutrients_input = input_temp, movement = "behav",
-                                                max_i = max_i, min_per_i = min_per_i,
+                                                nutrients_input = input_temp, movement = "behav", 
+                                                torus_diffusion = FALSE, max_i = max_i, min_per_i = min_per_i,
                                                 seagrass_each = seagrass_each, save_each = save_each, 
                                                 verbose = FALSE) |> 
     meta.arrR::filter_meta(filter = c((max_i / years) * years_filter, max_i), 
@@ -122,7 +110,7 @@ globals <- c("n", "max_i", "reef_matrix", "starting_values_list", "parameters_li
 
 sbatch_cv <- rslurm::slurm_apply(f = foo_hpc, params = experiment_full_df, 
                                  global_objects = globals, jobname = "phase_sd",
-                                 nodes = nrow(experiment_df), cpus_per_node = 1, 
+                                 nodes = nrow(experiment_full_df), cpus_per_node = 1, 
                                  slurm_options = list("account" = account, 
                                                       "partition" = "standard",
                                                       "time" = time,
@@ -136,7 +124,7 @@ suppoRt::rslurm_missing(x = sbatch_cv)
 
 cv_result <- rslurm::get_slurm_out(sbatch_cv, outtype = "raw")
 
-suppoRt::save_rds(object = cv_result, path = "02_Data/", overwrite = FALSE,
-                  filename = paste0("result-phase-", n, ".rds"))
+suppoRt::save_rds(object = cv_result, path = "02_Data/", 
+                  overwrite = FALSE, filename = "result-phase.rds")
 
 rslurm::cleanup_files(sbatch_cv)

@@ -10,7 +10,7 @@
 
 #### Load setup ####
 
-source("05_Various/setup.R")
+source("01_Functions/setup.R")
 
 #### Simulate example populations ####
 

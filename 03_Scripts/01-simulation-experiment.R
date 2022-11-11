@@ -10,25 +10,27 @@
 
 #### Load setup ####
 
-source("05_Various/setup.R")
+source("01_Functions/setup.R")
 
 #### Setup experiment ####
+
+pop_n <- c(8, 16, 32, 64, 128)
 
 set.seed(42)
 
 matrix_lhs <- lhs::improvedLHS(n = iterations, k = 2, dup = 2)
 
-matrix_lhs[, 1] <- qunif(matrix_lhs[, 1], 0.1, 1.0) 
+matrix_lhs[, 1] <- qunif(matrix_lhs[, 1], 0.0, 1.0) 
 
-matrix_lhs[, 2] <- qunif(matrix_lhs[, 2], 0.1, 1.0) 
+matrix_lhs[, 2] <- qunif(matrix_lhs[, 2], 0.0, 1.0) 
 
 table(cut(matrix_lhs[, 1], breaks = seq(0.1, 1, 0.2)),
       cut(matrix_lhs[, 2], breaks = seq(0.1, 1, 0.2)))
 
 experiment_df <- tibble::tibble(biotic = matrix_lhs[, 1], 
                                 abiotic = matrix_lhs[, 2]) |> 
-  dplyr::slice(rep(x = 1:dplyr::n(), times = 5)) |> 
-  dplyr::mutate(pop_n = rep(x = c(8, 16, 32, 64, 128), each = iterations))
+  dplyr::slice(rep(x = 1:dplyr::n(), times = length(pop_n))) |> 
+  dplyr::mutate(pop_n = rep(x = pop_n, each = iterations))
 
 nrow(experiment_df)
 
@@ -36,8 +38,8 @@ nrow(experiment_df)
 
 ggplot(data = experiment_df) + 
   geom_point(aes(x = biotic, y = abiotic)) + 
-  geom_hline(yintercept = 0.1, color = "grey", linetype = 2) + geom_hline(yintercept = 1.0, color = "grey", linetype = 2) + 
-  geom_vline(xintercept = 0.1, color = "grey", linetype = 2) + geom_vline(xintercept = 1.0, color = "grey", linetype = 2) + 
+  geom_hline(yintercept = 0.0, color = "grey", linetype = 2) + geom_hline(yintercept = 1.0, color = "grey", linetype = 2) + 
+  geom_vline(xintercept = 0.0, color = "grey", linetype = 2) + geom_vline(xintercept = 1.0, color = "grey", linetype = 2) + 
   labs(x = "Diversity consumer behavior", y = "Variability nutrient subsidies") +
   coord_fixed(ratio = 1) + 
   theme_classic()
@@ -47,11 +49,11 @@ purrr::walk(unique(experiment_df$pop_n), function(i) {
   temp_df <- dplyr::filter(experiment_df, pop_n == i)
   
   tab_temp <- table(
-    cut(temp_df$biotic, breaks = seq(0.1, 1, 0.2)),
-    cut(temp_df$abiotic, breaks = seq(0.1, 1, 0.2))
+    cut(temp_df$biotic, breaks = seq(0.0, 1, 0.2)),
+    cut(temp_df$abiotic, breaks = seq(0.0, 1, 0.2))
   )
   
-  if (sum(tab_temp == 0) > 0) warning(paste0(i, "; No parameter for some combination"))
+  if (sum(tab_temp == 0) > 0) warning(paste0(i, "; No parameter for some combination"), call. = FALSE)
   
   message(paste0("Pop = ", i, "; mean = ", round(mean(tab_temp), 2), "; sd = ", round(sd(tab_temp), 2)), 
           "; min = ", min(tab_temp), "; max = ", max(tab_temp))

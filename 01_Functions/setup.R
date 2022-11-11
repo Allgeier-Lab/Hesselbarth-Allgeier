@@ -60,13 +60,11 @@ dimensions <- c(50, 50)
 
 grain <- 1
 
-# # use log size distribution (or not)
-# use_log <- FALSE
-
 # mean amplitude
-# amplitude_mn <- 0.95
+amplitude_mn <- 0.95
 
-# nutrient_input <- 4.693026e-05 # see 00_input-nutr-fish.R
+# number of ecosystems
+n <- 5
 
 #### Setup reef cells ####
 

@@ -10,11 +10,11 @@
 
 #### Load setup ####
 
-source("05_Various/setup.R")
+source("01_Functions/setup.R")
 
 #### Change parameters and starting values ####
 
-parameters_list$nutrients_loss <- 0.0 
+
 
 #### Setup environment #### 
 
@@ -48,7 +48,7 @@ foo <- function(itr, pop_n) {
   # create fishpop
   input_fishpop <- arrR::setup_fishpop(seafloor = input_seafloor, 
                                        starting_values = starting_values_list, parameters = parameters_list,
-                                       use_log = use_log, verbose = FALSE)
+                                       use_log = FALSE, verbose = FALSE)
     
   # run simulation
   result_temp <- arrR::run_simulation(seafloor = input_seafloor, fishpop = input_fishpop,
@@ -66,24 +66,16 @@ foo <- function(itr, pop_n) {
     dplyr::pull(excretion_diff) %>% 
     mean(na.rm = TRUE)
   
-  # # calculate mean consumption per individual and time step
-  # consumption_mn <- dplyr::select(result_temp$fishpop, timestep, id, consumption) |> 
-  #   dplyr::group_by(id) %>% 
-  #   dplyr::mutate(consumption_last = dplyr::lag(consumption), 
-  #                 consumption_diff = (consumption - consumption_last) / save_each) |> 
-  #   dplyr::pull(consumption_diff) %>% 
-  #   mean(na.rm = TRUE)
-  
   data.frame(itr = itr, pop_n = pop_n, excretion_ttl = excretion_ttl)
   
 }
 
 globals <- c("dimensions", "grain", "reef_matrix", "starting_values_list", # input_seafloor
-             "parameters_list", "use_log", # input_fishpop
+             "parameters_list", # input_fishpop
              "max_i", "min_per_i", "seagrass_each", "save_each", # run_simulation
              "years", "years_filter") # filter_mdlrn
 
-input_df <- data.frame(pop_n = rep(x = c(8, 68, 128), each = iterations)) |> 
+input_df <- data.frame(pop_n = rep(x = c(8, median(8:128), 128), each = iterations)) |> 
   dplyr::mutate(itr = 1:dplyr::n(), .before = "pop_n")
 
 #### Submit to HPC ####
@@ -94,10 +86,12 @@ sbatch_fish <- rslurm::slurm_apply(f = foo, params = input_df,
                                    nodes = nrow(input_df), cpus_per_node = 1, 
                                    slurm_options = list("account" = account, 
                                                         "partition" = "standard",
-                                                        "time" = "00:30:00", ## hh:mm::ss
+                                                        "time" = "01:00:00", ## hh:mm::ss
                                                         "mem-per-cpu" = "7G"),
                                    pkgs = c("arrR", "dplyr"), rscript_path = rscript_path,
                                    submit = FALSE)
+
+#### Collect results ####
 
 # check results
 suppoRt::rslurm_missing(sbatch_fish)
@@ -116,7 +110,6 @@ rslurm::cleanup_files(sbatch_fish)
 
 result_rds <- readr::read_rds("02_Data/nutrient-input-fish.rds")
 
-
 ggplot(data = result_rds, aes(x = factor(pop_n, ordered = TRUE), y = excretion_ttl)) + 
   geom_boxplot() + 
   geom_jitter(alpha = 0.25) + 
@@ -131,7 +124,7 @@ nutrient_input_cell <- dplyr::group_by(result_rds, pop_n) |>
   dplyr::mutate(level = c("low", "medium", "high"))
 
 # save results to disk
-suppoRt::save_rds(object = nutrient_input_cell, file = "02_Data/nutrient_input_cell.rds", 
+suppoRt::save_rds(object = nutrient_input_cell, file = "02_Data/nutrient-input-cell.rds", 
                   overwrite = FALSE)
 
 # # calculate nutrients loss parameter: nutrients_loss = nutrients_input / nutrients_pool

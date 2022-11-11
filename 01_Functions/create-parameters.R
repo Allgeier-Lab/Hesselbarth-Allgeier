@@ -24,19 +24,19 @@ parameters_list <- list(
   ag_gamma = 0.0144,
   
   # seagrass
-  seagrass_thres = -1/4,
+  seagrass_thres = -0.25,
   seagrass_slope = 2.0,
-  seagrass_slough = 0.001, # 0.001
+  seagrass_slough = 0.01,
   
   # nutrients
-  nutrients_diffusion = 2/3,
-  nutrients_loss = 0.01, # 0.02423493
+  nutrients_diffusion = 0.5,
+  nutrients_loss = 0.0,
   
   # detritus
-  detritus_mineralization = 0.001,
-  detritus_diffusion = 1/3,
+  detritus_mineralization = 0.01,
+  detritus_diffusion = 0.01,
   detritus_fish_decomp = 0.5,
-  detritus_fish_diffusion = 1/3,
+  detritus_fish_diffusion = 0.01,
   detritus_loss = 0.0,
   
   # fishpop movement
