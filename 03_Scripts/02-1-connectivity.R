@@ -10,13 +10,11 @@
 
 #### Load setup ####
 
-source("05_Various/setup.R")
-
-n <- 5
+source("01_Functions/setup.R")
 
 #### Adapt parameters ####
 
-parameters_list$nutrients_loss <- 0.0
+
 
 #### Stable values #### 
 
@@ -30,9 +28,7 @@ starting_values_list$detritus_pool <- stable_values_list$detritus_pool
 
 #### Setup experiment ####
 
-reps <- 50
-
-matrix_lhs <- lhs::improvedLHS(n = reps, k = 1, dup = 2)
+matrix_lhs <- lhs::improvedLHS(n = iterations, k = 1, dup = 2)
 
 matrix_lhs[, 1] <- qunif(matrix_lhs[, 1], 0.1, 1.0) 
 
@@ -42,7 +38,7 @@ experiment_df <- tibble::tibble(move_meta_sd = matrix_lhs[, 1]) |>
 # setup metaecosystems
 metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = reef_matrix,
                                        starting_values = starting_values_list, parameters = parameters_list,
-                                       dimensions = dimensions, grain = grain, use_log = use_log, 
+                                       dimensions = dimensions, grain = grain, use_log = FALSE, 
                                        verbose = FALSE)
 
 foo_hpc <- function(move_meta_sd) {

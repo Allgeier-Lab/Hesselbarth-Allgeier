@@ -10,16 +10,16 @@
 
 #### Load setup ####
 
-source("05_Various/setup.R")
-source("01_Functions/import_data.R")
+source("01_Functions/setup.R")
+source("01_Functions/import-cv.R")
 
 #### Load data####
 
 n <- 5
 
-phase_df <- import_data(path = paste0("02_Data/result-phase-", n, ".rds"))
+phase_df <- import_cv(path = paste0("02_Data/result-phase-", n, ".rds"))
 
-noise_df <- import_data(path =  paste0("02_Data/result-noise-", n, ".rds"))
+noise_df <- import_cv(path =  paste0("02_Data/result-noise-", n, ".rds"))
 
 #### Wrangle data ####
 

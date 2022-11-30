@@ -10,19 +10,15 @@
 
 #### Load setup ####
 
-source("05_Various/setup.R")
+source("01_Functions/setup.R")
 
 #### Adapt parameters ####
 
-amplitude_mn <- 0.95
-
-frequency <- years
-
 variability <- 0.75
 
-n <- 5
-
 years_filter <- 45
+
+nutrient_input <- 1.0
 
 #### Stable values #### 
 
@@ -58,15 +54,13 @@ line_color <- MetBrewer::met.brewer(name = "Java", n = n, type = "discrete")
 
 base_size <- 7.5
 
-extension <- ".png"
-
 #### Create ggplot local ####
 
 gg_local <- ggplot(data = input_values_noise, aes(x = timestep, y = value, color = meta)) +
 
   # adding geoms
   geom_hline(yintercept = nutrient_input, linetype = 2, size = line_size, color = "grey") +
-  geom_line(size = line_size) +
+  geom_line(linewidth = line_size) +
 
   # set scales
   scale_x_continuous(breaks = breaks_x) +
@@ -84,7 +78,7 @@ gg_meta <- ggplot(data = input_values_meta, aes(x = timestep, y = value)) +
   
   # adding geoms
   geom_hline(yintercept = nutrient_input * n, linetype = 2, size = line_size, color = "grey") +
-  geom_line(size = line_size, color = "#32b2daff") +
+  geom_line(linewidth = line_size, color = "#32b2daff") +
   
   # set scales
   scale_x_continuous(breaks = breaks_x) +
@@ -105,6 +99,6 @@ gg_input_curves <- cowplot::ggdraw(gg_input_curves, ylim = c(-0.05, 1.0)) +
 
 #### Save result ####
 
-suppoRt::save_ggplot(plot = gg_input_curves, filename = paste0("Figure-1-nutr", extension),
+suppoRt::save_ggplot(plot = gg_input_curves, filename = paste0("Figure-1-nutr.png"),
                      path = "04_Figures/", width = 85, height = 35,
                      units = units, dpi = dpi, overwrite = FALSE)

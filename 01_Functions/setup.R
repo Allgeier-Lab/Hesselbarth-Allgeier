@@ -40,7 +40,7 @@ years <- 50
 max_i <- (60 * 24 * 365 * years) / min_per_i
 
 # set frequency to once a year
-frequency <- years
+frequency <- years # / 2
 
 # run seagrass only 1 day
 days_seagrass <- 1
@@ -60,13 +60,8 @@ dimensions <- c(50, 50)
 
 grain <- 1
 
-# use log size distribution (or not)
-use_log <- FALSE
-
-# mean amplitude
-amplitude_mn <- 0.95
-
-nutrient_input <- 4.693026e-05 # see 00_input-nutr-fish.R
+# number of ecosystems
+n <- 5
 
 #### Setup reef cells ####
 

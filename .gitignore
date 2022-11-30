@@ -7,3 +7,4 @@
 04_Figures/
 05_Various/install-meta.arrR.R
 _rslurm_*/
+*.rds
