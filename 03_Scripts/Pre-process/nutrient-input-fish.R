@@ -14,7 +14,7 @@ source("01_Functions/setup.R")
 
 #### Change parameters and starting values ####
 
-
+# nothing to change
 
 #### Setup environment #### 
 
@@ -58,15 +58,11 @@ foo <- function(itr, pop_n) {
     arrR::filter_mdlrn(filter = c((max_i / years) * years_filter, max_i), reset = TRUE)
   
   # calculate total excretion per time step averaged over all time steps
-  excretion_ttl <- dplyr::select(result_temp$fishpop, timestep, id, excretion) |> 
-    dplyr::group_by(timestep) %>% 
-    dplyr::summarise(excretion = sum(excretion, na.rm = TRUE), .groups = "drop") |> 
-    dplyr::mutate(excretion_last = dplyr::lag(excretion), 
-                  excretion_diff = (excretion - excretion_last) / save_each) |> 
-    dplyr::pull(excretion_diff) %>% 
-    mean(na.rm = TRUE)
+  excretion_ttl <- dplyr::filter(result_temp$fishpop, timestep == max(timestep)) |> 
+    dplyr::pull(excretion) |> 
+    sum() / (max_i - ((max_i / years) * years_filter))
   
-  data.frame(itr = itr, pop_n = pop_n, excretion_ttl = excretion_ttl)
+  data.frame(itr = itr, pop_n = pop_n, excretion_ttl = excretion_ttl, excretion_cell = excretion_ttl / prod(dimensions))
   
 }
 
@@ -75,7 +71,7 @@ globals <- c("dimensions", "grain", "reef_matrix", "starting_values_list", # inp
              "max_i", "min_per_i", "seagrass_each", "save_each", # run_simulation
              "years", "years_filter") # filter_mdlrn
 
-input_df <- data.frame(pop_n = rep(x = c(8, median(8:128), 128), each = iterations)) |> 
+input_df <- data.frame(pop_n = rep(x = c(8, 16, 32, 64, 128), each = iterations)) |> 
   dplyr::mutate(itr = 1:dplyr::n(), .before = "pop_n")
 
 #### Submit to HPC ####
@@ -105,27 +101,3 @@ suppoRt::save_rds(object = fish_input, file = "02_Data/nutrient-input-fish.rds",
 
 # delete .sh scripts
 rslurm::cleanup_files(sbatch_fish)
-
-#### Results of simulations runs ####
-
-result_rds <- readr::read_rds("02_Data/nutrient-input-fish.rds")
-
-ggplot(data = result_rds, aes(x = factor(pop_n, ordered = TRUE), y = excretion_ttl)) + 
-  geom_boxplot() + 
-  geom_jitter(alpha = 0.25) + 
-  labs(x = "Population size", y = "Total excretion") +
-  scale_y_continuous(breaks = function(x) seq(quantile(x, 0.1), quantile(x, 0.9), length.out = 4), 
-                     labels = function(x) round(x, 3)) +
-  theme_classic()
-
-nutrient_input_cell <- dplyr::group_by(result_rds, pop_n) |> 
-  dplyr::summarise(excretion_ttl = mean(excretion_ttl), 
-                   excretion_cell = excretion_ttl /  prod(dimensions)) |> 
-  dplyr::mutate(level = c("low", "medium", "high"))
-
-# save results to disk
-suppoRt::save_rds(object = nutrient_input_cell, file = "02_Data/nutrient-input-cell.rds", 
-                  overwrite = FALSE)
-
-# # calculate nutrients loss parameter: nutrients_loss = nutrients_input / nutrients_pool
-# (nutrients_loss <- nutrient_input_cell / stable_values_list$nutrients_pool)
