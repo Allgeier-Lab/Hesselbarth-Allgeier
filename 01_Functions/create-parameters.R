@@ -10,15 +10,15 @@
 parameters_list <- list(
   
   # belowground biomass
-  bg_biomass_min = 275.89,
+  bg_biomass_min = 0.0, # 275.89,
   bg_biomass_max = 933.03,
   bg_v_max = 9.8,
   bg_k_m = 178.1,
   bg_gamma = 0.0082,
   
   # aboveground biomass
-  ag_biomass_min = 8.87,
-  ag_biomass_max = 193.01,
+  ag_biomass_min = 0.0, # 8.87,
+  ag_biomass_max = 486.075, # 193.01,
   ag_v_max = 8.1,
   ag_k_m = 12.6,
   ag_gamma = 0.0144,
@@ -29,20 +29,20 @@ parameters_list <- list(
   seagrass_slough = 0.01,
   
   # nutrients
-  nutrients_diffusion = 0.5,
-  nutrients_loss = 0.0,
+  nutrients_diffusion = 0.75,
+  nutrients_loss = 0.01,
   
   # detritus
   detritus_mineralization = 0.01,
-  detritus_diffusion = 0.01,
+  detritus_diffusion = 0.025,
   detritus_fish_decomp = 0.5,
-  detritus_fish_diffusion = 0.01,
+  detritus_fish_diffusion = 0.025,
   detritus_loss = 0.0,
   
   # fishpop movement
   move_mean = 10.0,
   move_sd = 5.0,
-  move_border = 2.0,
+  move_border = 5.0,
   move_reef = 1.0,
   move_return = 15.0,
   move_meta_mean = 0.0,
@@ -81,8 +81,8 @@ parameters_list <- list(
 starting_values_list <- list(
   
   # biomass (mean field data)
-  bg_biomass = 547.01948, # bg,
-  ag_biomass = 37.84915, # ag,
+  bg_biomass = parameters_list$bg_biomass_max * 0.25, # 547.01948, # bg,
+  ag_biomass = parameters_list$ag_biomass_max * 0.25, # 37.84915, # ag,
   
   # nutrients
   nutrients_pool = 0.0,

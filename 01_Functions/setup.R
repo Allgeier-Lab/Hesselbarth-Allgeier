@@ -40,7 +40,7 @@ years <- 50
 max_i <- (60 * 24 * 365 * years) / min_per_i
 
 # set frequency to once a year
-frequency <- years
+frequency <- years # / 2
 
 # run seagrass only 1 day
 days_seagrass <- 1
@@ -59,9 +59,6 @@ years_filter <- 40
 dimensions <- c(50, 50)
 
 grain <- 1
-
-# mean amplitude
-amplitude_mn <- 0.95
 
 # number of ecosystems
 n <- 5
