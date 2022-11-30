@@ -12,6 +12,7 @@
 
 source("01_Functions/setup.R")
 source("01_Functions/import-cv.R")
+source("01_Functions/import-abundance.R")
 
 #### Load simulated data ####
 
@@ -23,11 +24,25 @@ results_combined_df <- dplyr::bind_rows(phase = results_phase_df, noise = result
                                         .id = "scenario") |>
   dplyr::mutate(scenario = factor(scenario, levels = c("phase", "noise")))
 
+#### Load abundance data ####
+
+abundance_phase_df <- import_abundance(path = "02_Data/result-phase.rds") |> 
+  dplyr::filter(pop_n > 0)
+
+abundance_noise_df <- import_abundance(path = "02_Data/result-noise.rds") |> 
+  dplyr::filter(pop_n > 0)
+
+abundance_combined_df <- dplyr::bind_rows(phase = abundance_phase_df, noise = abundance_noise_df,
+                                          .id = "scenario") |>
+  dplyr::mutate(scenario = factor(scenario, levels = c("phase", "noise"))) |> 
+  dplyr::group_by(scenario, row_id, pop_n, nutrient_input) |>
+  dplyr::summarise(abundance_max = max(mean), .groups = "drop")
+
 #### Run total regression model ####
 
 full_lm_df <- dplyr::filter(results_combined_df, measure == "synchrony", 
                             part %in% c("ag_production", "bg_production", "ttl_production"), 
-                            pop_n != 0) |> 
+                            pop_n != 0, include == "yes") |> 
   dplyr::select(-c(measure, fish_biomass, value.sd, value.mn, value.prod, value.connectivity)) |> 
   dplyr::group_by(scenario, part, pop_n, nutrient_input) |> 
   dplyr::group_split() |> 

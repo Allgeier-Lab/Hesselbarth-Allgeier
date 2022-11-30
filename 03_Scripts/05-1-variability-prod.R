@@ -12,7 +12,7 @@
 
 source("01_Functions/setup.R")
 source("01_Functions/import-cv.R")
-source("01_Functions/import-mortality.R")
+source("01_Functions/import-abundance.R")
 
 #### Load/wrangle simulated data ####
 
@@ -24,34 +24,27 @@ results_combined_df <- dplyr::bind_rows(phase = results_phase_df, noise = result
                                         .id = "scenario") |> 
   dplyr::mutate(scenario = factor(scenario, levels = c("phase", "noise")))
 
-#### Load mortality data ####
+#### Load abundance data ####
 
-mortality_phase_df <- import_mortality(path = "02_Data/result-phase.rds") |> 
+abundance_phase_df <- import_abundance(path = "02_Data/result-phase.rds") |> 
   dplyr::filter(pop_n > 0)
 
-mortality_noise_df <- import_mortality(path = "02_Data/result-noise.rds") |> 
+abundance_noise_df <- import_abundance(path = "02_Data/result-noise.rds") |> 
   dplyr::filter(pop_n > 0)
 
-mortality_combined_df <- dplyr::bind_rows(phase = mortality_phase_df, noise = mortality_noise_df, 
-                                          .id = "scenario") |> 
+abundance_combined_df <- dplyr::bind_rows(phase = abundance_phase_df, noise = abundance_noise_df,
+                                          .id = "scenario") |>
   dplyr::mutate(scenario = factor(scenario, levels = c("phase", "noise"))) |> 
-  dplyr::group_by(scenario, row_id, pop_n, nutrient_input) |> 
-  dplyr::summarise(died_total = sum(died_total), .groups = "drop")
+  dplyr::group_by(scenario, row_id, pop_n, nutrient_input) |>
+  dplyr::summarise(abundance_max = max(mean), .groups = "drop")
 
-#### Filter quantiles mortality #### 
+#### Filter abundances/mortality #### 
 
-results_combined_df <- dplyr::group_by(mortality_combined_df, scenario, pop_n, nutrient_input) |> 
-  dplyr::summarise(thres = quantile(died_total, probs = 0.75), .groups = "drop") |> 
-  dplyr::right_join(y = mortality_combined_df, by = c("scenario", "pop_n", "nutrient_input")) |> 
-  dplyr::mutate(include = dplyr::case_when(pop_n == 128 & nutrient_input == "low" & died_total > thres ~ "no", 
-                                           TRUE ~ "yes")) |> 
-  dplyr::select(scenario, row_id, include) |> 
-  dplyr::right_join(y = results_combined_df, by = c("scenario", "row_id"))
-
-# dplyr::filter(results_combined_df, include == "yes") |> 
-#   dplyr::group_by(scenario, pop_n, nutrient_input) |> 
-#   dplyr::summarise(n = dplyr::n() / (4 * 3)) |>  # divide by four because of measures and three because of parts
-#   dplyr::arrange(n)
+results_combined_df <- dplyr::left_join(x = results_combined_df, y = abundance_combined_df, 
+                                        by = c("scenario", "row_id", "pop_n", "nutrient_input")) |> 
+  dplyr::mutate(include = dplyr::case_when(pop_n == 128 & nutrient_input == "low" &
+                                             abundance_max > threshold_abundance ~ "no", 
+                                           TRUE ~ "yes"))
 
 #### Split data #### 
 
@@ -176,4 +169,8 @@ gg_coef_scenario <- purrr::map(c(phase = "phase", noise = "noise"), function(sce
 
 suppoRt::save_ggplot(plot = gg_coef_scenario$noise$ag_production, filename = "Figure-3.pdf",
                      path = "04_Figures/", width = width, height = height * 0.75,
+                     units = units, dpi = dpi, overwrite = FALSE)
+
+suppoRt::save_ggplot(plot = gg_coef_scenario$noise$bg_production, filename = "Figure-A5.pdf",
+                     path = "04_Figures/Appendix/", width = width, height = height * 0.75,
                      units = units, dpi = dpi, overwrite = FALSE)
