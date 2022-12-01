@@ -50,7 +50,7 @@ result_total_df <- dplyr::left_join(x = abundance_combined_df, y = mortality_com
 #### ####
 
 # ggplot
-gg_all <- ggplot(result_total_df, aes(x = abundance_max, y = died_total))  + 
+ggplot(result_total_df, aes(x = abundance_max, y = died_total))  + 
   
   #geoms 
   geom_point(pch = 1) +
@@ -68,9 +68,11 @@ gg_all <- ggplot(result_total_df, aes(x = abundance_max, y = died_total))  +
   theme(strip.background = element_blank(), strip.text = element_text(hjust = 0),
         axis.line = element_blank(), panel.border = element_rect(linewidth = 0.5, fill = NA))
 
-gg_128 <- dplyr::filter(result_total_df, pop_n == 128, nutrient_input == "low") |>
-  dplyr::mutate(group = dplyr::case_when(abundance_max <= 140 ~ "low", TRUE ~ "high"), 
-                group = factor(group, levels = c("low", "high"))) |> 
+threshold <- 135
+
+(gg_128 <- dplyr::filter(result_total_df, pop_n == 128, nutrient_input == "low") |>
+  dplyr::mutate(group = dplyr::case_when(abundance_max <= threshold ~ "low", TRUE ~ "high"),
+                group = factor(group, levels = c("low", "high"))) |>
   
   # ggplot
   ggplot(aes(x = abundance_max, y = died_total))  + 
@@ -78,19 +80,16 @@ gg_128 <- dplyr::filter(result_total_df, pop_n == 128, nutrient_input == "low") 
   # geoms 
   geom_point(pch = 1, alpha = 0.75) +
   geom_smooth(method = "lm", se = FALSE, color = "#6ad5e8") +
-  geom_vline(xintercept = 140, linetype = 2, color = "#f7aa58") +
+  # geom_vline(xintercept = threshold, linetype = 2, color = "#f7aa58") +
 
   # facet_wrap
-  facet_wrap(. ~ group, scales = "free_x") + 
-  
-  # scales
-  scale_color_viridis_d(name = "") + 
+  facet_wrap(. ~ group, scales = "free_x") +
   
   # themes
   labs(x = "Maximum abundance", y = "Maximum total mortality") + 
   theme_classic(base_size = 10) +
-  theme(legend.position = "none", strip.background = element_blank(), strip.text = element_blank(),
-        axis.line = element_blank(), panel.border = element_rect(linewidth = 0.5, fill = NA))
+  theme(strip.background = element_blank(), strip.text = element_blank(),
+        axis.line = element_blank(), panel.border = element_rect(linewidth = 0.5, fill = NA)))
 
 #### Save ggplot ####
 

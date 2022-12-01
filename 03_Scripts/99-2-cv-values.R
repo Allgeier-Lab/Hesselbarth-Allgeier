@@ -23,16 +23,13 @@ results_noise_df <- import_cv(path = "02_Data/result-noise.rds")
 
 results_combined_df <- dplyr::bind_rows(phase = results_phase_df, noise = results_noise_df, 
                                         .id = "scenario") |> 
-  dplyr::mutate(scenario = factor(scenario, levels = c("phase", "noise"))) |> 
-  dplyr::filter(pop_n > 0)
+  dplyr::mutate(scenario = factor(scenario, levels = c("phase", "noise")))
 
 #### Load abundance data ####
 
-abundance_phase_df <- import_abundance(path = "02_Data/result-phase.rds") |> 
-  dplyr::filter(pop_n > 0)
+abundance_phase_df <- import_abundance(path = "02_Data/result-phase.rds")
 
-abundance_noise_df <- import_abundance(path = "02_Data/result-noise.rds") |> 
-  dplyr::filter(pop_n > 0)
+abundance_noise_df <- import_abundance(path = "02_Data/result-noise.rds")
 
 abundance_combined_df <- dplyr::bind_rows(phase = abundance_phase_df, noise = abundance_noise_df,
                                           .id = "scenario") |>
@@ -71,7 +68,7 @@ gg_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i) {
       # geoms
       geom_boxplot(outlier.shape = NA) +
       geom_jitter(alpha = 0.1) +
-      geom_jitter(data = df_extra, aes(x = pop_n, y = value.cv), col = "#ef8a47", alpha = 0.1) +
+      geom_jitter(data = df_extra, aes(x = pop_n, y = value.cv), col = "#ef8a47", alpha = 0.25) +
       geom_text(data = obs_n_temp, aes(x = pop_n, y = 0.0, label = paste0("n=", n)), size = 2.5) +
       
       # facet
@@ -89,10 +86,14 @@ gg_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i) {
   })
 })
 
+#### Save plots ####
+
+overwrite <- FALSE
+
 suppoRt::save_ggplot(plot = gg_cv$noise$ag, filename = "Figure-A2.pdf",
                      path = "04_Figures/Appendix/", width = width, height = height * 0.5,
-                     units = units, dpi = dpi, overwrite = FALSE)
+                     units = units, dpi = dpi, overwrite = overwrite)
 
 suppoRt::save_ggplot(plot = gg_cv$noise$bg, filename = "Figure-A3.pdf",
                      path = "04_Figures/Appendix/", width = width, height = height * 0.5,
-                     units = units, dpi = dpi, overwrite = FALSE)
+                     units = units, dpi = dpi, overwrite = overwrite)
