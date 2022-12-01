@@ -2,8 +2,8 @@ import_cv <- function(path) {
   
   readr::read_rds(path) |> 
     purrr::map_dfr(function(j) {
-      dplyr::left_join(x = j$cv, y = j$prod_cumulative, by = c("part", "measure", "pop_n", "nutrient_input",
-                                                               "biotic", "abiotic"), 
+      dplyr::left_join(x = j$cv, y = j$prod, by = c("part", "measure", "pop_n", "nutrient_input",
+                                                    "biotic", "abiotic"), 
                        suffix = c(".cv", ".prod")) |> 
         dplyr::rename("value.sd" = "sd", "value.mn" = "mean")
     }, .id = "row_id") |> 

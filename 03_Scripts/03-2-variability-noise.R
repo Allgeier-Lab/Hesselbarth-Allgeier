@@ -101,37 +101,57 @@ foo_hpc <- function(pop_n, biotic, abiotic, nutrient_input) {
     dplyr::group_by(meta) |> 
     dplyr::summarise(min = min(abundance), mean = mean(abundance), max = max(abundance))
   
-  # calculate biomass/production
-  prod_cumulative <- meta.arrR::summarize_meta(result = result_temp, biomass = FALSE, production = TRUE, 
-                                               lag = c(FALSE, FALSE))[["production"]] |> 
-    dplyr::filter(timestep == max_i) |>
-    tidyr::pivot_longer(-c(meta, timestep), names_to = "part") |> 
-    dplyr::group_by(part) |> 
-    dplyr::summarise(alpha = mean(value), gamma = sum(value),  .groups = "drop") |> 
-    tidyr::pivot_longer(-part, names_to = "measure", values_to = "value")
+  # # calculate biomass/production
+  # prod <- meta.arrR::summarize_meta(result = result_temp, biomass = FALSE, production = TRUE,
+  #                                   lag = c(NA, FALSE))[["production"]] |>
+  #   dplyr::filter(timestep == max_i) |>
+  #   tidyr::pivot_longer(-c(meta, timestep), names_to = "part") |>
+  #   dplyr::group_by(part) |>
+  #   dplyr::summarise(alpha = mean(value), gamma = sum(value),  .groups = "drop") |>
+  #   tidyr::pivot_longer(-part, names_to = "measure", values_to = "value")
   
-  prod_cumulative_near <- meta.arrR::summarize_meta(result = result_temp_near, biomass = FALSE, production = TRUE, 
-                                                    lag = c(FALSE, FALSE))[["production"]] |> 
-    dplyr::filter(timestep == max_i) |>
+  prod <- meta.arrR::summarize_meta(result = result_temp, biomass = FALSE, production = TRUE, 
+                                    lag = c(NA, TRUE))[["production"]] |> 
+    dplyr::filter(timestep != min(timestep)) |> 
     tidyr::pivot_longer(-c(meta, timestep), names_to = "part") |> 
-    dplyr::group_by(part) |> 
-    dplyr::summarise(alpha = mean(value), gamma = sum(value),  .groups = "drop") |> 
-    tidyr::pivot_longer(-part, names_to = "measure", values_to = "value")
+    dplyr::group_by(timestep, part) |> 
+    dplyr::summarise(alpha = mean(value), gamma = sum(value), .groups = "drop") |> 
+    tidyr::pivot_longer(-c(timestep, part), names_to = "measure") |> 
+    dplyr::group_by(part, measure) |> 
+    dplyr::summarise(value = mean(value))
+  
+  # prod_near <- meta.arrR::summarize_meta(result = result_temp_near, biomass = FALSE, production = TRUE,
+  #                                        lag = c(NA, FALSE))[["production"]] |>
+  #   dplyr::filter(timestep == max_i) |>
+  #   tidyr::pivot_longer(-c(meta, timestep), names_to = "part") |>
+  #   dplyr::group_by(part) |>
+  #   dplyr::summarise(alpha = mean(value), gamma = sum(value),  .groups = "drop") |>
+  #   tidyr::pivot_longer(-part, names_to = "measure", values_to = "value")
+  
+  prod_near <- meta.arrR::summarize_meta(result = result_temp_near, biomass = FALSE, production = TRUE, 
+                                         lag = c(NA, TRUE))[["production"]] |> 
+    dplyr::filter(timestep != min(timestep)) |> 
+    tidyr::pivot_longer(-c(meta, timestep), names_to = "part") |> 
+    dplyr::group_by(timestep, part) |> 
+    dplyr::summarise(alpha = mean(value), gamma = sum(value), .groups = "drop") |> 
+    tidyr::pivot_longer(-c(timestep, part), names_to = "measure") |> 
+    dplyr::group_by(part, measure) |> 
+    dplyr::summarise(value = mean(value))
   
   # calc cv
   cv <- meta.arrR::calc_variability(x = result_temp, biomass = FALSE, production = TRUE,
-                                    lag = c(FALSE, TRUE))[["production"]]
+                                    lag = c(NA, TRUE))[["production"]]
   
   cv_near <- meta.arrR::calc_variability(x = result_temp_near, biomass = FALSE, production = TRUE,
-                                         lag = c(FALSE, TRUE))[["production"]]
+                                         lag = c(NA, TRUE))[["production"]]
   
   # combine to result data.frame and list
   list(fishpop_init = dplyr::mutate(dplyr::bind_rows(metasyst_temp$fishpop), pop_n = pop_n, biotic = biotic, abiotic = abiotic, nutrient_input = nutrient_input), 
        connectivity = dplyr::mutate(connectivity, pop_n = pop_n, biotic = biotic, abiotic = abiotic, nutrient_input = nutrient_input), 
        mortality = dplyr::mutate(mortality, pop_n = pop_n, biotic = biotic, abiotic = abiotic, nutrient_input = nutrient_input), 
        abundance = dplyr::mutate(abundance, pop_n = pop_n, biotic = biotic, abiotic = abiotic, nutrient_input = nutrient_input),
-       prod_cumulative = dplyr::mutate(prod_cumulative, pop_n = pop_n, biotic = biotic, abiotic = abiotic, nutrient_input = nutrient_input), 
-       prod_cumulative_near = dplyr::mutate(prod_cumulative_near, pop_n = pop_n, biotic = biotic, abiotic = abiotic, nutrient_input = nutrient_input), 
+       prod = dplyr::mutate(prod, pop_n = pop_n, biotic = biotic, abiotic = abiotic, nutrient_input = nutrient_input), 
+       prod_near = dplyr::mutate(prod_near, pop_n = pop_n, biotic = biotic, abiotic = abiotic, nutrient_input = nutrient_input), 
        cv = dplyr::mutate(dplyr::bind_rows(cv), pop_n = pop_n, biotic = biotic, abiotic = abiotic, nutrient_input = nutrient_input),
        cv_near = dplyr::mutate(dplyr::bind_rows(cv_near), pop_n = pop_n, biotic = biotic, abiotic = abiotic, nutrient_input = nutrient_input))
   
