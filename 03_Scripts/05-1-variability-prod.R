@@ -62,7 +62,7 @@ full_lm_df <- purrr::map_dfr(results_combined_list, function(df_temp) {
     dplyr::mutate(dplyr::across(where(is.numeric), .fns = function(x) log(x))) |>
     dplyr::mutate(dplyr::across(where(is.numeric), .fns = function(x) (x - mean(x)) / sd(x)))
   
- lm_temp <- lm(value.prod ~ biotic * abiotic, data = df_temp_stand)
+ lm_temp <- lm(value.prod ~ abiotic * biotic, data = df_temp_stand)
   
   broom::tidy(lm_temp) |> 
     dplyr::mutate(scenario = unique(df_temp$scenario), part = unique(df_temp$part), 
@@ -85,10 +85,7 @@ full_lm_df <- purrr::map_dfr(results_combined_list, function(df_temp) {
 
 #### Setup ggplot ####
 
-color_term <- c("biotic" = "#00af73", "abiotic" = "#006d9a", "biotic:abiotic" = "#ffaa3a")
-
-color_term <- c("biotic" = "#00af73", "abiotic" = "#006d9a",
-                "biotic:abiotic" = "#ffaa3a", "residuals" = "grey")
+color_term <- c("abiotic" = "#006d9a", "biotic" = "#00af73", "abiotic:biotic" = "#ffaa3a", "residuals" = "grey")
 
 size_point <- 5 #* 0.75
 size_line <- 0.75
@@ -106,16 +103,16 @@ width_pos <- 0.65
 gg_coef_scenario <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i) {
   
   range_estimate <- dplyr::filter(full_lm_df, scenario == scenario_i, 
-                                  term %in% c("biotic", "abiotic", "biotic:abiotic")) |> 
+                                  term %in% c("abiotic", "biotic", "abiotic:biotic")) |> 
     dplyr::pull(estimate) |> 
     range() |> 
     abs() |> 
     max()
   
-  gg_part <- purrr::map(c("ag_production", "bg_production", "ttl_production"), function(part_j) {
+  purrr::map(c(ag_production = "ag_production", bg_production = "bg_production", ttl_production = "ttl_production"), function(part_j) {
   
     dplyr::filter(full_lm_df, scenario == scenario_i, 
-                  part == part_j, term %in% c("biotic", "abiotic", "biotic:abiotic")) |> 
+                  part == part_j, term %in% c("biotic", "abiotic", "abiotic:biotic")) |> 
       
       ggplot() +
       
@@ -133,14 +130,14 @@ gg_coef_scenario <- purrr::map(c(phase = "phase", noise = "noise"), function(sce
 
       # set scales and labs
       scale_color_manual(name = "", values = color_term,
-                         labels = c("biotic" = "Consumer behavior", "abiotic" =  "Abiotic subsidies",
-                                    "biotic:abiotic" = "Interaction Behavior:Subsidies", "residuals" = "Residuals")) +
+                         labels = c("abiotic" =  "Abiotic subsidies", "biotic" = "Consumer connectivity", 
+                                    "abiotic:biotic" = "Interaction Subsidies:Connectivity", "residuals" = "Residuals")) +
       scale_fill_manual(name = "", values =  color_term,
-                        labels = c("biotic" = "Consumer behavior", "abiotic" =  "Abiotic subsidies",
-                                   "biotic:abiotic" = "Subsidies:Behavior", "residuals" = "Residuals")) +
+                        labels = c("abiotic" =  "Abiotic subsidies", "biotic" = "Consumer connectivity", 
+                                   "abiotic:biotic" = "Interaction Subsidies:Connectivity", "residuals" = "Residuals")) +
       scale_shape_manual(name = "", values = c("decrease" = 25, "increase" = 24)) +
-      scale_size_manual(values = c("biotic" = size_point, "abiotic" = size_point, 
-                                   "biotic:abiotic" = size_point / 2)) +
+      scale_size_manual(values = c("abiotic" = size_point, "biotic" = size_point,
+                                   "abiotic:biotic" = size_point / 2)) +
       coord_flip() +
       scale_x_discrete(limits = rev(levels(full_lm_df$pop_n)[-1])) +
       scale_y_continuous(limits = c(-range_estimate, range_estimate), labels = function(x) round(x, 2),
@@ -158,11 +155,6 @@ gg_coef_scenario <- purrr::map(c(phase = "phase", noise = "noise"), function(sce
             plot.margin = margin(t = 5.5, r = 5.5, b = 5.5, l = 5.5, unit = "pt"))
     
   })
-  
-  names(gg_part) <- c("ag_production", "bg_production", "ttl_production")
-  
-  gg_part
-  
 })
 
 #### Save ggplot #### 

@@ -5,6 +5,6 @@
 .DS_Store
 02_Data/
 04_Figures/
-05_Various/install-meta.arrR.R
+05_Results/
 _rslurm_*/
 *.rds

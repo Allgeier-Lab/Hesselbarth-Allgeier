@@ -62,13 +62,13 @@ full_lm_df <- purrr::map_dfr(results_combined_list, function(df_temp) {
           "; measure=", unique(df_temp$measure), "; pop_n=", unique(df_temp$pop_n), 
           "; nutrient_input=", unique(df_temp$nutrient_input), appendLF = FALSE)
   
-  df_temp_stand <- dplyr::select(df_temp, value.cv, value.sd, value.mn, biotic, abiotic) |> 
+  df_temp_stand <- dplyr::select(df_temp, value.cv, value.sd, value.mn, abiotic, biotic) |> 
     dplyr::mutate(dplyr::across(where(is.numeric), .fns = function(x) log(x))) |>
     dplyr::mutate(dplyr::across(where(is.numeric), .fns = function(x) (x - mean(x)) / sd(x)))
   
   purrr::map_dfr(c(cv = "value.cv", sd = "value.sd", mn = "value.mn"), y = df_temp_stand, function(x, y) {
     
-    lm_temp <- lm(as.formula(paste0(x, " ~ biotic * abiotic")), data = y) 
+    lm_temp <- lm(as.formula(paste0(x, " ~ abiotic * biotic")), data = y) 
 
     broom::tidy(lm_temp) |> 
       dplyr::mutate(scenario = unique(df_temp$scenario), part = unique(df_temp$part), 
@@ -89,13 +89,13 @@ rel_importance_df <- purrr::map_dfr(results_combined_list, function(df_temp) {
           "; measure=", unique(df_temp$measure), "; pop_n=", unique(df_temp$pop_n), 
           "; nutrient_input=", unique(df_temp$nutrient_input), appendLF = FALSE)
   
-  df_temp_stand <- dplyr::select(df_temp, value.cv, value.sd, value.mn, biotic, abiotic) |> 
+  df_temp_stand <- dplyr::select(df_temp, value.cv, value.sd, value.mn, abiotic, biotic) |> 
     dplyr::mutate(dplyr::across(where(is.numeric), .fns = function(x) log(x))) |>
     dplyr::mutate(dplyr::across(where(is.numeric), .fns = function(x) (x - mean(x)) / sd(x)))
   
   purrr::map_dfr(c(cv = "value.cv", sd = "value.sd", mn = "value.mn"), y = df_temp_stand, function(x, y) {
     
-    lm_temp <- lm(as.formula(paste0(x, " ~ biotic * abiotic")), data = y) 
+    lm_temp <- lm(as.formula(paste0(x, " ~ abiotic * biotic")), data = y) 
     
     rel_r2 <- relaimpo::boot.relimp(lm_temp, type = "lmg", b = 100, level = 0.95, fixed = FALSE) |>
       relaimpo::booteval.relimp(bty = "basic")
@@ -116,17 +116,17 @@ size_point <- 3.5
 
 width_doge <- 0.5
 
-color_scale <- c("biotic" = "#41b282", "abiotic" = "#007aa1", "biotic:abiotic" = "#fcb252", "residual" = "grey")
+color_scale <- c("abiotic" = "#007aa1", "biotic" = "#41b282", "abiotic:biotic" = "#fcb252", "residual" = "grey")
 
-gg_dummy <- data.frame(beta = c("biotic", "abiotic", "biotic:abiotic", "residual"),
+gg_dummy <- data.frame(beta = c("abiotic", "biotic", "abiotic:biotic", "residual"),
                        mean = c(1, 1, 1, 1)) |>
-  dplyr::mutate(beta = factor(beta, levels = c("abiotic", "biotic", "biotic:abiotic", "residual"))) |>
+  dplyr::mutate(beta = factor(beta, levels = c("abiotic", "biotic", "abiotic:biotic", "residual"))) |>
   # dplyr::filter(beta != "biotic:abiotic") |>
   ggplot() +
   geom_col(aes(x = beta, y = mean, fill = beta)) +
   scale_fill_manual(name = "", values = color_scale,
-                    labels = c("biotic" = "Consumer behavior", "abiotic" = "Abiotic subsidies",
-                               "biotic:abiotic" = "Subsidies:Behavior", "residual" = "Residuals")) +
+                    labels = c("abiotic" = "Abiotic subsidies", "biotic" = "Consumer connectivity",
+                               "abiotic:biotic" = "Subsidies:Connectivity", "residual" = "Residuals")) +
   guides(fill = guide_legend(order = 1), colour = guide_legend(order = 2)) +
   theme_classic(base_size = size_base) +
   theme(legend.position = "bottom")
@@ -148,14 +148,14 @@ gg_scenario_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scena
         regression_df_temp <- dplyr::filter(full_lm_df, scenario == scenario_i,
                                             measure == measure_i, part == part_i, 
                                             nutrient_input == nutrient_i, response == "cv",
-                                            term %in% c("biotic", "abiotic", "biotic:abiotic"))
+                                            term %in% c("abiotic", "biotic", "abiotic:biotic"))
   
         importance_df_temp <- dplyr::filter(rel_importance_df, scenario == scenario_i,
                                             measure == measure_i, part == part_i, 
                                             nutrient_input == nutrient_i, response == "cv",
-                                            beta %in% c("biotic", "abiotic", "biotic:abiotic", "residual"))
+                                            beta %in% c("abiotic", "biotic", "abiotic:biotic", "residual"))
         
-        label_part <- paste0("Nutr. input: ", nutrient_i)
+        label_input <- paste0("Nutr. input: ", nutrient_i)
         
         gg_regression <- ggplot(data = regression_df_temp) +
   
@@ -178,8 +178,7 @@ gg_scenario_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scena
           scale_color_manual(name = "Scale", values = color_scale) +
           scale_y_continuous(limits = y_range_cv, breaks = seq(y_range_cv[[1]], y_range_cv[[2]], length.out = 4),
                              labels = function(x) round(x, digits = 2)) +
-          scale_size_manual(values = c("biotic" = size_point, "abiotic" = size_point, "biotic:abiotic" = size_point / 2)) +
-          # scale_shape_manual(values = c("***" = 19, "**" = 19, "*" = 19, " " = 1)) +
+          scale_size_manual(values = c("biotic" = size_point, "abiotic" = size_point, "abiotic:biotic" = size_point / 2)) +
           coord_cartesian(clip = "off") +
   
           # labels and themes
@@ -209,7 +208,7 @@ gg_scenario_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scena
   
         cowplot::plot_grid(gg_regression, gg_relimp, ncol = 2, rel_widths = c(0.5, 0.5)) |>
           cowplot::ggdraw(xlim = c(0, 1.05)) +
-          cowplot::draw_label(label = label_part, x = 1.0, y = 0.65, angle = 270, size = size_base * 0.85)
+          cowplot::draw_label(label = label_input, x = 1.0, y = 0.55, angle = 270, size = size_base * 0.85)
   
       })
     }) |> purrr::flatten()
