@@ -62,24 +62,20 @@ full_lm_df <- purrr::map_dfr(results_combined_list, function(df_temp) {
           "; measure=", unique(df_temp$measure), "; pop_n=", unique(df_temp$pop_n), 
           "; nutrient_input=", unique(df_temp$nutrient_input), appendLF = FALSE)
   
-  df_temp_stand <- dplyr::select(df_temp, value.cv, value.sd, value.mn, abiotic, biotic) |> 
+  df_temp_stand <- dplyr::select(df_temp, value.cv, abiotic, biotic) |> 
     dplyr::mutate(dplyr::across(where(is.numeric), .fns = function(x) log(x))) |>
     dplyr::mutate(dplyr::across(where(is.numeric), .fns = function(x) (x - mean(x)) / sd(x)))
   
-  purrr::map_dfr(c(cv = "value.cv", sd = "value.sd", mn = "value.mn"), y = df_temp_stand, function(x, y) {
-    
-    lm_temp <- lm(as.formula(paste0(x, " ~ abiotic * biotic")), data = y) 
+  lm_temp <- lm(value.cv ~ abiotic * biotic, data = df_temp_stand) 
 
-    broom::tidy(lm_temp) |> 
-      dplyr::mutate(scenario = unique(df_temp$scenario), part = unique(df_temp$part), 
-                    measure = unique(df_temp$measure), pop_n = unique(df_temp$pop_n), 
-                    nutrient_input = unique(df_temp$nutrient_input), .before = term) |> 
-      dplyr::mutate(p.value.class = dplyr::case_when(p.value < 0.001 ~ "***", p.value < 0.01 ~ "**", 
-                                                     p.value < 0.05 ~ "*", p.value >= 0.05 ~ " "), 
-                    r2 = summary(lm_temp)$adj.r.squared)
-    }, .id = "response")}) |> 
-  dplyr::mutate(response = factor(response, levels = c("cv", "mn", "sd")), 
-                term = factor(term), p.value.class = factor(p.value.class, levels = c("*", "**", "***", " ")))
+  broom::tidy(lm_temp) |> 
+    dplyr::mutate(scenario = unique(df_temp$scenario), part = unique(df_temp$part), 
+                  measure = unique(df_temp$measure), pop_n = unique(df_temp$pop_n), 
+                  nutrient_input = unique(df_temp$nutrient_input), .before = term) |> 
+    dplyr::mutate(p.value.class = dplyr::case_when(p.value < 0.001 ~ "***", p.value < 0.01 ~ "**", 
+                                                   p.value < 0.05 ~ "*", p.value >= 0.05 ~ " "), 
+                  r2 = summary(lm_temp)$adj.r.squared)}) |> 
+  dplyr::mutate(term = factor(term), p.value.class = factor(p.value.class, levels = c("*", "**", "***", " ")))
 
 #### Relative importance R2 ####
 
@@ -89,24 +85,22 @@ rel_importance_df <- purrr::map_dfr(results_combined_list, function(df_temp) {
           "; measure=", unique(df_temp$measure), "; pop_n=", unique(df_temp$pop_n), 
           "; nutrient_input=", unique(df_temp$nutrient_input), appendLF = FALSE)
   
-  df_temp_stand <- dplyr::select(df_temp, value.cv, value.sd, value.mn, abiotic, biotic) |> 
+  df_temp_stand <- dplyr::select(df_temp, value.cv, abiotic, biotic) |> 
     dplyr::mutate(dplyr::across(where(is.numeric), .fns = function(x) log(x))) |>
     dplyr::mutate(dplyr::across(where(is.numeric), .fns = function(x) (x - mean(x)) / sd(x)))
   
-  purrr::map_dfr(c(cv = "value.cv", sd = "value.sd", mn = "value.mn"), y = df_temp_stand, function(x, y) {
-    
-    lm_temp <- lm(as.formula(paste0(x, " ~ abiotic * biotic")), data = y) 
-    
-    rel_r2 <- relaimpo::boot.relimp(lm_temp, type = "lmg", b = 100, level = 0.95, fixed = FALSE) |>
-      relaimpo::booteval.relimp(bty = "basic")
-    
-    tibble::tibble(
-      scenario = unique(df_temp$scenario), part = unique(df_temp$part), measure = unique(df_temp$measure),
-      pop_n = unique(df_temp$pop_n), nutrient_input = unique(df_temp$nutrient_input),
-      beta = c(rel_r2@namen[-1], "residual"), mean = c(rel_r2@lmg, 1 - sum(rel_r2@lmg)), 
-      lower = c(rel_r2@lmg.lower, NA), higher = c(rel_r2@lmg.upper, NA), r2 = summary(lm_temp)$adj.r.squared) |> 
-      dplyr::mutate(dplyr::across(mean:higher, ~ .x * 100))}, .id = "response")}) |> 
-  dplyr::mutate(response = factor(response, levels = c("cv", "mn", "sd")), beta = factor(beta))
+  lm_temp <- lm(value.cv ~ abiotic * biotic, data = df_temp_stand) 
+  
+  rel_r2 <- relaimpo::boot.relimp(lm_temp, type = "lmg", b = 100, level = 0.95, fixed = FALSE) |>
+    relaimpo::booteval.relimp(bty = "basic")
+  
+  tibble::tibble(
+    scenario = unique(df_temp$scenario), part = unique(df_temp$part), measure = unique(df_temp$measure),
+    pop_n = unique(df_temp$pop_n), nutrient_input = unique(df_temp$nutrient_input),
+    beta = c(rel_r2@namen[-1], "residual"), mean = c(rel_r2@lmg, 1 - sum(rel_r2@lmg)), 
+    lower = c(rel_r2@lmg.lower, NA), higher = c(rel_r2@lmg.upper, NA), r2 = summary(lm_temp)$adj.r.squared) |> 
+    dplyr::mutate(dplyr::across(mean:higher, ~ .x * 100))}) |> 
+  dplyr::mutate(beta = factor(beta))
 
 #### Setup ggplot ####
 
@@ -133,7 +127,7 @@ gg_dummy <- data.frame(beta = c("abiotic", "biotic", "abiotic:biotic", "residual
 
 #### Create ggplot cv ####
 
-y_range_cv <- dplyr::filter(full_lm_df, response == "cv") |>
+y_range_cv <- dplyr::filter(full_lm_df) |>
   dplyr::pull(estimate) |>
   range(na.rm = TRUE)
 
@@ -147,12 +141,12 @@ gg_scenario_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scena
   
         regression_df_temp <- dplyr::filter(full_lm_df, scenario == scenario_i,
                                             measure == measure_i, part == part_i, 
-                                            nutrient_input == nutrient_i, response == "cv",
+                                            nutrient_input == nutrient_i,
                                             term %in% c("abiotic", "biotic", "abiotic:biotic"))
   
         importance_df_temp <- dplyr::filter(rel_importance_df, scenario == scenario_i,
                                             measure == measure_i, part == part_i, 
-                                            nutrient_input == nutrient_i, response == "cv",
+                                            nutrient_input == nutrient_i,
                                             beta %in% c("abiotic", "biotic", "abiotic:biotic", "residual"))
         
         label_input <- paste0("Nutr. input: ", nutrient_i)
@@ -233,12 +227,16 @@ gg_scenario_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scena
   
 })
 
+gg_scenario_cv$noise$ag_production
+
 #### Save ggplot #### 
+
+overwrite <- FALSE
 
 suppoRt::save_ggplot(plot = gg_scenario_cv$noise$ag_production, filename = "Figure-2.pdf",
                      path = "04_Figures/", width = height * 0.8, height = width * 0.75,
-                     units = units, dpi = dpi, overwrite = FALSE)
+                     units = units, dpi = dpi, overwrite = overwrite)
 
 suppoRt::save_ggplot(plot = gg_scenario_cv$noise$bg_production, filename = "Figure-A4.pdf",
                      path = "04_Figures/", width = height * 0.8, height = width * 0.75,
-                     units = units, dpi = dpi, overwrite = FALSE)
+                     units = units, dpi = dpi, overwrite = overwrite)
