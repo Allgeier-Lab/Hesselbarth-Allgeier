@@ -70,7 +70,7 @@ reef_matrix <- matrix(data = c(-1, 0, 0, 1, 1, 0, 0, -1, 0, 0),
 
 #### ####
 
-threshold_abundance <- 135
+threshold_mort <- 1000
 
 #### Plotting defaults ####
 
