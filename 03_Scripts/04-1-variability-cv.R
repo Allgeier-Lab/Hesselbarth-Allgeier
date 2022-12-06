@@ -12,7 +12,7 @@
 
 source("01_Functions/setup.R")
 source("01_Functions/import-cv.R")
-source("01_Functions/import-abundance.R")
+source("01_Functions/import-mortality.R")
 
 #### Load/wrangle simulated data ####
 
@@ -24,33 +24,33 @@ results_combined_df <- dplyr::bind_rows(phase = results_phase_df, noise = result
                                         .id = "scenario") |> 
   dplyr::mutate(scenario = factor(scenario, levels = c("phase", "noise")))
 
-#### Load abundance data ####
+#### Load mortality data ####
 
-abundance_phase_df <- import_abundance(path = "02_Data/result-phase.rds") |> 
+mortality_phase_df <- import_mortality(path = "02_Data/result-phase.rds") |> 
   dplyr::filter(pop_n > 0)
 
-abundance_noise_df <- import_abundance(path = "02_Data/result-noise.rds") |> 
+mortality_noise_df <- import_mortality(path = "02_Data/result-noise.rds") |> 
   dplyr::filter(pop_n > 0)
 
-abundance_combined_df <- dplyr::bind_rows(phase = abundance_phase_df, noise = abundance_noise_df,
+mortality_combined_df <- dplyr::bind_rows(phase = mortality_phase_df, noise = mortality_noise_df,
                                           .id = "scenario") |>
-  dplyr::mutate(scenario = factor(scenario, levels = c("phase", "noise"))) |> 
+  dplyr::mutate(scenario = factor(scenario, levels = c("phase", "noise"))) |>
   dplyr::group_by(scenario, row_id, pop_n, nutrient_input) |>
-  dplyr::summarise(abundance_max = max(mean), .groups = "drop")
+  dplyr::summarise(died_total = mean(died_total), .groups = "drop")
 
 #### Filter abundances/mortality #### 
 
-results_combined_df <- dplyr::left_join(x = results_combined_df, y = abundance_combined_df, 
+results_combined_df <- dplyr::left_join(x = results_combined_df, y = mortality_combined_df, 
                  by = c("scenario", "row_id", "pop_n", "nutrient_input")) |> 
   dplyr::mutate(include = dplyr::case_when(pop_n == 128 & nutrient_input == "low" &
-                                             abundance_max > threshold_abundance ~ "no", 
+                                             died_total > threshold_mort ~ "no", 
                                            TRUE ~ "yes"))
 
 #### Split data #### 
 
 results_combined_list <- dplyr::filter(results_combined_df, measure %in% c("alpha", "gamma"),
                                        part %in% c("ag_production", "bg_production", "ttl_production"), 
-                                       pop_n != 0, include == "yes") |>
+                                       pop_n != 0, biotic != 0.0, abiotic != 0.0, include == "yes") |>
   dplyr::group_by(scenario, part, measure, pop_n, nutrient_input) |>
   dplyr::group_split()
 
@@ -62,9 +62,10 @@ full_lm_df <- purrr::map_dfr(results_combined_list, function(df_temp) {
           "; measure=", unique(df_temp$measure), "; pop_n=", unique(df_temp$pop_n), 
           "; nutrient_input=", unique(df_temp$nutrient_input), appendLF = FALSE)
   
-  df_temp_stand <- dplyr::select(df_temp, value.cv, abiotic, biotic) |> 
-    dplyr::mutate(dplyr::across(where(is.numeric), .fns = function(x) log(x))) |>
-    dplyr::mutate(dplyr::across(where(is.numeric), .fns = function(x) (x - mean(x)) / sd(x)))
+  df_temp_stand <- dplyr::select(df_temp, value.cv, abiotic, biotic) # |>
+    # dplyr::mutate(value.cv = log(value.cv))
+    # dplyr::mutate(dplyr::across(where(is.numeric), .fns = function(x) log(x)))
+    # dplyr::mutate(dplyr::across(where(is.numeric), .fns = function(x) (x - mean(x)) / sd(x)))
   
   lm_temp <- lm(value.cv ~ abiotic * biotic, data = df_temp_stand) 
 
@@ -77,6 +78,29 @@ full_lm_df <- purrr::map_dfr(results_combined_list, function(df_temp) {
                   r2 = summary(lm_temp)$adj.r.squared)}) |> 
   dplyr::mutate(term = factor(term), p.value.class = factor(p.value.class, levels = c("*", "**", "***", " ")))
 
+#### Model assumptions ####
+# 
+# assumption_df <- purrr::map_dfr(results_combined_list, function(df_temp) {
+# 
+#   message("\r> Progress: scenario=", unique(df_temp$scenario), "; part=", unique(df_temp$part),
+#           "; measure=", unique(df_temp$measure), "; pop_n=", unique(df_temp$pop_n),
+#           "; nutrient_input=", unique(df_temp$nutrient_input), appendLF = FALSE)
+# 
+#   df_temp_stand <- dplyr::select(df_temp, value.cv, abiotic, biotic) # |>
+#   # dplyr::mutate(dplyr::across(where(is.numeric), .fns = function(x) log(x))) |>
+#   # dplyr::mutate(dplyr::across(where(is.numeric), .fns = function(x) (x - mean(x)) / sd(x)))
+# 
+#   lm_temp <- lm(value.cv ~ abiotic * biotic, data = df_temp_stand)
+# 
+#   residuals_temp <- resid(lm_temp)
+# 
+#   tibble::tibble(scenario = unique(df_temp$scenario), part = unique(df_temp$part),
+#                  measure = unique(df_temp$measure), pop_n = unique(df_temp$pop_n),
+#                  nutrient_input = unique(df_temp$nutrient_input),
+#                  shapiro =  shapiro.test(residuals_temp)[[2]], lillie = nortest::lillie.test(residuals_temp)[[2]])})
+# 
+# dplyr::filter(assumption_df, shapiro < 0.05 & lillie < 0.05)
+
 #### Relative importance R2 ####
 
 rel_importance_df <- purrr::map_dfr(results_combined_list, function(df_temp) {
@@ -85,9 +109,10 @@ rel_importance_df <- purrr::map_dfr(results_combined_list, function(df_temp) {
           "; measure=", unique(df_temp$measure), "; pop_n=", unique(df_temp$pop_n), 
           "; nutrient_input=", unique(df_temp$nutrient_input), appendLF = FALSE)
   
-  df_temp_stand <- dplyr::select(df_temp, value.cv, abiotic, biotic) |> 
-    dplyr::mutate(dplyr::across(where(is.numeric), .fns = function(x) log(x))) |>
-    dplyr::mutate(dplyr::across(where(is.numeric), .fns = function(x) (x - mean(x)) / sd(x)))
+  df_temp_stand <- dplyr::select(df_temp, value.cv, abiotic, biotic) # |>
+    # dplyr::mutate(value.cv = log(value.cv))
+    # dplyr::mutate(dplyr::across(where(is.numeric), .fns = function(x) log(x)))
+    # dplyr::mutate(dplyr::across(where(is.numeric), .fns = function(x) (x - mean(x)) / sd(x)))
   
   lm_temp <- lm(value.cv ~ abiotic * biotic, data = df_temp_stand) 
   
@@ -110,12 +135,12 @@ size_point <- 3.5
 
 width_doge <- 0.5
 
-color_scale <- c("abiotic" = "#007aa1", "biotic" = "#41b282", "abiotic:biotic" = "#fcb252", "residual" = "grey")
+color_scale <- c("abiotic" = "#007aa1", "biotic" = "#41b282", "abiotic:biotic" = "#fcb252", 
+                 "(Intercept)" = "#e76254", "residual" = "grey")
 
-gg_dummy <- data.frame(beta = c("abiotic", "biotic", "abiotic:biotic", "residual"),
-                       mean = c(1, 1, 1, 1)) |>
-  dplyr::mutate(beta = factor(beta, levels = c("abiotic", "biotic", "abiotic:biotic", "residual"))) |>
-  # dplyr::filter(beta != "biotic:abiotic") |>
+gg_dummy <- data.frame(beta = c("abiotic", "biotic", "abiotic:biotic", "(Intercept)", "residual"),
+                       mean = c(1, 1, 1, 1, 1)) |>
+  dplyr::mutate(beta = factor(beta, levels = c("abiotic", "biotic", "abiotic:biotic", "(Intercept)", "residual"))) |>
   ggplot() +
   geom_col(aes(x = beta, y = mean, fill = beta)) +
   scale_fill_manual(name = "", values = color_scale,
@@ -141,13 +166,11 @@ gg_scenario_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scena
   
         regression_df_temp <- dplyr::filter(full_lm_df, scenario == scenario_i,
                                             measure == measure_i, part == part_i, 
-                                            nutrient_input == nutrient_i,
-                                            term %in% c("abiotic", "biotic", "abiotic:biotic"))
+                                            nutrient_input == nutrient_i)
   
-        importance_df_temp <- dplyr::filter(rel_importance_df, scenario == scenario_i,
-                                            measure == measure_i, part == part_i, 
-                                            nutrient_input == nutrient_i,
-                                            beta %in% c("abiotic", "biotic", "abiotic:biotic", "residual"))
+        # importance_df_temp <- dplyr::filter(rel_importance_df, scenario == scenario_i,
+        #                                     measure == measure_i, part == part_i, 
+        #                                     nutrient_input == nutrient_i)
         
         label_input <- paste0("Nutr. input: ", nutrient_i)
         
@@ -161,7 +184,7 @@ gg_scenario_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scena
                     alpha = 0.25, position = position_dodge(width = width_doge)) +
   
           # Points
-          geom_point(aes(x = pop_n, y = estimate, color = term, size = term),
+          geom_point(aes(x = pop_n, y = estimate, color = term),
                      shape = 19, position = position_dodge(width = width_doge)) +
   
           # Text
@@ -172,7 +195,7 @@ gg_scenario_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scena
           scale_color_manual(name = "Scale", values = color_scale) +
           scale_y_continuous(limits = y_range_cv, breaks = seq(y_range_cv[[1]], y_range_cv[[2]], length.out = 4),
                              labels = function(x) round(x, digits = 2)) +
-          scale_size_manual(values = c("biotic" = size_point, "abiotic" = size_point, "abiotic:biotic" = size_point / 2)) +
+          # scale_size_manual(values = c("biotic" = size_point, "abiotic" = size_point, "abiotic:biotic" = size_point / 2)) +
           coord_cartesian(clip = "off") +
   
           # labels and themes
@@ -182,6 +205,7 @@ gg_scenario_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scena
                 axis.line = element_blank(), panel.border = element_rect(linewidth = 0.25, fill = NA),
                 legend.position = "none",
                 plot.margin = margin(t = 5.5, r = 0.5, b = 5.5, l = 5.5, unit = "pt"))
+
   
         gg_relimp <- ggplot(data = importance_df_temp) +
   
@@ -231,12 +255,6 @@ gg_scenario_cv$noise$ag_production
 
 #### Save ggplot #### 
 
-overwrite <- FALSE
-
 suppoRt::save_ggplot(plot = gg_scenario_cv$noise$ag_production, filename = "Figure-2.pdf",
                      path = "04_Figures/", width = height * 0.8, height = width * 0.75,
-                     units = units, dpi = dpi, overwrite = overwrite)
-
-suppoRt::save_ggplot(plot = gg_scenario_cv$noise$bg_production, filename = "Figure-A4.pdf",
-                     path = "04_Figures/", width = height * 0.8, height = width * 0.75,
-                     units = units, dpi = dpi, overwrite = overwrite)
+                     units = units, dpi = dpi, overwrite = FALSE)

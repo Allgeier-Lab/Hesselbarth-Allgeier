@@ -48,10 +48,10 @@ results_combined_df <- dplyr::left_join(x = results_combined_df, y = abundance_c
 
 #### Split data #### 
 
-results_combined_list <- dplyr::filter(results_combined_df, measure == "gamma",
+results_combined_list <- dplyr::filter(results_combined_df, measure %in% c("alpha", "gamma"),
                                        part %in% c("ag_production", "bg_production", "ttl_production"), 
                                        pop_n != 0, include == "yes") |>
-  dplyr::group_by(scenario, part, pop_n, nutrient_input) |>
+  dplyr::group_by(scenario, part, measure, pop_n, nutrient_input) |>
   dplyr::group_split()
 
 #### Fit regression model ####
@@ -126,7 +126,8 @@ gg_coef_scenario <- purrr::map(c(phase = "phase", noise = "noise"), function(sce
                 position = position_dodge(width = width_pos),vjust = 0.75, size = size_text, color = "white") +
 
       # facet gridding
-      facet_grid(rows = dplyr::vars(nutrient_input), labeller = labeller(nutrient_input = function(x) paste0("Nutr. input: ", x))) +
+      facet_grid(rows = dplyr::vars(nutrient_input), cols = dplyr::vars(measure), 
+                 labeller = labeller(nutrient_input = function(x) paste0("Nutr. input: ", x))) +
 
       # set scales and labs
       scale_color_manual(name = "", values = color_term,

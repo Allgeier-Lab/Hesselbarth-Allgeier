@@ -6,7 +6,7 @@
 ##    www.github.com/mhesselbarth             ##
 ##--------------------------------------------##
 
-# Purpose: Create abundance vs mort figure
+# Purpose: Plot abundance and mortality values to find cut-off for 128 fish
 
 #### Load setup ####
 
@@ -54,7 +54,7 @@ ggplot(result_total_df, aes(x = abundance_max, y = died_total))  +
   
   #geoms 
   geom_point(pch = 1) +
-  geom_smooth(method = "lm", se = FALSE, color = "#6ad5e8") +
+  geom_smooth(method = "lm", formula = "y ~ x", se = FALSE, color = "#6ad5e8") +
   
   # facet
   # facet_grid(rows = vars(nutrient_input), cols = vars(pop_n), scales = "free") + 
@@ -68,10 +68,10 @@ ggplot(result_total_df, aes(x = abundance_max, y = died_total))  +
   theme(strip.background = element_blank(), strip.text = element_text(hjust = 0),
         axis.line = element_blank(), panel.border = element_rect(linewidth = 0.5, fill = NA))
 
-threshold <- 135
+threshold <- 1000
 
 (gg_128 <- dplyr::filter(result_total_df, pop_n == 128, nutrient_input == "low") |>
-  dplyr::mutate(group = dplyr::case_when(abundance_max <= threshold ~ "low", TRUE ~ "high"),
+  dplyr::mutate(group = dplyr::case_when(died_total <= threshold ~ "low", TRUE ~ "high"),
                 group = factor(group, levels = c("low", "high"))) |>
   
   # ggplot
