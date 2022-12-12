@@ -299,6 +299,12 @@ gg_scenario <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario
 
 #### Save ggplot #### 
 
+overwrite <- FALSE
+
 suppoRt::save_ggplot(plot = gg_scenario$noise$ag, filename = "Figure-2.pdf",
                      path = "04_Figures/", width = width, height = height * 0.75,
-                     units = units, dpi = dpi, overwrite = FALSE)
+                     units = units, dpi = dpi, overwrite = overwrite)
+
+suppoRt::save_ggplot(plot = gg_scenario$noise$bg, filename = "Figure-A4.pdf",
+                     path = "04_Figures/Appendix/", width = width, height = height * 0.75,
+                     units = units, dpi = dpi, overwrite = overwrite)

@@ -162,10 +162,18 @@ gg_biotic <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i
 
 overwrite <- FALSE
 
-suppoRt::save_ggplot(plot = gg_abiotic$noise$ag_production, filename = "Figure-A3.pdf",
+suppoRt::save_ggplot(plot = gg_abiotic$noise$ag_production, filename = "Figure-A5.pdf",
                      path = "04_Figures/Appendix/", width = width, height = height * 0.5,
                      units = units, dpi = dpi, overwrite = overwrite)
 
-suppoRt::save_ggplot(plot = gg_biotic$noise$ag_production, filename = "Figure-A4.pdf",
+suppoRt::save_ggplot(plot = gg_abiotic$noise$bg_production, filename = "Figure-A6.pdf",
+                     path = "04_Figures/Appendix/", width = width, height = height * 0.5,
+                     units = units, dpi = dpi, overwrite = overwrite)
+
+suppoRt::save_ggplot(plot = gg_biotic$noise$ag_production, filename = "Figure-A7.pdf",
+                     path = "04_Figures/Appendix/", width = width, height = height * 0.5,
+                     units = units, dpi = dpi, overwrite = overwrite)
+
+suppoRt::save_ggplot(plot = gg_biotic$noise$bg_production, filename = "Figure-A8.pdf",
                      path = "04_Figures/Appendix/", width = width, height = height * 0.5,
                      units = units, dpi = dpi, overwrite = overwrite)

@@ -26,11 +26,9 @@ results_combined_df <- dplyr::bind_rows(phase = results_phase_df, noise = result
 
 #### Load mortality data ####
 
-mortality_phase_df <- import_mortality(path = "02_Data/result-phase.rds") |> 
-  dplyr::filter(pop_n > 0)
+mortality_phase_df <- import_mortality(path = "02_Data/result-phase.rds")
 
-mortality_noise_df <- import_mortality(path = "02_Data/result-noise.rds") |> 
-  dplyr::filter(pop_n > 0)
+mortality_noise_df <- import_mortality(path = "02_Data/result-noise.rds")
 
 mortality_combined_df <- dplyr::bind_rows(phase = mortality_phase_df, noise = mortality_noise_df,
                                           .id = "scenario") |>
@@ -45,7 +43,7 @@ results_combined_df <- dplyr::left_join(x = results_combined_df, y = mortality_c
   dplyr::mutate(include = dplyr::case_when(pop_n == 128 & nutrient_input == "low" &
                                              died_total > threshold_mort ~ "no", 
                                            TRUE ~ "yes")) |> 
-  dplyr::filter(abiotic != 0.0, biotic != 0.0)
+  dplyr::filter(abiotic != 0.0)
 
 obs_n_df <- dplyr::filter(results_combined_df, include == "yes") |>
   dplyr::group_by(scenario, pop_n, nutrient_input) |>
@@ -76,17 +74,11 @@ gg_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i) {
       geom_text(data = obs_n_temp, aes(x = pop_n, y = 0.0, label = paste0("n=", n)), size = 2.5) +
       
       # facet
-      # facet_grid(rows = vars(nutrient_input), cols = vars(measure), scales = "free_y",
-      #            labeller = labeller(measure = c("alpha" = "Local scale",
-      #                                            "gamma" = "Meta-ecosystem scale", 
-      #                                            "beta" = "Portfolio effect"), 
-      #                                nutrient_input = function(x) paste("Nutr. input:", x))) +
-      facet_wrap(. ~ nutrient_input + measure, scales = "free_y", nrow = 3, ncol = 2,
+      facet_grid(rows = vars(nutrient_input), cols = vars(measure), scales = "free_y",
                  labeller = labeller(measure = c("alpha" = "Local scale",
-                                                 "gamma" = "Meta-ecosystem scale", 
-                                                 "beta" = "Portfolio effect"), 
+                                                 "gamma" = "Meta-ecosystem scale",
+                                                 "beta" = "Portfolio effect"),
                                      nutrient_input = function(x) paste("Nutr. input:", x))) +
-      
       
       # themes
       labs(x = "Population size", y = "Coefficient of variation") +
@@ -105,6 +97,6 @@ suppoRt::save_ggplot(plot = gg_cv$noise$ag, filename = "Figure-A2.pdf",
                      path = "04_Figures/Appendix/", width = width, height = height * 0.5,
                      units = units, dpi = dpi, overwrite = overwrite)
 
-# suppoRt::save_ggplot(plot = gg_cv$noise$bg, filename = "Figure-A3.pdf",
-#                      path = "04_Figures/Appendix/", width = width, height = height * 0.5,
-#                      units = units, dpi = dpi, overwrite = overwrite)
+suppoRt::save_ggplot(plot = gg_cv$noise$bg, filename = "Figure-A3.pdf",
+                     path = "04_Figures/Appendix/", width = width, height = height * 0.5,
+                     units = units, dpi = dpi, overwrite = overwrite)
