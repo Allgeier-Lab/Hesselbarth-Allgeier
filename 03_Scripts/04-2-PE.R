@@ -6,7 +6,7 @@
 ##    www.github.com/mhesselbarth             ##
 ##--------------------------------------------##
 
-# Purpose: Figure of CV values
+# Purpose:
 
 #### Load setup ####
 
@@ -22,7 +22,11 @@ results_noise_df <- import_cv(path = "02_Data/result-noise.rds")
 
 results_combined_df <- dplyr::bind_rows(phase = results_phase_df, noise = results_noise_df, 
                                         .id = "scenario") |> 
-  dplyr::mutate(scenario = factor(scenario, levels = c("phase", "noise")))
+  dplyr::mutate(scenario = factor(scenario, levels = c("phase", "noise")), 
+                type = dplyr::case_when(pop_n == 0 ~ "a", abiotic == 0.0 ~ "b", TRUE ~ "ab"), 
+                type = factor(type, levels = c("a", "ab", "b"), 
+                              labels = c("Abiotic subsidies only", "Abiotic and connectivity", 
+                                         "Consumer connectivity only")))
 
 #### Load mortality data ####
 
@@ -38,72 +42,69 @@ mortality_combined_df <- dplyr::bind_rows(phase = mortality_phase_df, noise = mo
   dplyr::group_by(scenario, row_id, pop_n, nutrient_input) |>
   dplyr::summarise(died_total = mean(died_total), .groups = "drop")
 
-#### Filter data ####
+#### Filter abundances/mortality #### 
 
-results_combined_df <- dplyr::left_join(x = results_combined_df, y = mortality_combined_df, 
+beta_df <- dplyr::left_join(x = results_combined_df, y = mortality_combined_df, 
                                         by = c("scenario", "row_id", "pop_n", "nutrient_input")) |> 
   dplyr::mutate(include = dplyr::case_when(pop_n == 128 & nutrient_input == "low" &
                                              died_total > threshold_mort ~ "no", 
                                            TRUE ~ "yes")) |> 
-  dplyr::mutate(type = dplyr::case_when(pop_n == 0 ~ "a", abiotic == 0.0 ~ "b", 
-                                        TRUE ~ "ab"), 
-                type = factor(type, levels = c("a", "ab", "b"), labels = c("Abiotic subsidies only", 
-                                                                           "Abiotic and connectivity", 
-                                                                           "Connectivity only")))
+  dplyr::filter(include == "yes", measure == "beta")
 
-obs_n_df <- dplyr::filter(results_combined_df, include == "yes") |>
-  dplyr::group_by(scenario, pop_n, nutrient_input) |>
-  dplyr::summarise(n = dplyr::n() / (3 * 4), .groups = "drop") |>  # divide by four because of measures and three because of parts
-  dplyr::arrange(n, pop_n, scenario, nutrient_input)
 
-#### CV densities ####
+#### Create ggplot ####
 
-gg_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i) {
+size_base <- 10.0
+size_text <- 2.0
+size_point <- 2.5
+
+width_doge <- 0.5
+
+gg_pe <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i) {
   
   purrr::map(c(ag = "ag_production", bg =  "bg_production", ttl = "ttl_production"), function(part_i) {
     
-    df_temp <- dplyr::filter(results_combined_df, scenario == scenario_i, part == part_i, 
-                             measure == "beta", include == "yes")
-
-    # y_max <- quantile(df_temp$value.cv, probs = 0.99)
+    beta_temp <- dplyr::filter(beta_df, scenario == scenario_i, part == part_i)
     
-    # obs_n_temp <- dplyr::filter(obs_n_df, scenario == scenario_i)
+    label_temp <- dplyr::group_by(beta_temp, nutrient_input) |> 
+      dplyr::group_split() |> 
+      purrr::map_dfr(function(i) {
+        anova <- aov(value.cv ~ type, data = i)
+        
+        tukey <- TukeyHSD(anova)
+        
+        label_letters <- multcompView::multcompLetters4(anova, tukey)
+        
+        data.frame(nutrient_input = unique(i$nutrient_input), type = names(label_letters$type$monospacedLetters),
+                   letter = unname(label_letters$type$monospacedLetters))
+        
+      })
     
-    # ggplot
-    ggplot(df_temp, aes(x = type, y = value.cv, fill = pop_n)) + 
+    ggplot(beta_temp, aes(x = type, y = value.cv)) + 
       
       # geoms
       geom_boxplot(outlier.shape = NA) +
       geom_hline(yintercept = 1.0, linetype = 2, color = "grey") +
-
-      facet_grid(rows = vars(nutrient_input), scales = "fixed",
+      geom_text(data = label_temp, aes(x = type, y = max(beta_temp$value.cv) * 0.85, label = letter)) +
+      
+      # scales
+      coord_cartesian(ylim = c(1.0, max(beta_temp$value.cv) * 0.85)) +
+      
+      # facet
+      facet_grid(rows = vars(nutrient_input),
                  labeller = labeller(nutrient_input = function(x) paste("Nutr. input:", x))) +
-    
-      scale_fill_manual(name = "Population size", values = c("0" = "grey", "8" = "#0D0887FF", "16" = "#7E03A8FF", 
-                                                             "32" = "#CC4678FF", "64" = "#F89441FF", "128" = "#F0F921FF")) +
-      coord_cartesian(ylim = c(1.0, 15.0)) +
-      # coord_flip() +
       
       # themes
       labs(x = "", y = "Portfolio effect") +
+      guides(fill = guide_legend(nrow = 1)) +
       theme_classic(base_size = 10) +
-      theme(strip.background = element_blank(), strip.text = element_text(hjust = 0.5),
+      theme(strip.background = element_blank(), strip.text = element_text(size = size_base * 0.65),
             axis.line = element_blank(), panel.border = element_rect(linewidth = 0.5, fill = NA), 
             legend.position = "bottom")
-    
   })
 })
 
-gg_cv$noise$ag
-
-#### Save plots ####
-
-overwrite <- FALSE
-
-suppoRt::save_ggplot(plot = gg_cv$noise$ag, filename = "Figure-A2.pdf",
+#### save ggplot ####
+suppoRt::save_ggplot(plot = gg_pe$noise$ag, filename = "Figure-A5.pdf",
                      path = "04_Figures/Appendix/", width = width, height = height * 0.5,
-                     units = units, dpi = dpi, overwrite = overwrite)
-
-# suppoRt::save_ggplot(plot = gg_cv$noise$bg, filename = "Figure-A3.pdf",
-#                      path = "04_Figures/Appendix/", width = width, height = height * 0.5,
-#                      units = units, dpi = dpi, overwrite = overwrite)
+                     units = units, dpi = dpi, overwrite = FALSE)
