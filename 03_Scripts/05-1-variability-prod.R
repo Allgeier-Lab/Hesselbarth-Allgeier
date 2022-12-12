@@ -12,7 +12,7 @@
 
 source("01_Functions/setup.R")
 source("01_Functions/import-cv.R")
-source("01_Functions/import-abundance.R")
+source("01_Functions/import-mortality.R")
 
 #### Load/wrangle simulated data ####
 
@@ -24,50 +24,52 @@ results_combined_df <- dplyr::bind_rows(phase = results_phase_df, noise = result
                                         .id = "scenario") |> 
   dplyr::mutate(scenario = factor(scenario, levels = c("phase", "noise")))
 
-#### Load abundance data ####
+#### Load mortality data ####
 
-abundance_phase_df <- import_abundance(path = "02_Data/result-phase.rds") |> 
+mortality_phase_df <- import_mortality(path = "02_Data/result-phase.rds") |> 
   dplyr::filter(pop_n > 0)
 
-abundance_noise_df <- import_abundance(path = "02_Data/result-noise.rds") |> 
+mortality_noise_df <- import_mortality(path = "02_Data/result-noise.rds") |> 
   dplyr::filter(pop_n > 0)
 
-abundance_combined_df <- dplyr::bind_rows(phase = abundance_phase_df, noise = abundance_noise_df,
+mortality_combined_df <- dplyr::bind_rows(phase = mortality_phase_df, noise = mortality_noise_df,
                                           .id = "scenario") |>
-  dplyr::mutate(scenario = factor(scenario, levels = c("phase", "noise"))) |> 
+  dplyr::mutate(scenario = factor(scenario, levels = c("phase", "noise"))) |>
   dplyr::group_by(scenario, row_id, pop_n, nutrient_input) |>
-  dplyr::summarise(abundance_max = max(mean), .groups = "drop")
+  dplyr::summarise(died_total = mean(died_total), .groups = "drop")
 
 #### Filter abundances/mortality #### 
 
-results_combined_df <- dplyr::left_join(x = results_combined_df, y = abundance_combined_df, 
+results_combined_df <- dplyr::left_join(x = results_combined_df, y = mortality_combined_df, 
                                         by = c("scenario", "row_id", "pop_n", "nutrient_input")) |> 
   dplyr::mutate(include = dplyr::case_when(pop_n == 128 & nutrient_input == "low" &
-                                             abundance_max > threshold_abundance ~ "no", 
+                                             died_total > threshold_mort ~ "no", 
                                            TRUE ~ "yes"))
 
 #### Split data #### 
 
-results_combined_list <- dplyr::filter(results_combined_df, measure %in% c("alpha", "gamma"),
-                                       part %in% c("ag_production", "bg_production", "ttl_production"), 
-                                       pop_n != 0, include == "yes") |>
-  dplyr::group_by(scenario, part, measure, pop_n, nutrient_input) |>
+results_combined_list <- dplyr::left_join(x = dplyr::filter(results_combined_df, measure == "beta") |> 
+                                            dplyr::select(scenario, row_id, part, pop_n, nutrient_input, include, value.cv),
+                                          y = dplyr::filter(results_combined_df, measure == "gamma") |> 
+                                            dplyr::select(scenario, row_id, part, pop_n, nutrient_input, include, value.prod), 
+                                          by = c("scenario", "row_id", "part", "pop_n", "nutrient_input", "include")) |> 
+  dplyr::filter(include == "yes") |> 
+  dplyr::group_by(scenario, part, pop_n, nutrient_input) |>
   dplyr::group_split()
-
+  
 #### Fit regression model ####
 
 full_lm_df <- purrr::map_dfr(results_combined_list, function(df_temp) {
   
-  df_temp_stand <- dplyr::select(df_temp, value.prod, biotic, abiotic) |> 
-    dplyr::mutate(dplyr::across(where(is.numeric), .fns = function(x) log(x))) |>
+  df_temp_stand <- dplyr::select(df_temp, value.cv, value.prod) |> 
+    dplyr::mutate(dplyr::across(where(is.numeric), .fns = function(x) log(x))) |> 
     dplyr::mutate(dplyr::across(where(is.numeric), .fns = function(x) (x - mean(x)) / sd(x)))
   
- lm_temp <- lm(value.prod ~ abiotic * biotic, data = df_temp_stand)
+  lm_temp <- lm(value.prod ~ value.cv, data = df_temp_stand)
   
   broom::tidy(lm_temp) |> 
     dplyr::mutate(scenario = unique(df_temp$scenario), part = unique(df_temp$part), 
-                  measure = unique(df_temp$measure), pop_n = unique(df_temp$pop_n),
-                  nutrient_input = unique(df_temp$nutrient_input), .before = term) |> 
+                  pop_n = unique(df_temp$pop_n), nutrient_input = unique(df_temp$nutrient_input), .before = term) |> 
     dplyr::mutate(p.value.class = dplyr::case_when(p.value < 0.001 ~ "***", p.value < 0.01 ~ "**", 
                                                    p.value < 0.05 ~ "*", p.value >= 0.05 ~ ""), 
                   r2 = summary(lm_temp)$adj.r.squared, 
@@ -75,95 +77,58 @@ full_lm_df <- purrr::map_dfr(results_combined_list, function(df_temp) {
                                                estimate > 0.0 ~ "increase"))
 })
 
-#### Save linear regression results ####
-
-# purrr::walk(c("phase", "noise"), function(i) {
-#   dplyr::filter(full_lm_df, scenario == i) |> 
-#     suppoRt::save_rds(filename = paste0("lm_variability_prod_", i, ".rds"), 
-#                       path = "05_Results/", overwrite = FALSE)
-# })
-
 #### Setup ggplot ####
 
-color_term <- c("abiotic" = "#006d9a", "biotic" = "#00af73", "abiotic:biotic" = "#ffaa3a", "residuals" = "grey")
+color_part <- c("ag_production" = "#c97644", "bg_production" = "#541f1b")
 
-size_point <- 5 #* 0.75
-size_line <- 0.75
-size_text <- 2.5
-size_base <- 10.0
-
-alpha <- 0.5
-
-width_pos <- 0.65
-
-# dplyr::filter(full_lm_df, term %in% c("biotic", "abiotic"))
+width_pos <- 0.35
 
 #### Create ggplot model parameters ####
 
 gg_coef_scenario <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i) {
   
-  range_estimate <- dplyr::filter(full_lm_df, scenario == scenario_i, 
-                                  term %in% c("abiotic", "biotic", "abiotic:biotic")) |> 
-    dplyr::pull(estimate) |> 
-    range() |> 
-    abs() |> 
-    max()
-  
-  purrr::map(c(ag_production = "ag_production", bg_production = "bg_production", ttl_production = "ttl_production"), function(part_j) {
-  
-    dplyr::filter(full_lm_df, scenario == scenario_i, 
-                  part == part_j, term %in% c("biotic", "abiotic", "abiotic:biotic")) |> 
-      
-      ggplot() +
-      
-      # adding geoms
-      geom_hline(yintercept = 0.0, linetype = 2, color = "grey") +
-      geom_linerange(aes(x = pop_n, ymin = 0.0, ymax = estimate, color = term),
-                     alpha = 0.25, position = position_dodge(width = width_pos), linewidth = size_line) +
-      geom_point(aes(x = pop_n, y = estimate, fill = term, color = term, size = term, shape = direction),
-                 position = position_dodge(width = width_pos)) +
-      geom_text(aes(x = pop_n, y = estimate, label = p.value.class, group = term), 
-                position = position_dodge(width = width_pos),vjust = 0.75, size = size_text, color = "white") +
-
-      # facet gridding
-      facet_grid(rows = dplyr::vars(nutrient_input), cols = dplyr::vars(measure), 
-                 labeller = labeller(nutrient_input = function(x) paste0("Nutr. input: ", x))) +
-
-      # set scales and labs
-      scale_color_manual(name = "", values = color_term,
-                         labels = c("abiotic" =  "Abiotic subsidies", "biotic" = "Consumer connectivity", 
-                                    "abiotic:biotic" = "Interaction Subsidies:Connectivity", "residuals" = "Residuals")) +
-      scale_fill_manual(name = "", values =  color_term,
-                        labels = c("abiotic" =  "Abiotic subsidies", "biotic" = "Consumer connectivity", 
-                                   "abiotic:biotic" = "Interaction Subsidies:Connectivity", "residuals" = "Residuals")) +
-      scale_shape_manual(name = "", values = c("decrease" = 25, "increase" = 24)) +
-      scale_size_manual(values = c("abiotic" = size_point, "biotic" = size_point,
-                                   "abiotic:biotic" = size_point / 2)) +
-      coord_flip() +
-      scale_x_discrete(limits = rev(levels(full_lm_df$pop_n)[-1])) +
-      scale_y_continuous(limits = c(-range_estimate, range_estimate), labels = function(x) round(x, 2),
-                         breaks = seq(-range_estimate, range_estimate, length.out = 5)) +
-
-      # setup theme
-      labs(x = "Population size", y = "Parameter estimate") +
-      guides(color = guide_legend(order = 1, override.aes = list(shape = 17, size = size_point)),
-             shape = guide_legend(order = 2, override.aes = list(size = size_point)), 
-             fill = "none", size = "none") +
-      theme_classic(base_size = size_base) +
-      theme(axis.line = element_blank(), panel.border = element_rect(linewidth = 0.5, fill = NA),
-            strip.background = element_blank(), strip.text = element_text(hjust = 0.1), plot.title = element_text(size = size_base),
-            legend.position = "bottom",
-            plot.margin = margin(t = 5.5, r = 5.5, b = 5.5, l = 5.5, unit = "pt"))
+  dplyr::filter(full_lm_df, scenario == scenario_i, part %in% c("ag_production", "bg_production"), term == "value.cv") |> 
     
-  })
+    ggplot(aes(x = pop_n, y = estimate, color = part, fill = part, group = part)) +
+    
+    # adding geoms
+    geom_hline(yintercept = 0.0, linetype = 2, color = "grey") +
+    geom_linerange(aes(ymin = 0.0, ymax = estimate), alpha = 0.75, linewidth = 0.75, 
+                   position = position_dodge(width = width_pos)) +
+    geom_point(aes(shape = direction), size = 5.0, 
+               position = position_dodge(width = width_pos)) +
+    geom_text(aes(label = p.value.class), vjust = 0.75, size = 2.5, color = "white",
+              position = position_dodge(width = width_pos)) +
+      
+    # facet grid
+    facet_grid(rows = dplyr::vars(nutrient_input), scales = "fixed",
+               labeller = labeller(nutrient_input = function(x) paste0("Nutr. input: ", x))) +
+  
+    # set scales and labs
+    scale_color_manual(name = "", values = color_part) +
+    scale_fill_manual(name = "", values = color_part, 
+                      labels = c("ag_production" = "Aboveground", "bg_production" = "Belowground")) +
+    # scale_shape_manual(name = "", values = c("decrease" = 25, "increase" = 24)) +
+    coord_flip() +
+    scale_x_discrete(limits = rev(levels(full_lm_df$pop_n))) +
+    scale_y_continuous(breaks = function(x) seq(min(x), max(x), length.out = 5), 
+                       labels = function(x) round(x, 2)) +
+      
+    # setup theme
+    labs(x = "Population size", y = "Parameter estimate") +
+    guides(shape = "none", color = "none", 
+           fill = guide_legend(override.aes = list(shape = 24, color = "white"))) +
+    theme_classic(base_size = 10.0) +
+    theme(axis.line = element_blank(), panel.border = element_rect(linewidth = 0.5, fill = NA),
+          strip.background = element_blank(), strip.text = element_text(hjust = 0.5),
+          legend.position = "bottom")
+  
 })
 
-#### Save ggplot #### 
+#### Save ggplot ####
 
-suppoRt::save_ggplot(plot = gg_coef_scenario$noise$ag_production, filename = "Figure-3.pdf",
-                     path = "04_Figures/", width = width, height = height * 0.75,
-                     units = units, dpi = dpi, overwrite = FALSE)
+overwrite <- TRUE
 
-suppoRt::save_ggplot(plot = gg_coef_scenario$noise$bg_production, filename = "Figure-A5.pdf",
-                     path = "04_Figures/Appendix/", width = width, height = height * 0.75,
-                     units = units, dpi = dpi, overwrite = FALSE)
+suppoRt::save_ggplot(plot = gg_coef_scenario$noise, filename = "Figure-3.pdf",
+                     path = "04_Figures/", width = width, height = height * 0.65,
+                     units = units, dpi = dpi, overwrite = overwrite)
