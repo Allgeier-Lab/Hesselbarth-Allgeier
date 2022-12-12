@@ -33,8 +33,7 @@ starting_values_list$detritus_pool <- stable_values_list$detritus_pool
 #### Simulate nutrient inputs variability ####
 
 input_values_noise <- meta.arrR::simulate_nutrient_noise(n = n, max_i = max_i, frequency = frequency, 
-                                                         input_mn = nutrient_input, amplitude_mn = amplitude_mn, 
-                                                         noise_sd = variability) |>  
+                                                         input_mn = nutrient_input, noise = variability) |>  
   
   meta.arrR::get_input_df(gamma = FALSE, long = TRUE) |> 
   dplyr::filter(timestep > (max_i / years) * years_filter) |> 
@@ -59,7 +58,7 @@ base_size <- 7.5
 gg_local <- ggplot(data = input_values_noise, aes(x = timestep, y = value, color = meta)) +
 
   # adding geoms
-  geom_hline(yintercept = nutrient_input, linetype = 2, size = line_size, color = "grey") +
+  geom_hline(yintercept = nutrient_input, linetype = 2, linewidth = line_size, color = "grey") +
   geom_line(linewidth = line_size) +
 
   # set scales
@@ -100,5 +99,5 @@ gg_input_curves <- cowplot::ggdraw(gg_input_curves, ylim = c(-0.05, 1.0)) +
 #### Save result ####
 
 suppoRt::save_ggplot(plot = gg_input_curves, filename = paste0("Figure-1-nutr.png"),
-                     path = "04_Figures/", width = 85, height = 35,
-                     units = units, dpi = dpi, overwrite = FALSE)
+                     path = "04_Figures/", width = 165, height = 65,
+                     units = units, dpi = dpi, overwrite = T)
