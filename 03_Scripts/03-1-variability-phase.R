@@ -110,6 +110,7 @@ foo_hpc <- function(pop_n, biotic, abiotic, nutrient_input) {
   #   tidyr::pivot_longer(-part, names_to = "measure", values_to = "value")
   
   prod <- meta.arrR::summarize_meta(result = result_temp, biomass = FALSE, production = TRUE, 
+                                    fun = function(x, ...) {mean(x, ...) / ((save_each * 120) / 60 / 24)},
                                     lag = c(NA, TRUE))[["production"]] |> 
     dplyr::filter(timestep != min(timestep)) |> 
     tidyr::pivot_longer(-c(meta, timestep), names_to = "part") |> 
@@ -117,7 +118,7 @@ foo_hpc <- function(pop_n, biotic, abiotic, nutrient_input) {
     dplyr::summarise(alpha = mean(value), gamma = sum(value), .groups = "drop") |> 
     tidyr::pivot_longer(-c(timestep, part), names_to = "measure") |> 
     dplyr::group_by(part, measure) |> 
-    dplyr::summarise(value = mean(value))
+    dplyr::summarise(value = mean(value), .groups = "drop")
   
   # prod_near <- meta.arrR::summarize_meta(result = result_temp_near, biomass = FALSE, production = TRUE, 
   #                                                   lag = c(NA, FALSE))[["production"]] |> 
@@ -128,6 +129,7 @@ foo_hpc <- function(pop_n, biotic, abiotic, nutrient_input) {
   #   tidyr::pivot_longer(-part, names_to = "measure", values_to = "value")
   
   prod_near <- meta.arrR::summarize_meta(result = result_temp_near, biomass = FALSE, production = TRUE, 
+                                         fun = function(x, ...) {mean(x, ...) / ((save_each * 120) / 60 / 24)},
                                          lag = c(NA, TRUE))[["production"]] |> 
     dplyr::filter(timestep != min(timestep)) |> 
     tidyr::pivot_longer(-c(meta, timestep), names_to = "part") |> 
@@ -135,13 +137,15 @@ foo_hpc <- function(pop_n, biotic, abiotic, nutrient_input) {
     dplyr::summarise(alpha = mean(value), gamma = sum(value), .groups = "drop") |> 
     tidyr::pivot_longer(-c(timestep, part), names_to = "measure") |> 
     dplyr::group_by(part, measure) |> 
-    dplyr::summarise(value = mean(value))
+    dplyr::summarise(value = mean(value), .groups = "drop")
   
   # calc cv
   cv <- meta.arrR::calc_variability(x = result_temp, biomass = FALSE, production = TRUE,
+                                    fun = function(x, ...) {mean(x, ...) / ((save_each * 120) / 60 / 24)},
                                     lag = c(NA, TRUE))[["production"]]
   
   cv_near <- meta.arrR::calc_variability(x = result_temp_near, biomass = FALSE, production = TRUE,
+                                         fun = function(x, ...) {mean(x, ...) / ((save_each * 120) / 60 / 24)},
                                          lag = c(NA, TRUE))[["production"]]
   
   # combine to result data.frame and list
