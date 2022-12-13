@@ -17,9 +17,9 @@ source("01_Functions/import-cv.R")
 
 n <- 5
 
-results_phase_df <- import_cv(path = paste0("02_Data/result-phase-", n, ".rds"))
+results_phase_df <- import_cv(path = "02_Data/result-phase.rds", near = FALSE)
 
-results_noise_df <- import_cv(path = paste0("02_Data/result-noise-", n, ".rds"))
+results_noise_df <- import_cv(path = "02_Data/result-noise.rds", near = FALSE)
 
 results_combinded_df <- dplyr::bind_rows(phase = results_phase_df, noise = results_noise_df, .id = "scenario") |> 
   dplyr::mutate(scenario = factor(scenario, levels = c("phase", "noise")))

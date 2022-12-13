@@ -16,9 +16,9 @@ source("01_Functions/import-mortality.R")
 
 #### Load/wrangle simulated data ####
 
-results_phase_df <- import_cv(path = "02_Data/result-phase.rds")
+results_phase_df <- import_cv(path = "02_Data/result-phase.rds", near = FALSE)
 
-results_noise_df <- import_cv(path = "02_Data/result-noise.rds")
+results_noise_df <- import_cv(path = "02_Data/result-noise.rds", near = FALSE)
 
 results_combined_df <- dplyr::bind_rows(phase = results_phase_df, noise = results_noise_df, 
                                         .id = "scenario") |> 

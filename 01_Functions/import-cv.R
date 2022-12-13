@@ -1,12 +1,23 @@
-import_cv <- function(path) {
+import_cv <- function(path, near = FALSE) {
   
   readr::read_rds(path) |> 
     purrr::map_dfr(function(j) {
-      dplyr::left_join(x = j$cv, y = j$prod, by = c("part", "measure", "pop_n", "nutrient_input",
-                                                    "biotic", "abiotic"), 
-                       suffix = c(".cv", ".prod")) |> 
-        dplyr::rename("value.sd" = "sd", "value.mn" = "mean")
-    }, .id = "row_id") |> 
+      
+      if (near) {
+        
+        x <- dplyr::left_join(x = j$cv_near, y = j$prod_near, suffix = c(".cv", ".prod"),
+                              by = c("part", "measure", "pop_n", "nutrient_input",
+                                     "biotic", "abiotic"))
+        
+      } else {
+        
+        x <- dplyr::left_join(x = j$cv, y = j$prod, suffix = c(".cv", ".prod"),
+                              by = c("part", "measure", "pop_n", "nutrient_input",
+                                     "biotic", "abiotic"))
+        
+      }
+      
+      dplyr::rename(x, "value.sd" = "sd", "value.mn" = "mean")}, .id = "row_id") |> 
     dplyr::mutate(row_id = as.numeric(row_id),part = factor(part, levels = c("ag_production", "bg_production", "ttl_production")),
                   measure = factor(measure, levels = c("alpha", "gamma", "beta", "synchrony")),
                   pop_n = factor(as.numeric(pop_n), ordered = TRUE),

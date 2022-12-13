@@ -17,9 +17,9 @@ source("01_Functions/import-cv.R")
 
 n <- 5
 
-phase_df <- import_cv(path = paste0("02_Data/result-phase-", n, ".rds"))
+phase_df <- import_cv(path = "02_Data/result-phase.rds", near = FALSE)
 
-noise_df <- import_cv(path =  paste0("02_Data/result-noise-", n, ".rds"))
+noise_df <- import_cv(path = "02_Data/result-noise.rds", near = FALSE)
 
 #### Wrangle data ####
 

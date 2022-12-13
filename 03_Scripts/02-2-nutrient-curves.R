@@ -14,9 +14,9 @@ source("01_Functions/setup.R")
 
 #### Adapt parameters ####
 
-variability <- 0.75
+variability <- 0.5
 
-years_filter <- 45
+years_filter <- 48
 
 nutrient_input <- 1.0
 
@@ -47,57 +47,82 @@ input_values_meta <- dplyr::group_by(input_values_noise, timestep) |>
 
 breaks_x <- seq(from = (max_i / years) * years_filter, to = max_i, by = max_i / years)
 
-line_size <- 0.25
+line_size <- 0.5
 
-line_color <- MetBrewer::met.brewer(name = "Java", n = n, type = "discrete")
+color_meta <- MetBrewer::met.brewer(name = "Java", n = n, type = "discrete")
 
-base_size <- 7.5
+names(color_meta) <- levels(input_values_noise$meta) |> as.character()
+
+color_meta <- c(color_meta, "Meta-ecosystem" = "grey")
+
+base_size <- 5.5
 
 #### Create ggplot local ####
 
-gg_local <- ggplot(data = input_values_noise, aes(x = timestep, y = value, color = meta)) +
+# gg_local <- ggplot(data = input_values_noise, aes(x = timestep, y = value, color = meta)) +
+# 
+#   # adding geoms
+#   geom_hline(yintercept = nutrient_input, linetype = 2, linewidth = line_size, color = "grey") +
+#   geom_line(linewidth = line_size) +
+# 
+#   # set scales
+#   scale_x_continuous(breaks = breaks_x) +
+#   scale_y_continuous(limits = c(nutrient_input * 0.05, nutrient_input * 1.95),
+#                      breaks = c(nutrient_input * 0.05, nutrient_input, nutrient_input * 1.95),
+#                      labels = c("5%", "Mean", "195%")) +
+#   scale_color_manual(values = color_meta) +
+# 
+#   # theming
+#   labs(x = "", y = "Abiotic nutrient subsidies") +
+#   theme_classic(base_size = base_size) +
+#   theme(legend.position = "none", axis.text = element_blank())
+# 
+# gg_meta <- ggplot(data = input_values_meta, aes(x = timestep, y = value)) +
+#   
+#   # adding geoms
+#   geom_hline(yintercept = nutrient_input * n, linetype = 2, size = line_size, color = "grey") +
+#   geom_line(linewidth = line_size, color = "#32b2daff") +
+#   
+#   # set scales
+#   scale_x_continuous(breaks = breaks_x) +
+#   scale_y_continuous(limits = c(nutrient_input * 0.05, nutrient_input * 1.95) * n,
+#                      breaks = c(nutrient_input * 0.05, nutrient_input, nutrient_input * 1.95) * n,
+#                      labels = c("5%", "Mean", "195%")) +
+#   scale_color_manual(values = color_meta) +
+#   
+#   # theming
+#   labs(x = "", y = "") +
+#   theme_classic(base_size = base_size) +
+#   theme(legend.position = "none", axis.text = element_blank())
+# 
+# gg_input_curves <- cowplot::plot_grid(gg_local, gg_meta, ncol = 2)
+# 
+# gg_input_curves <- cowplot::ggdraw(gg_input_curves, ylim = c(-0.05, 1.0)) + 
+#   cowplot::draw_label("Time", x = 0.5, y = 0, angle = 0, size = base_size)
 
-  # adding geoms
-  geom_hline(yintercept = nutrient_input, linetype = 2, linewidth = line_size, color = "grey") +
-  geom_line(linewidth = line_size) +
-
+gg_combined <- ggplot() + 
+  
+  # geoms
+  geom_line(data = input_values_noise, aes(x = timestep, y = value, color = meta), 
+            linewidth = line_size) +
+  geom_line(data = input_values_meta, aes(x = timestep, y = (value / 5), color = "Meta-ecosystem"), 
+            linewidth = line_size * 2.5) +
+  
   # set scales
-  scale_x_continuous(breaks = breaks_x) +
-  scale_y_continuous(limits = c(nutrient_input * 0.05, nutrient_input * 1.95),
-                     breaks = c(nutrient_input * 0.05, nutrient_input, nutrient_input * 1.95),
-                     labels = c("5%", "Mean", "195%")) +
-  scale_color_manual(values = line_color) +
-
-  # theming
-  labs(x = "", y = "Abiotic nutrient subsidies") +
+  scale_color_manual(name = "",values = color_meta, labels = c(paste("Local ecosystem", 1:n), "Meta-ecosystem")) +
+  scale_linetype_manual(name = "", values = c("local" = 1, "meta" = 1), 
+                        labels = c("local" = "Local ecosystems n", "meta" = "Meta-ecosystem scale")) + 
+  scale_y_continuous(limits = c(0,  2.0 * nutrient_input)) +
+  scale_x_continuous(breaks = function(x) seq(quantile(x, 0.1), quantile(x, 0.9), length.out = 5)) +
+  
+  # themes
+  guides(color = "none") +
+  labs(x = "Time", y = "Abiotic nutrient subsidies") +
   theme_classic(base_size = base_size) +
-  theme(legend.position = "none", axis.text = element_blank())
-
-gg_meta <- ggplot(data = input_values_meta, aes(x = timestep, y = value)) +
-  
-  # adding geoms
-  geom_hline(yintercept = nutrient_input * n, linetype = 2, size = line_size, color = "grey") +
-  geom_line(linewidth = line_size, color = "#32b2daff") +
-  
-  # set scales
-  scale_x_continuous(breaks = breaks_x) +
-  scale_y_continuous(limits = c(nutrient_input * 0.05, nutrient_input * 1.95) * n,
-                     breaks = c(nutrient_input * 0.05, nutrient_input, nutrient_input * 1.95) * n,
-                     labels = c("5%", "Mean", "195%")) +
-  scale_color_manual(values = line_color) +
-  
-  # theming
-  labs(x = "", y = "") +
-  theme_classic(base_size = base_size) +
-  theme(legend.position = "none", axis.text = element_blank())
-
-gg_input_curves <- cowplot::plot_grid(gg_local, gg_meta, ncol = 2)
-
-gg_input_curves <- cowplot::ggdraw(gg_input_curves, ylim = c(-0.05, 1.0)) + 
-  cowplot::draw_label("Time", x = 0.5, y = 0, angle = 0, size = base_size)
+  theme(legend.position = "bottom", axis.text = element_blank())
 
 #### Save result ####
 
-suppoRt::save_ggplot(plot = gg_input_curves, filename = paste0("Figure-1-nutr.png"),
+suppoRt::save_ggplot(plot = gg_combined, filename = paste0("Figure-1-nutr.pdf"),
                      path = "04_Figures/", width = 165, height = 65,
                      units = units, dpi = dpi, overwrite = T)
