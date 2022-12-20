@@ -87,7 +87,7 @@ threshold <- 1000
   
   # themes
   labs(x = "Maximum abundance", y = "Maximum total mortality") + 
-  theme_classic(base_size = 10) +
+  theme_classic(base_size = 12) +
   theme(strip.background = element_blank(), strip.text = element_blank(),
         axis.line = element_blank(), panel.border = element_rect(linewidth = 0.5, fill = NA)))
 

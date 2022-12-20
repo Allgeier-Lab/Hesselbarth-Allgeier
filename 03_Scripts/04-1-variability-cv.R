@@ -16,9 +16,11 @@ source("01_Functions/import-mortality.R")
 
 #### Load/wrangle simulated data ####
 
-results_phase_df <- import_cv(path = "02_Data/result-phase.rds", near = FALSE)
+near <- FALSE
 
-results_noise_df <- import_cv(path = "02_Data/result-noise.rds", near = FALSE)
+results_phase_df <- import_cv(path = "02_Data/result-phase.rds", near = near)
+
+results_noise_df <- import_cv(path = "02_Data/result-noise.rds", near = near)
 
 results_combined_df <- dplyr::bind_rows(phase = results_phase_df, noise = results_noise_df, 
                                         .id = "scenario") |> 
@@ -117,7 +119,7 @@ rel_importance_df <- purrr::map_dfr(results_combined_list, function(df_temp) {
 
 #### Setup ggplot ####
 
-size_base <- 10.5
+size_base <- 10.0
 size_text <- 2.0
 size_point <- 2.5
 
@@ -140,147 +142,122 @@ gg_dummy <- data.frame(beta = c("abiotic", "biotic", "abiotic:biotic", "residual
   theme_classic(base_size = size_base) +
   theme(legend.position = "bottom")
 
-#### Create ggplot cv ####
+#### Create ggplot: Main ####
 
-gg_scenario <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i) {
+gg_alpha <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i) {
   
   purrr::map(c(ag = "ag_production", bg =  "bg_production", ttl = "ttl_production"), function(part_i) {
     
     regression_temp <- dplyr::filter(full_lm_df, scenario == scenario_i, part == part_i, 
-                                     term != "(Intercept)")
+                                     term != "(Intercept)", measure == "alpha")
     
-    importance_temp <- dplyr::filter(rel_importance_df, scenario == scenario_i, part == part_i)
+    importance_temp <- dplyr::filter(rel_importance_df, scenario == scenario_i, part == part_i, 
+                                     measure == "alpha")
       
     beta_temp <- dplyr::filter(results_combined_df, scenario == scenario_i, part == part_i, 
                                measure == "beta", include == "yes")
     
-    # label_temp <- dplyr::group_by(beta_temp, nutrient_input, type) |> 
-    #   dplyr::group_split() |> 
-    #   purrr::map_dfr(function(i) {
-    #     
-    #     if (any(i$pop_n != 0)) {
-    #     
-    #     anova <- aov(value.cv ~ pop_n, data = i)
-    #     
-    #     tukey <- TukeyHSD(anova)
-    #     
-    #     label_letters <- multcompView::multcompLetters4(anova, tukey)
-    #     
-    #     data.frame(nutrient_input = unique(i$nutrient_input), type = unique(i$type),
-    #                pop_n = names(label_letters$pop_n$Letters),
-    #                letter = unname(label_letters$pop_n$Letters))
-    #     
-    #     } else {
-    #     
-    #         data.frame(nutrient_input = unique(i$nutrient_input), type = unique(i$type),
-    #                    pop_n = unique(i$pop_n), letter = "")
-    #     
-    #     }
-    #   }) |> 
-    #   dplyr::mutate(pop_n = factor(as.numeric(pop_n), ordered = TRUE)) |> 
-    #   dplyr::arrange(nutrient_input, type, pop_n)
-    
-    y_lims <- range(regression_temp$estimate)
+    gg_regression <- ggplot(data = regression_temp) +
+      
+      # zero line
+      geom_hline(yintercept = 0.0, linetype = 2, color = "grey") +
+      
+      # lines
+      geom_line(aes(x = pop_n, y = estimate, group = term, color = term),
+                alpha = 0.25, position = position_dodge(width = width_doge)) +
+      
+      # points
+      geom_point(aes(x = pop_n, y = estimate, color = term, shape = p.value.class),
+                 shape = 19, position = position_dodge(width = width_doge), size = size_point) +
+      
+      # text
+      geom_text(aes(x = pop_n, y = estimate, label = p.value.class, group = term), color = "black",
+                size = size_text, position = position_dodge(width = width_doge), vjust = 0.75) +
+      
+      # facet
+      facet_grid(rows = vars(nutrient_input), scales = "free") +
+      annotate("segment", x = -Inf, xend = Inf, y = -Inf, yend = -Inf) +
+      annotate("segment", x = -Inf, xend = Inf, y = Inf, yend = Inf) +
+      annotate("segment", x = Inf, xend = Inf, y = -Inf, yend = Inf) +
+      annotate("segment", x = -Inf, xend = -Inf, y = -Inf, yend = Inf) +
+      
+      # set scales
+      scale_color_manual(name = "Scale", values = color_regression) +
+      scale_y_continuous(limits = function(x) c(-max(abs(regression_temp$estimate)), 
+                                                max(abs(regression_temp$estimate))), 
+                         breaks = function(x) seq(-quantile(abs(regression_temp$estimate), 0.99), 
+                                                  quantile(abs(regression_temp$estimate), 0.99), length.out = 4),
+                         labels = function(x) round(x, 2)) +
 
-    gg_var <- purrr::map(c(alpha = "alpha", beta = "gamma"), function(scale_i) {
+      # labels and themes
+      labs(y = "Parameter estimate") +
+      theme_classic(base_size = size_base) +
+      theme(strip.background = element_blank(), strip.text = element_blank(),
+            axis.line = element_blank(), axis.title.x = element_blank(), legend.position = "none")
       
-      gg_regression <- ggplot(data = dplyr::filter(regression_temp, measure == scale_i)) +
-        
-        # zero line
-        geom_hline(yintercept = 0.0, linetype = 2, color = "grey") +
-        
-        # lines
-        geom_line(aes(x = pop_n, y = estimate, group = term, color = term),
-                  alpha = 0.25, position = position_dodge(width = width_doge)) +
-        
-        # points
-        geom_point(aes(x = pop_n, y = estimate, color = term, shape = p.value.class),
-                   shape = 19, position = position_dodge(width = width_doge), size = size_point) +
-        
-        # text
-        geom_text(aes(x = pop_n, y = estimate, label = p.value.class, group = term), color = "black",
-                  size = size_text, position = position_dodge(width = width_doge), vjust = 0.75) +
-        
-        # facet
-        facet_grid(rows = vars(nutrient_input)) +
-        
-        # set scales
-        scale_color_manual(name = "Scale", values = color_regression) +
-        scale_y_continuous(limits = y_lims) +
-        
-        # labels and themes
-        theme_classic(base_size = size_base) +
-        theme(strip.background = element_blank(), strip.text = element_blank(),
-              axis.title = element_blank(), legend.position = "none")
+    gg_relimp <- ggplot(data = importance_temp) +
       
-      gg_relimp <- ggplot(data = dplyr::filter(importance_temp, measure == scale_i)) +
-        
-        # zero line
-        geom_hline(yintercept = 0.0, linetype = 2, color = "grey") +
-        
-        # relative importance bars
-        geom_col(aes(x = pop_n, y = mean, fill = factor(beta, levels = rev(levels(beta))))) +
-        
-        # facets
-        facet_grid(rows = vars(nutrient_input)) +
-        
-        # set scales
-        scale_fill_manual(name = "", values = color_relimp) +
-        scale_y_continuous(labels = function(x) paste0(x, "%")) +
-        
-        # labels and themes
-        theme_classic(base_size = size_base) +
-        theme(strip.background = element_blank(), strip.text = element_blank(),
-              axis.title = element_blank(), legend.position = "none")
+      # zero line
+      geom_hline(yintercept = 0.0, linetype = 2, color = "grey") +
       
-      cowplot::plot_grid(gg_regression, gg_relimp, ncol = 2, rel_widths = c(0.6, 0.4))
+      # relative importance bars
+      geom_col(aes(x = pop_n, y = mean, fill = factor(beta, levels = rev(levels(beta))))) +
       
-    })
-    
-    gg_var <- cowplot::plot_grid(plotlist = gg_var, ncol = 2, labels = c("a)", "b)"))
-  
-    gg_var <- cowplot::ggdraw(gg_var, xlim = c(-0.05, 1.0)) +
-      # cowplot::draw_label("Population size", x = 0.5, y = 0, angle = 0, size = size_base) +
-      cowplot::draw_label("Param. estimate / Importance [%] / Portfolio effect", 
-                          x = 0.0, y = 0.5, angle = 90, vjust = -0.0, size = size_base) # +
-      # cowplot::draw_label("Nutr. input: low", x = 1.0, y = 0.85, angle = 270, size = size_base * 0.65) +
-      # cowplot::draw_label("Nutr. input: medium", x = 1.0, y = 0.525, angle = 270, size = size_base * 0.65) +
-      # cowplot::draw_label("Nutr. input: high", x = 1.0, y = 0.225, angle = 270, size = size_base * 0.65)
-    
-    # gg_var <- cowplot::plot_grid(gg_var, cowplot::get_legend(gg_dummy_var), 
-    #                              nrow = 2, ncol = 1, rel_heights = c(0.9, 0.1))
+      # facets
+      facet_grid(rows = vars(nutrient_input), scales = "fixed") +
+      annotate("segment", x = -Inf, xend = Inf, y = -Inf, yend = -Inf) +
+      annotate("segment", x = -Inf, xend = Inf, y = Inf, yend = Inf) +
+      annotate("segment", x = Inf, xend = Inf, y = -Inf, yend = Inf) +
+      annotate("segment", x = -Inf, xend = -Inf, y = -Inf, yend = Inf) +
+      
+      # set scales
+      scale_fill_manual(name = "", values = color_relimp) +
+      scale_y_continuous(labels = function(x) paste0(x, "%")) +
+      
+      # labels and themes
+      labs(y = "Relative importance [%]") +
+      theme_classic(base_size = size_base) +
+      theme(strip.background = element_blank(), strip.text = element_blank(),
+            axis.title.x = element_blank(), axis.line = element_blank(), legend.position = "none")
     
     # ggplot
-    gg_beta <- ggplot(beta_temp, aes(x = pop_n, y = value.cv, color = type, fill = type)) + 
-      
+    gg_beta <- ggplot(beta_temp, aes(x = pop_n, y = value.cv, color = type, fill = type)) +
+
       # geoms
-      geom_boxplot(outlier.shape = NA, position = position_dodge2(width = 1, preserve = "single"), 
+      geom_boxplot(outlier.shape = NA, position = position_dodge2(width = 1, preserve = "single"),
                    alpha = 0.5) +
       geom_hline(yintercept = 1.0, linetype = 2, color = "grey") +
-      # geom_text(data = label_temp, aes(x = pop_n, y = max(beta_temp$value.cv), label = letter),
-      #            position = position_dodge(0.8), size = size_text) +
-      
+
       # scales
       scale_fill_manual(name = "", values = color_beta) +
       scale_color_manual(name = "", values = color_beta) +
-      # scale_x_discrete(breaks = c(0, 8, 32, 128)) +
-  
+      scale_y_continuous(sec.axis = dup_axis()) +
+
       # facet
       facet_grid(rows = vars(nutrient_input), cols = vars(type), scales = "free_x", space = "free",
                  labeller = labeller(nutrient_input = function(x) paste("Nutr. input:", x))) +
-      
+      annotate("segment", x = -Inf, xend = Inf, y = -Inf, yend = -Inf) +
+      annotate("segment", x = -Inf, xend = Inf, y = Inf, yend = Inf) +
+
       # themes
       labs(y = "Portfolio effect") +
       guides(fill = guide_legend(nrow = 1), color = "none") +
       theme_classic(base_size = size_base) +
       theme(strip.background = element_blank(), strip.text = element_blank(),
-            axis.title = element_blank(), legend.position = "none")
-    
-   gg_total <- cowplot::plot_grid(gg_var, gg_beta, ncol = 2, rel_widths = c(0.8, 0.2),
-                                  labels = c("", "c)"))
+            panel.spacing.x = unit(0.0, "mm"), axis.title.x = element_blank(),
+            axis.ticks.y.right = element_blank(), axis.text.y.right = element_blank(),
+            axis.title.y.right = element_blank(), axis.line.y = element_line(linewidth = 0.5, color = "grey"), 
+            axis.line.x = element_blank(), legend.position = "none")
+ 
+   gg_total <- cowplot::plot_grid(gg_regression, gg_relimp, gg_beta, 
+                                  ncol = 3, rel_widths = c(1/3, 1/3, 1/3),
+                                  labels = c("a)", "b)", "c)"))
    
-   gg_total <- cowplot::ggdraw(gg_total, ylim = c(-0.025,  1.0)) +
-     cowplot::draw_label("Population size", x = 0.55, y = 0, angle = 0, size = size_base)
+   gg_total <- cowplot::ggdraw(gg_total, xlim = c(0, 1.025), ylim = c(-0.025,  1.0)) +
+     cowplot::draw_label("Population size", x = 0.55, y = 0, angle = 0, size = size_base * 0.65) + 
+     cowplot::draw_label("Nutr. input: low", x = 1.0, y = 0.8, angle = 270, size = size_base * 0.65, hjust = 1) +
+     cowplot::draw_label("Nutr. input: medium", x = 1.0, y = 1/2, angle = 270, size = size_base * 0.65) +
+     cowplot::draw_label("Nutr. input: high", x = 1.0, y = 0.15, angle = 270, size = size_base * 0.65, hjust = 1)
    
    gg_total <- cowplot::plot_grid(gg_total, cowplot::get_legend(gg_dummy),
                                   nrow = 2, ncol = 1, rel_heights = c(0.95, 0.05))
@@ -290,14 +267,128 @@ gg_scenario <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario
   })
 })
 
+#### Create ggplot: Appendix ####
+
+gg_gamma <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i) {
+  
+  purrr::map(c(ag = "ag_production", bg =  "bg_production", ttl = "ttl_production"), function(part_i) {
+    
+    regression_temp <- dplyr::filter(full_lm_df, scenario == scenario_i, part == part_i, 
+                                     term != "(Intercept)", measure == "gamma")
+    
+    importance_temp <- dplyr::filter(rel_importance_df, scenario == scenario_i, part == part_i, 
+                                     measure == "gamma")
+    
+    beta_temp <- dplyr::filter(results_combined_df, scenario == scenario_i, part == part_i, 
+                               measure == "beta", include == "yes", measure == "gamma")
+    
+    gg_regression <- ggplot(data = regression_temp) +
+      
+      # zero line
+      geom_hline(yintercept = 0.0, linetype = 2, color = "grey") +
+      
+      # lines
+      geom_line(aes(x = pop_n, y = estimate, group = term, color = term),
+                alpha = 0.25, position = position_dodge(width = width_doge)) +
+      
+      # points
+      geom_point(aes(x = pop_n, y = estimate, color = term, shape = p.value.class),
+                 shape = 19, position = position_dodge(width = width_doge), size = size_point) +
+      
+      # text
+      geom_text(aes(x = pop_n, y = estimate, label = p.value.class, group = term), color = "black",
+                size = size_text, position = position_dodge(width = width_doge), vjust = 0.75) +
+      
+      # facet
+      facet_grid(rows = vars(nutrient_input), scales = "free") +
+      annotate("segment", x = -Inf, xend = Inf, y = -Inf, yend = -Inf) +
+      annotate("segment", x = -Inf, xend = Inf, y = Inf, yend = Inf) +
+      annotate("segment", x = Inf, xend = Inf, y = -Inf, yend = Inf) +
+      annotate("segment", x = -Inf, xend = -Inf, y = -Inf, yend = Inf) +
+      
+      # set scales
+      scale_color_manual(name = "Scale", values = color_regression) +
+      scale_y_continuous(limits = function(x) c(-max(abs(regression_temp$estimate)), 
+                                                max(abs(regression_temp$estimate))), 
+                         breaks = function(x) seq(-quantile(abs(regression_temp$estimate), 0.99), 
+                                                  quantile(abs(regression_temp$estimate), 0.99), length.out = 4),
+                         labels = function(x) round(x, 2)) +
+      
+      # labels and themes
+      labs(y = "Parameter estimate") +
+      theme_classic(base_size = size_base) +
+      theme(strip.background = element_blank(), strip.text = element_blank(),
+            axis.title.x = element_blank(), axis.line = element_blank(), legend.position = "none")
+    
+    gg_relimp <- ggplot(data = importance_temp) +
+      
+      # zero line
+      geom_hline(yintercept = 0.0, linetype = 2, color = "grey") +
+      
+      # relative importance bars
+      geom_col(aes(x = pop_n, y = mean, fill = factor(beta, levels = rev(levels(beta))))) +
+      
+      # facets
+      facet_grid(rows = vars(nutrient_input), scales = "fixed") +
+      annotate("segment", x = -Inf, xend = Inf, y = -Inf, yend = -Inf) +
+      annotate("segment", x = -Inf, xend = Inf, y = Inf, yend = Inf) +
+      annotate("segment", x = Inf, xend = Inf, y = -Inf, yend = Inf) +
+      annotate("segment", x = -Inf, xend = -Inf, y = -Inf, yend = Inf) +
+      
+      # set scales
+      scale_fill_manual(name = "", values = color_relimp) +
+      scale_y_continuous(labels = function(x) paste0(x, "%")) +
+      
+      # labels and themes
+      labs(y = "Relative importance [%]") +
+      theme_classic(base_size = size_base) +
+      theme(strip.background = element_blank(), strip.text = element_blank(),
+            axis.line = element_blank(), legend.position = "none")
+    
+    gg_total <- cowplot::plot_grid(gg_regression, gg_relimp, 
+                                   ncol = 2, rel_widths = c(0.5, 0.5),
+                                   labels = c("a)", "b)"))
+    
+    gg_total <- cowplot::ggdraw(gg_total, xlim = c(0, 1.025), ylim = c(-0.025,  1.0)) +
+      cowplot::draw_label("Population size", x = 0.55, y = 0, angle = 0, size = size_base) +
+      cowplot::draw_label("Nutr. input: low", x = 1.0, y = 0.8, angle = 270, size = size_base * 0.65, hjust = 1) +
+      cowplot::draw_label("Nutr. input: medium", x = 1.0, y = 1/2, angle = 270, size = size_base * 0.65) +
+      cowplot::draw_label("Nutr. input: high", x = 1.0, y = 0.15, angle = 270, size = size_base * 0.65, hjust = 1)
+    
+    gg_total <- cowplot::plot_grid(gg_total, cowplot::get_legend(gg_dummy),
+                                   nrow = 2, ncol = 1, rel_heights = c(0.95, 0.05))
+    
+    gg_total
+    
+  })
+})
+
 #### Save ggplot #### 
 
-overwrite <- TRUE
+overwrite <- FALSE
 
-suppoRt::save_ggplot(plot = gg_scenario$noise$ag, filename = "Figure-2.pdf",
-                     path = "04_Figures/", width = height, height = width * 0.75,
+suppoRt::save_ggplot(plot = gg_alpha$noise$ag, 
+                     filename = ifelse(near, yes = "Figure-2-near.pdf", no = "Figure-2.pdf"),
+                     path = "04_Figures/", width = width, height = height * 0.5,
                      units = units, dpi = dpi, overwrite = overwrite)
 
-suppoRt::save_ggplot(plot = gg_scenario$noise$bg, filename = "Figure-A4.pdf",
-                     path = "04_Figures/Appendix/", width = height, height = width * 0.75,
+suppoRt::save_ggplot(plot = gg_gamma$noise$ag, 
+                     filename = ifelse(near, yes = "Figure-A4-near.pdf", no = "Figure-A4.pdf"),
+                     path = "04_Figures/Appendix/", width = width, height = height * 0.5,
                      units = units, dpi = dpi, overwrite = overwrite)
+
+# Belowground
+
+suppoRt::save_ggplot(plot = gg_alpha$noise$bg, 
+                     filename = ifelse(near, yes = "Figure-2-near.pdf", no = "Figure-2.pdf"),
+                     path = "04_Figures/Belowground/", width = width, height = height * 0.5,
+                     units = units, dpi = dpi, overwrite = overwrite)
+
+suppoRt::save_ggplot(plot = gg_gamma$noise$bg, 
+                     filename = ifelse(near, yes = "Figure-A4-near.pdf", no = "Figure-A4.pdf"),
+                     path = "04_Figures/Belowground//", width = width, height = height * 0.5,
+                     units = units, dpi = dpi, overwrite = overwrite)
+
+# suppoRt::save_ggplot(plot = gg_scenario$noise$bg, filename = "Figure-A4.pdf",
+#                      path = "04_Figures/Appendix/", width = width, height = height * 0.65,
+#                      units = units, dpi = dpi, overwrite = overwrite)

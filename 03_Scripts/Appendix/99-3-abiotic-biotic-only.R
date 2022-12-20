@@ -16,9 +16,11 @@ source("01_Functions/import-mortality.R")
 
 #### Load/wrangle simulated data ####
 
-results_phase_df <- import_cv(path = "02_Data/result-phase.rds", near = FALSE)
+near <- FALSE
 
-results_noise_df <- import_cv(path = "02_Data/result-noise.rds", near = FALSE)
+results_phase_df <- import_cv(path = "02_Data/result-phase.rds", near = near)
+
+results_noise_df <- import_cv(path = "02_Data/result-noise.rds", near = near)
 
 results_combined_df <- dplyr::bind_rows(phase = results_phase_df, noise = results_noise_df, 
                                         .id = "scenario") |> 
@@ -69,11 +71,11 @@ gg_abiotic <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_
         geom_smooth(method = 'loess', formula = "y ~ x", se = FALSE, color = "#6ad5e8") + 
         
         facet_grid(rows = dplyr::vars(nutrient_input), scales = "fixed") + 
+        annotate("segment", x = -Inf, xend = Inf, y = -Inf, yend = -Inf) +
         
         labs(x = bquote(CV[Local~scale]), y = bquote(CV[Meta-ecosystem~scale])) +
-        theme_classic() + 
+        theme_classic(base_size = 12.0) + 
         theme(strip.background = element_blank(), strip.text = element_blank(),
-              axis.line = element_blank(), panel.border = element_rect(linewidth = 0.5, fill = NA),
               legend.position = "none")
       
       gg_beta <- ggplot(data = beta_temp, aes(x = abiotic, y = value.cv)) + 
@@ -83,11 +85,11 @@ gg_abiotic <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_
         
         facet_grid(rows = dplyr::vars(nutrient_input), scales = "fixed", 
                    labeller = labeller(nutrient_input = function(x) paste0("Nutr. input: ", x))) + 
+        annotate("segment", x = -Inf, xend = Inf, y = -Inf, yend = -Inf) +
         
         labs(x = bquote(Variation[Nutrient~subsidies]), y = bquote(CV[beta])) +
-        theme_classic() + 
+        theme_classic(base_size = 12.0) + 
         theme(strip.background = element_blank(), strip.text = element_text(hjust = 0.5),
-              axis.line = element_blank(), panel.border = element_rect(linewidth = 0.5, fill = NA),
               legend.position = "none")
       
       cowplot::plot_grid(gg_alpha_gamma, gg_beta, ncol = 2)
@@ -102,7 +104,7 @@ gg_dummy <- ggplot(data = data.frame(pop_n = c(8, 16, 32, 64, 128),  x = c(1, 2,
                    aes(x = x, y = y, color = factor(pop_n))) +
   geom_point(size = 3.5) + 
   scale_color_viridis_d(name = "Population size", option = "C") + 
-  theme_classic() +
+  theme_classic(base_size = 12.0) +
   theme(legend.position = "bottom")
 
 gg_biotic <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i) {
@@ -125,13 +127,13 @@ gg_biotic <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i
       geom_smooth(method = 'loess', formula = "y ~ x", se = FALSE) + 
       
       facet_grid(rows = dplyr::vars(nutrient_input), scales = "fixed") + 
+      annotate("segment", x = -Inf, xend = Inf, y = -Inf, yend = -Inf) +
       
       scale_color_viridis_d(option = "C") +
       
       labs(x = bquote(CV[Local~scale]), y = bquote(CV[Meta-ecosystem~scale])) +
-      theme_classic() + 
+      theme_classic(base_size = 12.0) +
       theme(strip.background = element_blank(), strip.text = element_blank(),
-            axis.line = element_blank(), panel.border = element_rect(linewidth = 0.5, fill = NA),
             legend.position = "none")
     
     gg_beta <- ggplot(data = beta_temp, aes(x = biotic, y = value.cv, color = pop_n)) +
@@ -141,13 +143,13 @@ gg_biotic <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i
       
       facet_grid(rows = dplyr::vars(nutrient_input), scales = "fixed", 
                  labeller = labeller(nutrient_input = function(x) paste0("Nutr. input: ", x))) + 
+      annotate("segment", x = -Inf, xend = Inf, y = -Inf, yend = -Inf) +
       
       scale_color_viridis_d(option = "C") +
       
       labs(x = "Connectivity", y = bquote(CV[beta])) +
-      theme_classic() + 
+      theme_classic(base_size = 12.0) +
       theme(strip.background = element_blank(), strip.text = element_text(hjust = 0.5),
-            axis.line = element_blank(), panel.border = element_rect(linewidth = 0.5, fill = NA),
             legend.position = "none")
     
     gg_combined <- cowplot::plot_grid(gg_alpha_gamma, gg_beta, ncol = 2)
@@ -162,18 +164,24 @@ gg_biotic <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i
 
 overwrite <- FALSE
 
-suppoRt::save_ggplot(plot = gg_abiotic$noise$ag_production, filename = "Figure-A5.pdf",
+suppoRt::save_ggplot(plot = gg_abiotic$noise$ag_production, 
+                     filename = ifelse(near, yes = "Figure-A5-near.pdf", no = "Figure-A5.pdf"),
                      path = "04_Figures/Appendix/", width = width, height = height * 0.5,
                      units = units, dpi = dpi, overwrite = overwrite)
 
-suppoRt::save_ggplot(plot = gg_abiotic$noise$bg_production, filename = "Figure-A6.pdf",
+suppoRt::save_ggplot(plot = gg_biotic$noise$ag_production, 
+                     filename = ifelse(near, yes = "Figure-A6-near.pdf", no = "Figure-A6.pdf"),
                      path = "04_Figures/Appendix/", width = width, height = height * 0.5,
                      units = units, dpi = dpi, overwrite = overwrite)
 
-suppoRt::save_ggplot(plot = gg_biotic$noise$ag_production, filename = "Figure-A7.pdf",
-                     path = "04_Figures/Appendix/", width = width, height = height * 0.5,
+# Belowground 
+
+suppoRt::save_ggplot(plot = gg_abiotic$noise$bg_production, 
+                     filename = ifelse(near, yes = "Figure-A5-near.pdf", no = "Figure-A5.pdf"),
+                     path = "04_Figures/Belowground/", width = width, height = height * 0.5,
                      units = units, dpi = dpi, overwrite = overwrite)
 
-suppoRt::save_ggplot(plot = gg_biotic$noise$bg_production, filename = "Figure-A8.pdf",
-                     path = "04_Figures/Appendix/", width = width, height = height * 0.5,
+suppoRt::save_ggplot(plot = gg_biotic$noise$bg_production, 
+                     filename = ifelse(near, yes = "Figure-A6-near.pdf", no = "Figure-A6.pdf"),
+                     path = "04_Figures/Belowground/", width = width, height = height * 0.5,
                      units = units, dpi = dpi, overwrite = overwrite)

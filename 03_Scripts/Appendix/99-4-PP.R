@@ -16,9 +16,11 @@ source("01_Functions/import-mortality.R")
 
 #### Load/wrangle simulated data ####
 
-results_phase_df <- import_cv(path = "02_Data/result-phase.rds", near = TRUE)
+near <- FALSE
 
-results_noise_df <- import_cv(path = "02_Data/result-noise.rds", near = TRUE)
+results_phase_df <- import_cv(path = "02_Data/result-phase.rds", near = near)
+
+results_noise_df <- import_cv(path = "02_Data/result-noise.rds", near = near)
 
 results_combined_df <- dplyr::bind_rows(phase = results_phase_df, noise = results_noise_df, 
                                         .id = "scenario") |> 
@@ -79,22 +81,23 @@ gg_pp <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i) {
       
       # facet
       facet_wrap(. ~ nutrient_input, scales = "fixed", nrow = 3, ncol = 1) +
+      annotate("segment", x = -Inf, xend = Inf, y = -Inf, yend = -Inf) +
       
       # themes
       labs(x = "", y = "") +
-      theme_classic(base_size = 10) +
-      theme(strip.background = element_blank(), strip.text = element_blank(),
-            axis.line = element_blank(), panel.border = element_rect(linewidth = 0.5, fill = NA))
+      theme_classic(base_size = 12) +
+      theme(strip.background = element_blank(), strip.text = element_blank())
     
   })
   
-  gg_combined <- cowplot::plot_grid(plotlist = gg_part, ncol = 2)
+  gg_combined <- cowplot::plot_grid(plotlist = gg_part, ncol = 2, 
+                                    labels = c("a)", "b)"), hjust = c(-4.0, -4.5))
   
-  cowplot::ggdraw(gg_combined, xlim = c(-0.025, 1.025), ylim = c(-0.025,  1.025)) +
+  cowplot::ggdraw(gg_combined, xlim = c(-0.025, 1.025), ylim = c(-0.025,  1.0)) +
     cowplot::draw_label("Population size", x = 0.5, y = 0, angle = 0, size = size_base) +
     cowplot::draw_label(expression(paste("Primary production [", gDW~d^-1~m^-2, "]")), x = 0.0, y = 0.5, angle = 90, size = size_base) +
-    cowplot::draw_label("Aboveground", x = 0.265, y = 1.0, angle = 0, size = size_base * 0.75) +
-    cowplot::draw_label("Belowground", x = 0.755, y = 1.0, angle = 0, size = size_base * 0.75) +
+    # cowplot::draw_label("Aboveground", x = 0.265, y = 1.0, angle = 0, size = size_base * 0.75) +
+    # cowplot::draw_label("Belowground", x = 0.755, y = 1.0, angle = 0, size = size_base * 0.75) +
     cowplot::draw_label("Nutr. input: low", x = 1.0, y = 0.85, angle = 270, size = size_base * 0.65) +
     cowplot::draw_label("Nutr. input: medium", x = 1.0, y = 0.525, angle = 270, size = size_base * 0.65) +
     cowplot::draw_label("Nutr. input: high", x = 1.0, y = 0.225, angle = 270, size = size_base * 0.65)
@@ -103,6 +106,7 @@ gg_pp <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i) {
 
 #### Save ggplot ####
 
-suppoRt::save_ggplot(plot = gg_pp$noise, filename = "Figure-A9.pdf",
+suppoRt::save_ggplot(plot = gg_pp$noise, 
+                     filename = ifelse(near, yes = "Figure-A7-near.pdf", no = "Figure-A7.pdf"),
                      path = "04_Figures/Appendix/", width = width, height = height * 0.5,
                      units = units, dpi = dpi, overwrite = FALSE)

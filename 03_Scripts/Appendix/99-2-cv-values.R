@@ -16,9 +16,11 @@ source("01_Functions/import-mortality.R")
 
 #### Load/wrangle simulated data ####
 
-results_phase_df <- import_cv(path = "02_Data/result-phase.rds", near = FALSE)
+near <- FALSE
 
-results_noise_df <- import_cv(path = "02_Data/result-noise.rds", near = FALSE)
+results_phase_df <- import_cv(path = "02_Data/result-phase.rds", near = near)
+
+results_noise_df <- import_cv(path = "02_Data/result-noise.rds", near = near)
 
 results_combined_df <- dplyr::bind_rows(phase = results_phase_df, noise = results_noise_df, 
                                         .id = "scenario") |> 
@@ -67,10 +69,19 @@ gg_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i) {
     # ggplot
     ggplot(df_temp, aes(x = pop_n, y = value.cv)) + 
       
-      # geoms
+      # zero line
+      geom_hline(yintercept = 0.0, linetype = 2, color = "grey") +
+      
+      # boxplot
       geom_boxplot(outlier.shape = NA) +
+      
+      # jitter points included
       geom_jitter(alpha = 0.1) +
+      
+      # jitter points excluded
       geom_jitter(data = df_extra, aes(x = pop_n, y = value.cv), col = "#ef8a47", alpha = 0.25) +
+      
+      # number of obs
       geom_text(data = obs_n_temp, aes(x = pop_n, y = 0.0, label = paste0("n=", n)), size = 2.5) +
       
       # facet
@@ -82,7 +93,7 @@ gg_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i) {
       
       # themes
       labs(x = "Population size", y = "Coefficient of variation") +
-      theme_classic(base_size = 10) +
+      theme_classic(base_size = 12) +
       theme(strip.background = element_blank(), strip.text = element_text(hjust = 0.5),
             axis.line = element_blank(), panel.border = element_rect(linewidth = 0.5, fill = NA))
     
@@ -93,10 +104,12 @@ gg_cv <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i) {
 
 overwrite <- FALSE
 
-suppoRt::save_ggplot(plot = gg_cv$noise$ag, filename = "Figure-A2.pdf",
+suppoRt::save_ggplot(plot = gg_cv$noise$ag, 
+                     filename = ifelse(near, yes = "Figure-A2-near.pdf", no = "Figure-A2.pdf"),
                      path = "04_Figures/Appendix/", width = width, height = height * 0.5,
                      units = units, dpi = dpi, overwrite = overwrite)
 
-suppoRt::save_ggplot(plot = gg_cv$noise$bg, filename = "Figure-A3.pdf",
+suppoRt::save_ggplot(plot = gg_cv$noise$bg, 
+                     filename = ifelse(near, yes = "Figure-A3-near.pdf", no = "Figure-A3.pdf"),
                      path = "04_Figures/Appendix/", width = width, height = height * 0.5,
                      units = units, dpi = dpi, overwrite = overwrite)
