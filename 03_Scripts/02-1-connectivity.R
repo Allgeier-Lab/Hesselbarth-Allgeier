@@ -14,8 +14,6 @@ source("01_Functions/setup.R")
 
 #### Adapt parameters ####
 
-
-
 #### Stable values #### 
 
 stable_values_list <- arrR::get_req_nutrients(bg_biomass = starting_values_list$bg_biomass,
