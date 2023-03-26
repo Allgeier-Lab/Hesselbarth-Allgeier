@@ -13,6 +13,7 @@
 source("01_Functions/setup.R")
 source("01_Functions/import-cv.R")
 source("01_Functions/import-mortality.R")
+source("01_Functions/plot-lm.R")
 
 #### Load/wrangle simulated data ####
 
@@ -54,10 +55,10 @@ results_final_df <- dplyr::left_join(x = results_combined_df, y = mortality_comb
 #### Join PE and PP values ####
 
 results_pe_pp_df <- dplyr::left_join(x = dplyr::filter(results_final_df, measure == "beta", treatment == "combined", 
-                                                       include == "yes", part != "Total") |> 
+                                                       include == "yes", part != "Belowground") |> 
                                        dplyr::select(scenario, row_id, part, pop_n, nutrient_input, biotic, abiotic, value.cv),
                                      y = dplyr::filter(results_final_df, measure == "gamma", treatment == "combined", 
-                                                       include == "yes", part != "Total") |> 
+                                                       include == "yes", part != "Belowground") |> 
                                        dplyr::select(scenario, row_id, part, pop_n, nutrient_input, biotic, abiotic, value.prod), 
                                      by = c("scenario", "row_id", "part", "pop_n", "nutrient_input", "biotic", "abiotic"))
 
@@ -70,81 +71,63 @@ names_list <- purrr::map(results_final_list, function(i) c(unique(i$scenario), u
 
 #### Fit regression model and dredge ####
 
-best_lm_list <- purrr::map(seq_along(results_final_list), function(i) {
+best_lm_list <- vector(mode = "list", length = length(results_final_list))
+
+lm_summary_list <- vector(mode = "list", length = length(results_final_list))
+
+for(i in 1:length(results_final_list)) {
   
   message("> Progress: ", i, "/", length(results_final_list))
   
-  df_temp <- results_final_list[[i]]
+  df_temp <- results_final_list[[i]] |>
+    dplyr::mutate(value.cv = (value.cv - mean(value.cv)) / sd(value.cv),
+                  biotic = (biotic - mean(biotic)) / sd(biotic),
+                  abiotic = (abiotic - mean(abiotic)) / sd(abiotic))
   
-  lm_temp <- lm(value.prod ~ value.cv + abiotic + biotic + nutrient_input + pop_n,
+  if (unique(df_temp$part) == "Aboveground") {
+    
+    df_temp$value.prod <- sqrt(df_temp$value.prod)
+    
+  } else if (unique(df_temp$part) == "Total") {
+    
+    df_temp$value.prod <- log(df_temp$value.prod)
+    
+  }
+  
+  lm_temp <- lm(value.prod ~ value.cv + nutrient_input + pop_n,
                 data = df_temp, na.action = "na.fail")
   
-  lm_dredge <- MuMIn::dredge(lm_temp)
+  lm_dredge <- MuMIn::dredge(lm_temp, extra = c("R^2"))
   
-  get.models(lm_dredge, delta == 0.0)[[1]]
-  
-})
-
-#### Summarize model and rel importance
-
-lm_summary_df <- purrr::map_dfr(seq_along(results_final_list), function(i) {
-  
-  broom::tidy(best_lm_list[[i]]) |> 
-    dplyr::mutate(r2 = summary(best_lm_list[[i]])$adj.r.squared) |> 
+  lm_summary_list[[i]] <- subset(lm_dredge, subset = 1:3) |>
+    tibble::as_tibble() |>
     dplyr::mutate(scenario = names_list[[i]][[1]], part = names_list[[i]][[2]], 
-                  .before = term)}) |> 
-  dplyr::mutate(p.value.class = dplyr::case_when(p.value < 0.001 ~ "***", p.value < 0.01 ~ "**", p.value < 0.05 ~ "*", TRUE ~ ""))
-
-#### Setup ggplot ####
-
-base_size <- 10.0
-
-color_pop_n <- MetBrewer::met.brewer(name = "Isfahan2", n = 5, type = "discrete")
-
-#### Create ggplot: Main ####
-
-gg_treatments <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i) {
+                  .before = "(Intercept)")
   
-  df_temp <- dplyr::filter(results_pe_pp_df, scenario == scenario_i)
+  best_lm_list[[i]] <- get.models(lm_dredge, subset = 1)
   
-  ggplot(data = df_temp, aes(x = log(value.cv), y = log(value.prod), 
-                                         color = pop_n, shape = nutrient_input)) +
-    
-    # adding geoms
-    geom_point(alpha = 1, size = 1) +
-    geom_smooth(aes(linetype = nutrient_input), 
-                method = "lm", se = FALSE, formula = "y ~ x", linewidth = 0.5) +
-    
-    # scales
-    scale_color_manual(name = "Population size", values = color_pop_n) +
-    scale_shape_manual(name = "Amount subsidies", values = c("low" = 0, "medium" = 1, "high" = 2)) + 
-    scale_linetype_manual(name = "Amount subsidies", values = c("low" = "solid", "medium" = "dotted", "high" = "dashed")) + 
-    
-    # facet wrap by part
-    facet_wrap(. ~ part, ncol = 2, scales = "free", 
-               labeller = labeller(part = c("Aboveground" = "a)", "Belowground" = "b)"))) +
-    
-    # adding box
-    annotate("segment", x = -Inf, xend = Inf, y = -Inf, yend = -Inf) +
-    annotate("segment", x = -Inf, xend = Inf, y = Inf, yend = Inf) +
-    annotate("segment", x = Inf, xend = Inf, y = -Inf, yend = Inf) +
-    annotate("segment", x = -Inf, xend = -Inf, y = -Inf, yend = Inf) +
-    
-    # theming
-    labs(x = "log(Portfolio effect)", y = "log(Total primary production)") +
-    theme_classic(base_size = base_size) + 
-    theme(legend.position = "bottom", axis.line = element_blank(), strip.background = element_blank(), 
-          strip.text = element_text(hjust = 0))
+}
 
-  })
+# convert to data.frame
+lm_summary_df <- dplyr::bind_rows(lm_summary_list) |> 
+  dplyr::filter(scenario == "noise") |>
+  dplyr::select(-scenario, -logLik, -delta, -weight, -df) |>
+  dplyr::select(part, `(Intercept)`, value.cv, nutrient_input, pop_n, 
+                `R^2`, AICc) |> 
+  dplyr::rename("Part" = "part", "Intercept" = "(Intercept)", "Portfolio effect" = "value.cv",
+                "Enrichment" = "nutrient_input", "Population size" = "pop_n") |>
+  dplyr::mutate_if(is.numeric, round, digits = 3)
 
-#### Save ggplots ####
+#### Check models ####
 
-dplyr::filter(lm_summary_df, scenario == "noise") |> 
-  dplyr::select(-scenario, -r2) |> 
-  dplyr::mutate_if(is.numeric, round, digits = 3) |> 
-  readr::write_csv(file = "04_Figures/Table-2.csv")
+# gg_assumptions <- purrr::map(best_lm_list, function(i) {
+#   
+#   plot_lm(i[[1]])
+#   
+# })
 
-suppoRt::save_ggplot(plot = gg_treatments$noise, filename = "Figure-4.pdf",
-                     path = "04_Figures/", width = width, height = height * 1/2,
-                     units = units, dpi = dpi, overwrite = FALSE)
+#### Save results ####
+
+overwrite <- FALSE
+
+if (overwrite) readr::write_csv2(x = lm_summary_df, file = "04_Figures/Table-2.csv")

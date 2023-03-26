@@ -7,13 +7,14 @@
 ##--------------------------------------------##
 
 # load packages #
-library(meta.arrR) # remotes::install_github("Allgeier-Lab/meta.arrR", ref = "development")
-library(arrR)
+# library(meta.arrR)
+# library(arrR)
 
 library(broom)
 library(cowplot)
 library(lhs)
 library(MetBrewer)
+library(modelbased)
 library(MuMIn)
 library(multcompView)
 library(relaimpo)

@@ -54,7 +54,7 @@ results_final_df <- dplyr::left_join(x = results_combined_df, y = mortality_comb
 #### Split data #### 
 
 results_final_list <- dplyr::filter(results_final_df, measure == "beta", include == "yes",
-                                    part %in% c("Aboveground", "Belowground")) |>
+                                    part %in% c("Aboveground", "Total")) |>
   dplyr::group_by(scenario, part) |>
   dplyr::group_split()
 
@@ -77,20 +77,20 @@ anova_df <- purrr::map_dfr(results_final_list, function(df_temp) {
                 
 #### Setup ggplot ####
 
-base_size <- 10.0
+base_size <- 12.0
 
 w <- 0.5
 
-color_treatment <- c("subsidies" = "#007aa1", "connectivity" = "#41b282", "combined" = "#fcb252")
+color_treatment <- c("subsidies" = "#377EB8", "connectivity" = "#4DAF4A", "combined" = "#F781BF")
 
 gg_dummy <- data.frame(x = c(1, 2, 3), y = c(0.5, 0.5, 0.5), z = c("subsidies", "connectivity", "combined")) |> 
   dplyr::mutate(z = factor(z, levels = c("subsidies", "connectivity", "combined"))) |> 
   ggplot(aes(x = x, y = y, color = z)) + 
   geom_point() + geom_errorbar(aes(ymin = 0, ymax = 1)) +
   scale_color_manual(name = "", values = color_treatment, 
-                     labels = c("subsidies" = "Variation abiotic subsidies", 
-                                "connectivity" = "Consumer connectivity", 
-                                "combined" = "Variation and connectivity combined")) +
+                     labels = c("subsidies" = "Spatial variation only", 
+                                "connectivity" = "Connectivity only", 
+                                "combined" = "Spatial variation and connectivity")) +
   theme_classic(base_size = base_size) +
   theme(legend.position = "bottom")
 
@@ -101,83 +101,127 @@ gg_tukey <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i)
     anova_temp <- dplyr::filter(anova_df, scenario == scenario_i)
     
     pe_temp <- dplyr::filter(results_final_df, scenario == scenario_i, measure == "beta", 
-                             part != "Total", include == "yes")
+                             part != "Belowground", include == "yes")
     
     pe_sum <- dplyr::group_by(pe_temp, part, treatment) |> 
       dplyr::summarise(mean = mean(value.cv), lower = mean - sd(value.cv), upper = mean + sd(value.cv), 
-                       .groups = "drop")
+                       .groups = "drop") |> 
+      dplyr::mutate(lower = dplyr::case_when(lower < 0.0 ~ 0.0, TRUE ~ lower))
     
     cv_temp <- dplyr::filter(results_final_df, scenario == scenario_i, measure %in% c("alpha", "gamma"),
-                             part != "Total", include == "yes") |> 
+                             part != "Belowground", include == "yes") |> 
       dplyr::select(row_id, part, treatment, measure, value.cv) |> 
       tidyr::pivot_wider(names_from = measure, values_from = value.cv)
     
     gg_pe <- ggplot(data = pe_sum, aes(x = part, color = treatment, fill = treatment)) + 
       
-      # adding hline at 1
-      geom_hline(yintercept = 1, color = "grey", linetype = 2) +
-      
       # adding transparent jitter
       geom_point(data = pe_temp, aes(x = part, y = value.cv, color = treatment, group = treatment), 
-                 alpha = 0.1, size = 0.75,
+                 alpha = 0.15, size = 0.75, shape = 19,
                  position = position_jitterdodge(dodge.width = w, jitter.width = w * 0.75)) +
       
       # adding mean +- sd
       geom_errorbar(aes(ymin = lower, ymax = upper), position = position_dodge(w), 
-                    width = w * 0.75, linewidth = 1.0) +
+                    width = 0.0, linewidth = 1.0) +
+      
       geom_point(aes(y = mean), position = position_dodge(w), size = 1.5) +
+      
       geom_text(data = anova_temp, position = position_dodge(w),
                 aes(x = part, y = max(pe_sum$upper) * 1.1, 
                     label = label, group = treatment, color = treatment)) +
-
+      annotate("text", x = 0.5, y = 30, label = "a)") +
+      
+      # adding hline at 1
+      geom_hline(yintercept = 1, color = "grey25", linetype = 2) +
+      
+      # # adding hline at 1
+      # geom_hline(yintercept = 0, color = "grey95", linetype = 1) +
+      
       # change scales
       scale_color_manual(name = "", values = color_treatment) +
+      scale_y_continuous(limits = c(1, ceiling(max(pe_temp$value.cv) / 10) * 10), 
+                         breaks = seq(1, ceiling(max(pe_temp$value.cv)/10) * 10,
+                                      length.out = 5)) + 
 
       # adding box
       annotate("segment", x = -Inf, xend = Inf, y = -Inf, yend = -Inf) +
       annotate("segment", x = -Inf, xend = Inf, y = Inf, yend = Inf) +
       annotate("segment", x = Inf, xend = Inf, y = -Inf, yend = Inf) +
       annotate("segment", x = -Inf, xend = -Inf, y = -Inf, yend = Inf) +
-      
+
       # change theme
-      labs(x = "", y = expression(paste("Portfolio effect ", italic(cv[beta])))) +
+      labs(x = "", y = expression(paste("Portfolio effect ", italic(CV), italic(beta)))) +
       theme_classic(base_size = base_size) + 
       theme(legend.position = "none", axis.line = element_blank())
     
-    gg_cv <- ggplot(data = cv_temp, aes(x = gamma, y = alpha, color = treatment)) + 
-      
-      geom_abline(slope = 1, intercept = 0, color = "grey", linetype = 2) +
-      
-      # adding points
-      geom_point(alpha = 0.25) +
-      
-      # facet wrappung
-      facet_wrap(. ~ part, scales = "free", nrow = 2) +
-      
-      # # change scales
-      # coord_equal(ratio = 1) +
-      scale_color_manual(name = "", values = color_treatment) + 
-      
-      # adding box
-      annotate("segment", x = -Inf, xend = Inf, y = -Inf, yend = -Inf) +
-      annotate("segment", x = -Inf, xend = Inf, y = Inf, yend = Inf) +
-      annotate("segment", x = Inf, xend = Inf, y = -Inf, yend = Inf) +
-      annotate("segment", x = -Inf, xend = -Inf, y = -Inf, yend = Inf) +
-      
-      # change theme
-      labs(x = expression(paste("Meta-ecosystem scale ", italic(cv[gamma]))), 
-           y = expression(paste("Local scale ", italic(cv[alpha])))) +
-      theme_classic(base_size = base_size) + 
-      theme(legend.position = "none", axis.line = element_blank(),
-            strip.background = element_blank(), strip.text = element_text(hjust = 0))
+    xy_lims <- list(Aboveground = c(0, 1.0), Total = c(0, 0.1)) 
     
-    cowplot::plot_grid(cowplot::plot_grid(gg_pe, gg_cv, ncol = 2, labels = c("a)", "b)")), 
-                       cowplot::get_legend(gg_dummy), nrow = 2, ncol = 1, rel_heights = c(0.95, 0.05))
+    gg_cv <- purrr::map(c(Aboveground = "Aboveground", Total = "Total"), function(part_i) {
+      
+      label_temp <- ifelse(test = part_i == "Aboveground", yes = "b)", no = "c)")
+      
+      df_temp <- dplyr::filter(cv_temp, part == part_i) 
+      
+      ggplot() + 
+        
+        # adding points
+        geom_point(data = dplyr::filter(df_temp, treatment != "combined"),
+                   aes(x = gamma, y = alpha, color = treatment), 
+                   alpha = 0.15, shape = 19, size = 1) +
+        
+        geom_point(data = dplyr::filter(df_temp, treatment == "combined"),
+                   aes(x = gamma, y = alpha, color = treatment), 
+                   alpha = 0.15, shape = 19, size = 1) +
+        
+        # adding PE = 1 line
+        geom_abline(slope = 1, intercept = 0, color = "grey", linetype = 2) +
+        
+        # adding text
+        annotate("text", x = 0.0, y = xy_lims[names(xy_lims) == part_i][[1]][[2]], 
+                 label = label_temp) +
+        
+        # # change scales
+        # coord_equal(ratio = 1) +
+        scale_x_continuous(limits = xy_lims[names(xy_lims) == part_i][[1]]) +
+        scale_y_continuous(limits = xy_lims[names(xy_lims) == part_i][[1]]) +
+        scale_color_manual(name = "", values = color_treatment) + 
+        
+        # adding box
+        annotate("segment", x = -Inf, xend = Inf, y = -Inf, yend = -Inf) +
+        annotate("segment", x = -Inf, xend = Inf, y = Inf, yend = Inf) +
+        annotate("segment", x = Inf, xend = Inf, y = -Inf, yend = Inf) +
+        annotate("segment", x = -Inf, xend = -Inf, y = -Inf, yend = Inf) +
+        
+        # change theme
+        # labs(x = expression(paste("Meta-ecosystem scale ", italic(cv[gamma]))), 
+        #      y = expression(paste("Local scale ", italic(cv[alpha])))) +
+        theme_classic(base_size = base_size) + 
+        theme(legend.position = "none", axis.line = element_blank(),
+              strip.background = element_blank(), strip.text = element_text(hjust = 0), 
+              axis.title = element_blank())
+      
+    })
+    
+    gg_cv <- cowplot::plot_grid(plotlist = gg_cv, ncol = 1) |>
+      cowplot::ggdraw(xlim = c(-0.025, 1.0), ylim = c(-0.025, 1.0)) + 
+      cowplot::draw_label(expression(paste("Meta-ecosystem scale ", italic(CV), italic(gamma))), 
+                          x = 0.5, y = -0.01, angle = 0, size = base_size) + 
+      cowplot::draw_label(expression(paste("Local scale ", italic(CV), italic(alpha))),
+                          x = -0.01, y = 0.5, angle = 90, size = base_size)
+    
+    cowplot::plot_grid(cowplot::plot_grid(gg_pe, gg_cv, ncol = 2), 
+                       cowplot::get_legend(gg_dummy), nrow = 2, ncol = 1, rel_heights = c(0.9, 0.1))
 
 })
 
 #### Save ggplot #### 
 
+overwrite <- FALSE
+
 suppoRt::save_ggplot(plot = gg_tukey$noise, filename = "Figure-2.pdf",
-                     path = "04_Figures/", width = width, height = height * 1/3,
-                     units = units, dpi = dpi, overwrite = FALSE)
+                     path = "04_Figures/", width = width, height = height * 0.45,
+                     units = units, dpi = dpi, overwrite = overwrite)
+
+suppoRt::save_ggplot(plot = gg_tukey$noise, filename = "Figure-2.jpg",
+                     path = "04_Figures/", width = width, height = height * 0.45,
+                     units = units, dpi = dpi, overwrite = overwrite)
