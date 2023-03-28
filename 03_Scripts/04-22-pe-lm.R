@@ -54,7 +54,7 @@ results_final_df <- dplyr::left_join(x = results_combined_df, y = mortality_comb
 
 ### Alternative model ####
 
-results_final_list <- dplyr::filter(results_final_df, measure %in% c("alpha", "gamma"), include == "yes",
+results_final_list <- dplyr::filter(results_final_df, measure != "synchrony", include == "yes",
                                     part %in% c("Aboveground", "Total"), treatment == "combined") |>
   dplyr::group_by(scenario, part, measure) |>
   dplyr::group_split()
@@ -97,12 +97,12 @@ lm_summary_df <- dplyr::bind_rows(lm_summary_list) |>
                 "Connectivity" = "biotic", "Enrichment" = "nutrient_input", "Population size" = "pop_n",
                 "Variation:Connectivity" = "abiotic:biotic", "Variation:Population" = "abiotic:pop_n",
                 "Enrichment:Connectivity" = "biotic:nutrient_input", "Enrichment:Population" = "nutrient_input:pop_n") |>
-  dplyr::mutate_if(is.numeric, round, digits = 3)
+  dplyr::mutate_if(is.numeric, round, digits = 5)
 
 #### Save table and ggplot #### 
 
 overwrite <- FALSE
 
-if (overwrite) readr::write_csv2(x = lm_summary_df, file = "04_Figures/Table-1-alt.csv")
+if (overwrite) readr::write_csv2(x = lm_summary_df, file = "04_Figures/Table-Q2.csv")
 
 

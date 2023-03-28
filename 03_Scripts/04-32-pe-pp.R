@@ -54,20 +54,20 @@ results_final_df <- dplyr::left_join(x = results_combined_df, y = mortality_comb
 
 #### Join PE and PP values ####
 
-results_pe_pp_df <- dplyr::left_join(x = dplyr::filter(results_final_df, measure == "beta", treatment == "combined", 
+results_pe_pp_df <- dplyr::left_join(x = dplyr::filter(results_final_df, measure != "synchrony", treatment == "combined", 
                                                        include == "yes", part != "Belowground") |> 
-                                       dplyr::select(scenario, row_id, part, pop_n, nutrient_input, biotic, abiotic, value.cv),
+                                       dplyr::select(row_id, scenario, part, measure, pop_n, nutrient_input, biotic, abiotic, value.cv),
                                      y = dplyr::filter(results_final_df, measure == "gamma", treatment == "combined", 
                                                        include == "yes", part != "Belowground") |> 
-                                       dplyr::select(scenario, row_id, part, pop_n, nutrient_input, biotic, abiotic, value.prod), 
+                                       dplyr::select(row_id, scenario, part, pop_n, nutrient_input, biotic, abiotic, value.prod), 
                                      by = c("scenario", "row_id", "part", "pop_n", "nutrient_input", "biotic", "abiotic"))
 
 #### Split data #### 
 
-results_final_list <- dplyr::group_by(results_pe_pp_df, scenario, part) |>
+results_final_list <- dplyr::group_by(results_pe_pp_df, scenario, part, measure) |>
   dplyr::group_split()
 
-names_list <- purrr::map(results_final_list, function(i) c(unique(i$scenario), unique(i$part)))
+names_list <- purrr::map(results_final_list, function(i) c(unique(i$scenario), unique(i$part), unique(i$measure)))
 
 #### Fit regression model and dredge ####
 
@@ -101,7 +101,7 @@ for(i in 1:length(results_final_list)) {
   
   lm_summary_list[[i]] <- subset(lm_dredge, subset = 1:3) |>
     tibble::as_tibble() |>
-    dplyr::mutate(scenario = names_list[[i]][[1]], part = names_list[[i]][[2]], 
+    dplyr::mutate(scenario = names_list[[i]][[1]], part = names_list[[i]][[2]], measure = names_list[[i]][[3]],
                   .before = "(Intercept)")
   
   best_lm_list[[i]] <- get.models(lm_dredge, subset = 1)
@@ -112,11 +112,9 @@ for(i in 1:length(results_final_list)) {
 lm_summary_df <- dplyr::bind_rows(lm_summary_list) |> 
   dplyr::filter(scenario == "noise") |>
   dplyr::select(-scenario, -logLik, -delta, -weight, -df) |>
-  dplyr::select(part, `(Intercept)`, value.cv, nutrient_input, pop_n, 
-                `R^2`, AICc) |> 
-  dplyr::rename("Part" = "part", "Intercept" = "(Intercept)", "Portfolio effect" = "value.cv",
-                "Enrichment" = "nutrient_input", "Population size" = "pop_n") |>
-  dplyr::mutate_if(is.numeric, round, digits = 3)
+  dplyr::select(part, measure, `(Intercept)`, value.cv, nutrient_input, pop_n, 
+                `R^2`, AICc) |>
+  dplyr::mutate_if(is.numeric, round, digits = 5)
 
 #### Check models ####
 
@@ -130,4 +128,4 @@ lm_summary_df <- dplyr::bind_rows(lm_summary_list) |>
 
 overwrite <- FALSE
 
-if (overwrite) readr::write_csv2(x = lm_summary_df, file = "04_Figures/Table-2.csv")
+if (overwrite) readr::write_csv2(x = lm_summary_df, file = "04_Figures/Table-Q3.csv")

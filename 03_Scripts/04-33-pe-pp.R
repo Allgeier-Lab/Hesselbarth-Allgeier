@@ -131,4 +131,4 @@ lm_summary_df <- dplyr::bind_rows(lm_summary_list) |>
 
 overwrite <- FALSE
 
-if (overwrite) readr::write_csv2(x = lm_summary_df, file = "04_Figures/Table-2-alt.csv")
+if (overwrite) readr::write_csv2(x = lm_summary_df, file = "04_Figures/Table-Q3.csv")

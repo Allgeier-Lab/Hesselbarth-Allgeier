@@ -53,7 +53,7 @@ results_final_df <- dplyr::left_join(x = results_combined_df, y = mortality_comb
 
 #### Split data #### 
 
-results_final_list <- dplyr::filter(results_final_df, measure == "beta", include == "yes",
+results_final_list <- dplyr::filter(results_final_df, measure != "synchrony", include == "yes",
                                     part %in% c("Aboveground", "Total")) |>
   dplyr::group_by(scenario, part) |>
   dplyr::group_split()
@@ -62,7 +62,9 @@ results_final_list <- dplyr::filter(results_final_df, measure == "beta", include
 
 anova_df <- purrr::map_dfr(results_final_list, function(df_temp) {
   
-  anova <- aov(value.cv ~ treatment, data = df_temp)
+  df_beta <- dplyr::filter(df_temp, measure == "beta")
+  
+  anova <- aov(value.cv ~ treatment, data = df_beta)
   
   tukey <- TukeyHSD(anova)
 
@@ -74,10 +76,48 @@ anova_df <- purrr::map_dfr(results_final_list, function(df_temp) {
                   .before = treatment)}) |> 
   dplyr::mutate(scenario = factor(scenario, levels = c("phase", "noise")), 
                 treatment = factor(treatment, levels = c("subsidies", "connectivity", "combined")))
+
+lm_df <-  purrr::map_dfr(results_final_list, function(i) {
+  
+  dplyr::group_by(i, measure) |> 
+    dplyr::group_split() |> 
+    purrr::map_dfr(function(j){
+      
+      df_biotic <- dplyr::filter(j, treatment == "connectivity") |> 
+        dplyr::mutate(value.cv = log(value.cv), abiotic = log(abiotic), biotic = log(biotic)) |>
+        dplyr::mutate(biotic = (biotic - mean(biotic)) / sd(biotic),
+                      abiotic = (abiotic - mean(abiotic)) / sd(abiotic))
+      
+      df_abiotic <- dplyr::filter(j, treatment == "subsidies") |> 
+        dplyr::mutate(value.cv = log(value.cv), abiotic = log(abiotic), biotic = log(biotic)) |>
+        dplyr::mutate(biotic = (biotic - mean(biotic)) / sd(biotic),
+                      abiotic = (abiotic - mean(abiotic)) / sd(abiotic))
+      
+      lm_biotic <- lm(value.cv ~ biotic * pop_n, data = df_biotic, na.action = "na.fail")
+      lm_abiotic <- lm(value.cv ~ abiotic * nutrient_input, data = df_abiotic, na.action = "na.fail")
+      
+      dredge_biotic <- MuMIn::dredge(lm_biotic, extra = c("R^2")) |>  
+        subset(subset = 1:3) |> 
+        tibble::as_tibble() |>
+        dplyr::rename("continious" = "biotic", "treatment" = "pop_n", "interaction" = "biotic:pop_n")
+      
+      dredge_abiotic <- MuMIn::dredge(lm_abiotic, extra = c("R^2")) |> 
+        subset(subset = 1:3) |> 
+        tibble::as_tibble() |>
+        dplyr::rename("continious" = "abiotic", "treatment" = "nutrient_input", 
+                      "interaction" = "abiotic:nutrient_input")
+      
+      dplyr::bind_rows(connect_popn = dredge_biotic, 
+                       var_enrich = dredge_abiotic, .id = "model") |> 
+        tibble::add_column(part = unique(i$part), response  = unique(j$measure), 
+                           .before = "(Intercept)")
+      
+    })}) |> 
+  dplyr::mutate_if(is.numeric, round, digits = 5)
                 
 #### Setup ggplot ####
 
-base_size <- 12.0
+base_size <- 13.5
 
 w <- 0.5
 
@@ -88,9 +128,9 @@ gg_dummy <- data.frame(x = c(1, 2, 3), y = c(0.5, 0.5, 0.5), z = c("subsidies", 
   ggplot(aes(x = x, y = y, color = z)) + 
   geom_point() + geom_errorbar(aes(ymin = 0, ymax = 1)) +
   scale_color_manual(name = "", values = color_treatment, 
-                     labels = c("subsidies" = "Spatial variation only", 
-                                "connectivity" = "Connectivity only", 
-                                "combined" = "Spatial variation and connectivity")) +
+                     labels = c("subsidies" = "Nutrient entrichment variation", 
+                                "connectivity" = "Fish Connectivity", 
+                                "combined" = "Both")) +
   theme_classic(base_size = base_size) +
   theme(legend.position = "bottom")
 
@@ -121,10 +161,14 @@ gg_tukey <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i)
                  position = position_jitterdodge(dodge.width = w, jitter.width = w * 0.75)) +
       
       # adding mean +- sd
+      geom_errorbar(aes(ymin = lower, ymax = upper), color = "grey25", position = position_dodge(w), 
+                    width = 0.0, linewidth = 1.5) +
       geom_errorbar(aes(ymin = lower, ymax = upper), position = position_dodge(w), 
                     width = 0.0, linewidth = 1.0) +
       
-      geom_point(aes(y = mean), position = position_dodge(w), size = 1.5) +
+      
+      geom_point(aes(y = mean), color = "grey25", position = position_dodge(w), size = 2.5) +
+      geom_point(aes(y = mean), position = position_dodge(w), size = 1.0) +
       
       geom_text(data = anova_temp, position = position_dodge(w),
                 aes(x = part, y = max(pe_sum$upper) * 1.1, 
@@ -132,10 +176,7 @@ gg_tukey <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i)
       annotate("text", x = 0.5, y = 30, label = "a)") +
       
       # adding hline at 1
-      geom_hline(yintercept = 1, color = "grey25", linetype = 2) +
-      
-      # # adding hline at 1
-      # geom_hline(yintercept = 0, color = "grey95", linetype = 1) +
+      geom_hline(yintercept = 1, color = "black", linetype = 2) +
       
       # change scales
       scale_color_manual(name = "", values = color_treatment) +
@@ -167,14 +208,14 @@ gg_tukey <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i)
         # adding points
         geom_point(data = dplyr::filter(df_temp, treatment != "combined"),
                    aes(x = gamma, y = alpha, color = treatment), 
-                   alpha = 0.15, shape = 19, size = 1) +
+                   alpha = 0.15, shape = 19, size = 2.0) +
         
         geom_point(data = dplyr::filter(df_temp, treatment == "combined"),
                    aes(x = gamma, y = alpha, color = treatment), 
-                   alpha = 0.15, shape = 19, size = 1) +
+                   alpha = 0.15, shape = 19, size = 2.0) +
         
         # adding PE = 1 line
-        geom_abline(slope = 1, intercept = 0, color = "grey", linetype = 2) +
+        geom_abline(slope = 1, intercept = 0, color = "black", linetype = 2) +
         
         # adding text
         annotate("text", x = 0.0, y = xy_lims[names(xy_lims) == part_i][[1]][[2]], 
@@ -184,6 +225,7 @@ gg_tukey <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i)
         # coord_equal(ratio = 1) +
         scale_x_continuous(limits = xy_lims[names(xy_lims) == part_i][[1]]) +
         scale_y_continuous(limits = xy_lims[names(xy_lims) == part_i][[1]]) +
+        coord_equal(ratio = 1) +
         scale_color_manual(name = "", values = color_treatment) + 
         
         # adding box
@@ -207,16 +249,16 @@ gg_tukey <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i)
       cowplot::draw_label(expression(paste("Meta-ecosystem scale ", italic(CV), italic(gamma))), 
                           x = 0.5, y = -0.01, angle = 0, size = base_size) + 
       cowplot::draw_label(expression(paste("Local scale ", italic(CV), italic(alpha))),
-                          x = -0.01, y = 0.5, angle = 90, size = base_size)
+                          x = 0.01, y = 0.5, angle = 90, size = base_size)
     
     cowplot::plot_grid(cowplot::plot_grid(gg_pe, gg_cv, ncol = 2), 
-                       cowplot::get_legend(gg_dummy), nrow = 2, ncol = 1, rel_heights = c(0.9, 0.1))
-
-})
+                       cowplot::get_legend(gg_dummy), nrow = 2, ncol = 1, rel_heights = c(0.9, 0.1))})
 
 #### Save ggplot #### 
 
 overwrite <- FALSE
+
+if (overwrite) readr::write_csv2(x = lm_df, file = "04_Figures/Table-Q1.csv")
 
 suppoRt::save_ggplot(plot = gg_tukey$noise, filename = "Figure-2.pdf",
                      path = "04_Figures/", width = width, height = height * 0.45,
