@@ -54,9 +54,10 @@ results_final_df <- dplyr::left_join(x = results_combined_df, y = mortality_comb
 
 ### Alternative model ####
 
-results_final_list <- dplyr::filter(results_final_df, measure != "synchrony", include == "yes",
-                                    part %in% c("Aboveground", "Total"), treatment == "combined") |>
-  dplyr::group_by(scenario, part, measure) |>
+results_final_list <- dplyr::filter(results_final_df, scenario == "noise", measure != "synchrony",
+                                    include == "yes", part %in% c("Aboveground", "Total"), 
+                                    treatment == "combined") |>
+  dplyr::group_by(part, measure) |>
   dplyr::group_split()
 
 names_list <- purrr::map(results_final_list, function(i) c(unique(i$scenario), unique(i$part)))
@@ -71,7 +72,8 @@ for(i in 1:length(results_final_list)) {
   
   df_temp <- results_final_list[[i]] |> 
     dplyr::mutate(value.cv = log(value.cv), abiotic = log(abiotic), biotic = log(biotic)) |>
-    dplyr::mutate(biotic = (biotic - mean(biotic)) / sd(biotic),
+    dplyr::mutate(value.cv = (value.cv - mean(value.cv)) / sd(value.cv),
+                  biotic = (biotic - mean(biotic)) / sd(biotic),
                   abiotic = (abiotic - mean(abiotic)) / sd(abiotic))
   
   lm_temp <- lm(value.cv ~ nutrient_input + abiotic + pop_n + biotic + 
@@ -92,17 +94,12 @@ for(i in 1:length(results_final_list)) {
 # convert to data.frame
 lm_summary_df <- dplyr::bind_rows(lm_summary_list) |> 
   dplyr::filter(scenario == "noise") |>
-  dplyr::select(-scenario, -logLik, -delta, -weight, -df) |>
-  dplyr::rename("Part" = "part", "Intercept" = "(Intercept)", "Spatial variation" = "abiotic",
-                "Connectivity" = "biotic", "Enrichment" = "nutrient_input", "Population size" = "pop_n",
-                "Variation:Connectivity" = "abiotic:biotic", "Variation:Population" = "abiotic:pop_n",
-                "Enrichment:Connectivity" = "biotic:nutrient_input", "Enrichment:Population" = "nutrient_input:pop_n") |>
+  dplyr::rename("intercept" = "(Intercept)", "spatialVariation" = "abiotic",
+                "connectivity" = "biotic", "enrichment" = "nutrient_input", "popSize" = "pop_n",
+                "var:connect" = "abiotic:biotic", "var:pop" = "abiotic:pop_n",
+                "enrich:connect" = "biotic:nutrient_input", "enrich:pop" = "nutrient_input:pop_n") |>
   dplyr::mutate_if(is.numeric, round, digits = 5)
 
 #### Save table and ggplot #### 
 
-overwrite <- FALSE
-
-if (overwrite) readr::write_csv2(x = lm_summary_df, file = "04_Figures/Table-Q2.csv")
-
-
+ write.table(x = lm_summary_df, file = "04_Figures/Table-Q2.csv", sep  = ";", dec = ".", row.names = FALSE)

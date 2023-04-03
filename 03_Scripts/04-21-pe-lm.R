@@ -54,12 +54,14 @@ results_final_df <- dplyr::left_join(x = results_combined_df, y = mortality_comb
 
 #### Split data #### 
 
-results_final_list <- dplyr::filter(results_final_df, measure == "beta", include == "yes",
-                                    part %in% c("Aboveground", "Total"), treatment == "combined") |>
-  dplyr::group_by(scenario, part) |>
+results_final_list <- dplyr::filter(results_final_df, scenario == "noise", measure != "synchrony", 
+                                    include == "yes", part %in% c("Aboveground", "Total"), 
+                                    treatment == "combined") |>  
+  dplyr::group_by(part, measure) |>
   dplyr::group_split()
 
-names_list <- purrr::map(results_final_list, function(i) c(unique(i$scenario), unique(i$part)))
+names_list <- purrr::map(results_final_list, function(i) c(unique(i$scenario), unique(i$part), 
+                                                           unique(i$measure)))
 
 #### Fit regression model and dredge ####
 
@@ -73,7 +75,8 @@ for(i in 1:length(results_final_list)) {
   
   df_temp <- results_final_list[[i]] |> 
     dplyr::mutate(value.cv = log(value.cv), abiotic = log(abiotic), biotic = log(biotic)) |>
-    dplyr::mutate(biotic = (biotic - mean(biotic)) / sd(biotic),
+    dplyr::mutate(value.cv = (value.cv - mean(value.cv)) / sd(value.cv),
+                  biotic = (biotic - mean(biotic)) / sd(biotic),
                   abiotic = (abiotic - mean(abiotic)) / sd(abiotic))
   
   lm_temp <- lm(value.cv ~ nutrient_input + abiotic + pop_n + biotic + 
@@ -84,7 +87,7 @@ for(i in 1:length(results_final_list)) {
   
   lm_summary_list[[i]] <- subset(lm_dredge, subset = 1:3) |>
     tibble::as_tibble() |>
-    dplyr::mutate(scenario = names_list[[i]][[1]], part = names_list[[i]][[2]], 
+    dplyr::mutate(scenario = names_list[[i]][[1]], part = names_list[[i]][[2]], measure = names_list[[i]][[3]],
                   .before = "(Intercept)")
   
   best_lm_list[[i]] <- get.models(lm_dredge, subset = 1)
@@ -95,7 +98,7 @@ for(i in 1:length(results_final_list)) {
 lm_summary_df <- dplyr::bind_rows(lm_summary_list) |> 
   dplyr::filter(scenario == "noise") |>
   dplyr::select(-scenario, -logLik, -delta, -weight, -df) |>
-  dplyr::rename("Part" = "part", "Intercept" = "(Intercept)", "Spatial variation" = "abiotic",
+  dplyr::rename("Part" = "part", "Scale" = "measure", "Intercept" = "(Intercept)", "Spatial variation" = "abiotic",
                 "Connectivity" = "biotic", "Enrichment" = "nutrient_input", "Population size" = "pop_n",
                 "Variation:Connectivity" = "abiotic:biotic", "Variation:Population" = "abiotic:pop_n",
                 "Enrichment:Connectivity" = "biotic:nutrient_input", "Enrichment:Population" = "nutrient_input:pop_n") |>
@@ -112,12 +115,15 @@ rel_importance_df <- purrr::map_dfr(seq_along(results_final_list), function(i) {
     relaimpo::booteval.relimp(bty = "basic")
   
   tibble::tibble(
-    scenario = names_list[[i]][[1]], part = names_list[[i]][[2]],
+    scenario = names_list[[i]][[1]], part = names_list[[i]][[2]], measure = names_list[[i]][[3]],
     beta = c(rel_r2@namen[-1], "residual"), mean = c(rel_r2@lmg, 1 - sum(rel_r2@lmg)),
     lower = c(rel_r2@lmg.lower, NA), higher = c(rel_r2@lmg.upper, NA)) |>
     dplyr::mutate(dplyr::across(mean:higher, ~ .x * 100), 
                   lower = dplyr::case_when(lower < 0 ~ 0.0, TRUE ~ lower))}) |> 
-  dplyr::mutate(beta = factor(beta, levels = c("abiotic", "biotic", "nutrient_input", "pop_n", 
+  dplyr::mutate(measure = factor(measure, levels = c("alpha", "gamma" , "beta"), 
+                                 labels = c("alpha" = "Local scale", "gamma" = "Meta-ecosystem scale", 
+                                            "beta" = "Portfolio effect")),
+                beta = factor(beta, levels = c("abiotic", "biotic", "nutrient_input", "pop_n", 
                                                "nutrient_input:pop_n", "biotic:nutrient_input", 
                                                "abiotic:pop_n", "abiotic:biotic", "residual"), 
                               labels = c("abiotic" = "Spatial variation", "biotic" = "Connectivity", 
@@ -135,7 +141,7 @@ marginal_means <- purrr::map_dfr(seq_along(results_final_list), function(i) {
   modelbased::estimate_means(best_lm_list[[i]][[1]], at = c("pop_n", "nutrient_input"), 
                              ci = 0.95) |> 
     tibble::as_tibble() |> 
-    dplyr::mutate(scenario = names_list[[i]][[1]], part = names_list[[i]][[2]], 
+    dplyr::mutate(scenario = names_list[[i]][[1]], part = names_list[[i]][[2]], measure = names_list[[i]][[3]],
                   .before = "pop_n")
 
 })
@@ -146,86 +152,67 @@ base_size <- 12.0
 
 w <- 0.5
 
-color_imp <- c("Spatial variation" = "#377EB8", "Connectivity" = "#4DAF4A",
-               "Enrichment" = "#984EA3", "Population size" = "#A65628",
-               "Enrichment:Population" = "#FF7F00", "Enrichment:Connectivity" = "#FFFF33",
-               "Variation:Population" = "#E41A1C", "Variation:Connectivity" = "#F781BF",
-               "Residuals" = "grey85")
+# color_imp <- c("Spatial variation" = "#377EB8", "Connectivity" = "#4DAF4A",
+#                "Enrichment" = "#984EA3", "Population size" = "#A65628",
+#                "Enrichment:Population" = "#FF7F00", "Enrichment:Connectivity" = "#FFFF33",
+#                "Variation:Population" = "#E41A1C", "Variation:Connectivity" = "#F781BF",
+#                "Residuals" = "grey85")
+
+color_imp <- c("Local scale" = "#4DAF4A", "Meta-ecosystem scale" = "#F781BF", 
+               "Portfolio effect" = "#A65628")
 
 color_means <- c(low = "#007895", medium = "#f2d445", high = "#e93c26")
 
-gg_dummy <- data.frame(nutrient_input = c("low", "low", "low", "medium", "medium", "medium", "high", "high"), 
-                       beta = unique(rel_importance_df$beta)[-9],
-                       x = 1:8, y = 1:8) |> 
-  dplyr::mutate(nutrient_input = factor(nutrient_input, levels = c("low", "medium", "high"))) |> 
+gg_dummy <- data.frame(measure = unique(rel_importance_df$measure),
+                       x = 1:3, y = 1:3) |>
   
   # create ggplot
   ggplot(aes(x = x, y = y)) +
   
-  # adding geoims
-  geom_point(aes(color = nutrient_input)) + 
-  geom_errorbar(aes(color = nutrient_input, ymin = y - 1, ymax = y + 1), width = w) +
-  geom_col(aes(fill = beta)) + 
+  # adding geom
+  geom_col(aes(fill = measure)) + 
   
   # change scales
-  scale_color_manual(name = "Nutr.\nenrichment", values = color_means) +
-  scale_fill_manual(name = "Rel. imp", values = color_imp) +
+  scale_fill_manual(name = "", values = color_imp) +
   
   # themeing
-  guides(color = guide_legend(order = 1, nrow = 2, byrow = TRUE), 
-         fill = guide_legend(order = 2, nrow = 3, byrow = FALSE)) +
-  theme_classic(base_size = base_size * 0.9) +
-  theme(legend.position = "bottom")
+  guides(fill = guide_legend(nrow = 1, byrow = FALSE)) +
+  theme_classic() +
+  theme(legend.position = "bottom", legend.text = element_text(size = base_size * 0.75))
 
 #### Create ggplot ####
 
-gg_relimp <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i) {
-  
-  gg_part <- purrr::map(c(Aboveground = "Aboveground", Total = "Total"), function(part_i) {
+gg_relimp <- gg_part <- purrr::map(c(Aboveground = "Aboveground", Total = "Total"), function(part_i) {
     
-    mean_temp <- dplyr::filter(marginal_means, scenario == scenario_i, part == part_i) 
+    mean_temp <- dplyr::filter(marginal_means, part == part_i, measure == "beta") 
     
-    importance_temp <- dplyr::filter(rel_importance_df, scenario == scenario_i, part == part_i) |>
-      dplyr::mutate(part = " ")
+    importance_temp <- dplyr::filter(rel_importance_df, part == part_i) |>
+      dplyr::filter(beta != "Residuals")
     
-    pe_max <- dplyr::filter(marginal_means, scenario == scenario_i) |> 
-      dplyr::pull(CI_high) |> 
-      max() |> 
+    imp_max <- max(rel_importance_df$mean)
+    
+    pe_max <- max(marginal_means$CI_high) |> 
       exp()
     
-    gg_means <- ggplot(data = mean_temp) +
+    if (part_i == "Aboveground") {
       
-      # adding mean and error bars
-      geom_point(aes(x = pop_n, y = exp(Mean), color = nutrient_input)) + 
-      geom_errorbar(aes(x = pop_n, ymin = exp(CI_low), ymax = exp(CI_high), color = nutrient_input), 
-                    width = 0.0) +
+      lgd_pos <- c(0.2, 0.75)
       
-      geom_line(aes(x = pop_n, y = exp(Mean), color = nutrient_input, group = nutrient_input), 
-                alpha = 0.25) + 
+      label_y <- NULL
       
-      # adding box
-      annotate("segment", x = -Inf, xend = Inf, y = -Inf, yend = -Inf) +
-      annotate("segment", x = -Inf, xend = Inf, y = Inf, yend = Inf) +
-      annotate("segment", x = Inf, xend = Inf, y = -Inf, yend = Inf) +
-      annotate("segment", x = -Inf, xend = -Inf, y = -Inf, yend = Inf) +
+    } else {
       
-      # set colors
-      scale_color_manual(name = "Amount nutrient subsidies", values = color_means) +
-      scale_y_continuous(limits = c(1.0, pe_max)) +
+      lgd_pos <- "none"
       
-      # change theme
-      labs(y = "", x = "") +
-      theme_classic(base_size = base_size) +
-      theme(legend.position = "none", axis.line = element_blank(),
-            strip.background = element_blank(), strip.text = element_text(hjust = 0.0))
+      label_y <- element_blank()
+      
+    }
     
     gg_importance <- ggplot(data = importance_temp) +
       
-      # zero line
-      geom_hline(yintercept = 0.0, linetype = 2, color = "grey95") +
-      
       # relative importance bars
-      geom_col(aes(x = part, y = mean, fill = forcats::fct_rev(beta)), position = "stack") +
+      geom_col(aes(x = forcats::fct_rev(beta), y = mean, fill = forcats::fct_rev(measure)), 
+               position = position_dodge(width = 0.9), width = 0.75) +
       
       # adding box
       annotate("segment", x = -Inf, xend = Inf, y = -Inf, yend = -Inf) +
@@ -235,51 +222,70 @@ gg_relimp <- purrr::map(c(phase = "phase", noise = "noise"), function(scenario_i
       
       # set scales
       scale_fill_manual(name = "", values = color_imp) +
-      scale_y_continuous(labels = function(x) paste0(x, "%"), limits = c(0, 100),
-                         breaks = seq(0, 100, 25)) +
+      scale_y_continuous(labels = function(x) paste0(x, "%"), limits = c(0, imp_max),
+                         breaks = seq(0, imp_max, 25)) +
+      
       coord_flip() +
-
+      
       # labels and themes
       labs(y = "", x = "") +
       theme_classic(base_size = base_size) +
-      theme(legend.position = "none", axis.line = element_blank(),
-            axis.ticks.y = element_blank(), axis.text.y = element_text(angle = 90))
+      theme(legend.position = "none", axis.line = element_blank(), 
+            axis.text.y = label_y)
     
-    # cowplot::plot_grid(gg_importance, gg_means, nrow = 2, rel_heights = c(0.3, 0.7))
+    gg_means <- ggplot(data = mean_temp) +
+      
+      # adding mean and error bars
+      geom_point(aes(x = pop_n, y = exp(Mean), color = nutrient_input), size = 3.5) + 
+      geom_errorbar(aes(x = pop_n, ymin = exp(CI_low), ymax = exp(CI_high), color = nutrient_input), 
+                    width = 0, linewidth = 1.5) +
+      
+      geom_line(aes(x = pop_n, y = exp(Mean), color = nutrient_input, group = nutrient_input), 
+                alpha = 0.25, linewidth = 1.5) + 
+      
+      # adding box
+      annotate("segment", x = -Inf, xend = Inf, y = -Inf, yend = -Inf) +
+      annotate("segment", x = -Inf, xend = Inf, y = Inf, yend = Inf) +
+      annotate("segment", x = Inf, xend = Inf, y = -Inf, yend = Inf) +
+      annotate("segment", x = -Inf, xend = -Inf, y = -Inf, yend = Inf) +
+      
+      # set colors
+      scale_color_manual(name = "Enrichment", values = color_means) +
+      scale_y_continuous(limits = c(0.0, pe_max)) +
+      
+      # change theme
+      labs(y = "", x = "") +
+      theme_classic(base_size = base_size) +
+      theme(legend.position = lgd_pos, legend.text = element_text(size = base_size * 0.65),  
+            axis.line = element_blank())
     
     list(imp = gg_importance, means = gg_means)
     
   })
   
-  gg_imp <- cowplot::plot_grid(gg_part$Aboveground$imp, gg_part$Total$imp,
-                               ncol = 2, labels = c("a)", "b)")) |> 
-    cowplot::ggdraw(xlim = c(-0.025, 1.0), ylim = c(-0.025, 1.0)) + 
-    cowplot::draw_label(label = "Relative importance [%]", x = 0.5, y = 0.15, size = base_size)
-  
-  gg_means <- cowplot::plot_grid(gg_part$Aboveground$means, gg_part$Total$means, ncol = 2) |> 
-    cowplot::ggdraw(xlim = c(-0.025, 1.0), ylim = c(-0.025, 1.0)) + 
-    cowplot::draw_label(label = "Population size", x = 0.5, y = 0.05, angle = 0, size = base_size) + 
-    cowplot::draw_label(expression(paste("Portfolio effect ", italic(cv), italic(beta))),
-                        x = -0.01, y = 0.5, angle = 90, size = base_size)
-  
-  gg_combined <- cowplot::plot_grid(gg_imp, gg_means, nrow = 2, rel_heights = c(0.25, 0.75))
-  
-  cowplot::plot_grid(gg_combined, cowplot::get_legend(gg_dummy), nrow = 2, ncol = 1, 
-                     rel_heights = c(0.85, 0.15))
-    
-})
+gg_imp <- cowplot::plot_grid(gg_part$Aboveground$imp, gg_part$Total$imp, 
+                             ncol = 2, labels = c("a)", "b)"), rel_widths = c(0.575, 0.425))
+
+gg_imp <- cowplot::plot_grid(gg_imp, cowplot::get_legend(gg_dummy), nrow = 2, ncol = 1,
+                             rel_heights = c(0.9, 0.1))
+
+gg_means <- cowplot::plot_grid(gg_part$Aboveground$means, gg_part$Total$means, ncol = 2) |>
+  cowplot::ggdraw(xlim = c(-0.025, 1.0), ylim = c(-0.025, 1.0)) +
+  cowplot::draw_label(label = "Population size", x = 0.5, y = 0.05, angle = 0, size = base_size) +
+  cowplot::draw_label(expression(paste("Portfolio effect ", italic(cv), italic(beta))),
+                      x = -0.01, y = 0.5, angle = 90, size = base_size)
+
+gg_final <- cowplot::plot_grid(gg_imp, gg_means, nrow = 2, rel_heights = c(0.5, 0.5))
 
 #### Save table and ggplot #### 
 
 overwrite <- FALSE
 
-if (overwrite) readr::write_csv2(x = lm_summary_df, file = "04_Figures/Table-1.csv")
-
-suppoRt::save_ggplot(plot = gg_relimp$noise, filename = "Figure-3.pdf",
+suppoRt::save_ggplot(plot = gg_final, filename = "Figure-3.pdf",
                      path = "04_Figures/", width = width, height = height * 1/2,
                      units = units, dpi = dpi, overwrite = overwrite)
 
-suppoRt::save_ggplot(plot = gg_relimp$noise, filename = "Figure-3.jpg",
+suppoRt::save_ggplot(plot = gg_final, filename = "Figure-3.jpg",
                      path = "04_Figures/", width = width, height = height * 1/2,
                      units = units, dpi = dpi, overwrite = overwrite)
 

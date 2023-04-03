@@ -64,7 +64,8 @@ results_pe_pp_df <- dplyr::left_join(x = dplyr::filter(results_final_df, measure
 
 #### Split data #### 
 
-results_final_list <- dplyr::group_by(results_pe_pp_df, scenario, part) |>
+results_final_list <-  dplyr::filter(results_pe_pp_df, scenario  == "noise") |>
+  dplyr::group_by(part) |>
   dplyr::group_split()
 
 names_list <- purrr::map(results_final_list, function(i) c(unique(i$scenario), unique(i$part)))
@@ -79,10 +80,7 @@ for(i in 1:length(results_final_list)) {
   
   message("> Progress: ", i, "/", length(results_final_list))
   
-  df_temp <- results_final_list[[i]] |>
-    dplyr::mutate(value.cv = (value.cv - mean(value.cv)) / sd(value.cv),
-                  biotic = (biotic - mean(biotic)) / sd(biotic),
-                  abiotic = (abiotic - mean(abiotic)) / sd(abiotic))
+  df_temp <- results_final_list[[i]]
   
   if (unique(df_temp$part) == "Aboveground") {
     
@@ -93,6 +91,10 @@ for(i in 1:length(results_final_list)) {
     df_temp$value.prod <- log(df_temp$value.prod)
     
   }
+  
+  df_temp <- dplyr::mutate(df_temp, value.cv = (value.cv - mean(value.cv)) / sd(value.cv),
+                           biotic = (biotic - mean(biotic)) / sd(biotic),
+                           abiotic = (abiotic - mean(abiotic)) / sd(abiotic))
   
   lm_temp <- lm(value.prod ~ abiotic + biotic + nutrient_input + pop_n,
                 data = df_temp, na.action = "na.fail")
@@ -109,26 +111,13 @@ for(i in 1:length(results_final_list)) {
 }
 
 # convert to data.frame
-lm_summary_df <- dplyr::bind_rows(lm_summary_list) |> 
-  dplyr::filter(scenario == "noise") |>
-  dplyr::select(-scenario, -logLik, -delta, -weight, -df) |>
-  dplyr::select(part, `(Intercept)`, abiotic, biotic, nutrient_input, pop_n, 
-                `R^2`, AICc) |> 
-  dplyr::rename("Part" = "part", "Intercept" = "(Intercept)", "Spatial variation" = "abiotic",
-                "Connectivity" = "biotic", "Enrichment" = "nutrient_input", 
-                "Population size" = "pop_n") |>
-  dplyr::mutate_if(is.numeric, round, digits = 3)
-
-#### Check models ####
-
-# gg_assumptions <- purrr::map(best_lm_list, function(i) {
-#   
-#   plot_lm(i[[1]])
-#   
-# })
+lm_summary_df <- dplyr::bind_rows(lm_summary_list) |>
+  dplyr::rename("intercept" = "(Intercept)", "spatialVariation" = "abiotic",
+                "connectivity" = "biotic", "enrichment" = "nutrient_input", "popSize" = "pop_n") |> 
+  dplyr::mutate_if(is.numeric, round, digits = 5)
 
 #### Save results ####
 
-overwrite <- FALSE
+write.table(x = lm_summary_df, file = "04_Figures/Table-Q3-var-con.csv", sep  = ";",
+            dec = ".", row.names = FALSE)
 
-if (overwrite) readr::write_csv2(x = lm_summary_df, file = "04_Figures/Table-Q3.csv")
