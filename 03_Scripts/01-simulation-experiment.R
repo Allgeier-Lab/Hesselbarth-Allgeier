@@ -6,8 +6,6 @@
 ##    www.github.com/mhesselbarth             ##
 ##--------------------------------------------##
 
-# Purpose: Sample parameter space for simulation experiment
-
 #### Load setup ####
 
 source("01_Functions/setup.R")
@@ -27,8 +25,7 @@ matrix_lhs[, 2] <- qunif(matrix_lhs[, 2], 0.0, 1.0)
 table(cut(matrix_lhs[, 1], breaks = seq(0.0, 1, 0.2)),
       cut(matrix_lhs[, 2], breaks = seq(0.0, 1, 0.2)))
 
-experiment_df <- tibble::tibble(biotic = matrix_lhs[, 1], 
-                                abiotic = matrix_lhs[, 2]) |> 
+experiment_df <- tibble::tibble(biotic = matrix_lhs[, 1], abiotic = matrix_lhs[, 2]) |> 
   dplyr::slice(rep(x = 1:dplyr::n(), times = length(pop_n))) |> 
   dplyr::mutate(pop_n = rep(x = pop_n, each = iterations)) |> 
   dplyr::mutate(biotic = dplyr::case_when(pop_n == 0 ~ 0, TRUE ~ biotic)) |> 
