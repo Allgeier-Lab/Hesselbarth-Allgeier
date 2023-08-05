@@ -66,7 +66,7 @@ parameters_list <- list(
   resp_intercept = 0.0108,
   resp_slope = -0.2,
   resp_temp_low = 2.1,
-  resp_temp_optm = 36,
+  resp_temp_optm = 26, # 36,
   resp_temp_max = 40
 )
 
