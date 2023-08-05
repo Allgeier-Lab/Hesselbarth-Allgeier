@@ -12,6 +12,7 @@
 
 library(broom)
 library(cowplot)
+library(ggpattern)
 library(lhs)
 library(MetBrewer)
 library(modelbased)
@@ -21,6 +22,8 @@ library(relaimpo)
 library(rslurm)
 library(suppoRt) # remotes::install_github("mhesselbarth/suppoRt")
 library(tidyverse)
+
+library(emmeans) # needed somewhere in marginal means calc
 
 #### Load data ####
 
