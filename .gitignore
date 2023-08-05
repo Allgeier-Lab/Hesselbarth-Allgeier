@@ -4,6 +4,7 @@
 .Ruserdata
 .DS_Store
 02_Data/
+03_Scripts/Supplemental/99-06-export-csv.R
 04_Figures/
 05_Results/
 _rslurm_*/
