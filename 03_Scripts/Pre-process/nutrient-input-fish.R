@@ -54,15 +54,16 @@ foo <- function(itr, pop_n) {
   result_temp <- arrR::run_simulation(seafloor = input_seafloor, fishpop = input_fishpop,
                                       parameters = parameters_list, movement = "behav",
                                       max_i = max_i, min_per_i = min_per_i, seagrass_each = seagrass_each, 
-                                      save_each = save_each, verbose = FALSE) |> 
+                                      save_each = save_each, verbose = FALSE)  |> 
     arrR::filter_mdlrn(filter = c((max_i / years) * years_filter, max_i), reset = TRUE)
   
   # calculate total excretion per time step averaged over all time steps
-  excretion_ttl <- dplyr::filter(result_temp$fishpop, timestep == max(timestep)) |> 
-    dplyr::pull(excretion) |> 
+  excretion_ttl <- dplyr::filter(result_temp$fishpop, timestep == max(timestep)) |>
+    dplyr::pull(excretion) |>
     sum() / (max_i - ((max_i / years) * years_filter))
   
-  data.frame(itr = itr, pop_n = pop_n, excretion_ttl = excretion_ttl, excretion_cell = excretion_ttl / prod(dimensions))
+  data.frame(itr = itr, pop_n = pop_n, excretion_ttl = excretion_ttl, 
+             excretion_cell = excretion_ttl / prod(dimensions))
   
 }
 
