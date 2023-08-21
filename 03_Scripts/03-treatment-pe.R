@@ -106,12 +106,12 @@ w <- 1.0
 arrow_width <- 0.3
 arrow_size <- 1.0
 
-color_beta <- c("Spatial variation" = "#004E70", "Nutrient enrichment" = "#3A8AA6", "Variation:Enrichment" = "#7AC7DF",
-                "Connectivity" = "#003D2B", "Population size" = "#338159", "Connectivity:Population" = "#7EAF9C",
+color_beta <- c("Nutrient enrichment" = "#0072B2", "Spatial variation" = "#56B4E9", "Variation:Enrichment" = "#CC79A7",
+                "Population size" = "#009E73", "Connectivity" = "#D55E00", "Connectivity:Population" = "#F0E442",
                 "Residuals" = "grey")
 
 # color_treatment <- c("Nutrient enrichment" = "#BD92BF", "Fish dynamics" = "#749F6F")
-color_treatment <- c("Nutrient enrichment" = "#3A8AA6", "Fish dynamics" = "#338159")
+color_treatment <- c("Nutrient enrichment" = "#0072B2", "Fish dynamics" = "#009E73")
 
 #### Create ggplot: Main ####
 
@@ -162,7 +162,7 @@ gg_pe <- ggplot(data = pe_sum, aes(x = part, color = treatment, group = treatmen
 
   # change theme
   guides(color = guide_legend(nrow = 2)) +
-  labs(x = "", y = expression(paste("Portfolio effect (", italic(CV), italic(beta), ")"))) +
+  labs(x = "", y = "Portfolio effect (PE)") +
   theme_classic(base_size = base_size) + 
   theme(legend.position = c(0.2, 0.95), legend.text = element_text(size = base_size * 0.85), 
         legend.background = element_rect(colour = NA, fill = NA), axis.line = element_blank())

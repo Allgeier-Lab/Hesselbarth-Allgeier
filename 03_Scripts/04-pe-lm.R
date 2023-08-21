@@ -146,7 +146,7 @@ w <- 1.0
 
 text_size <- 5
 
-color_enrich <- c("low" = "#007895", "medium" = "#f2d445", "high" = "#e93c26")
+color_enrich <- c("low" = "#648FFF", "medium" = "#FFB000", "high" = "#DC267F")
 
 #### Create ggplot ####
 
@@ -289,7 +289,7 @@ gg_means_part <- dplyr::filter(marginal_means, measure == "Portfolio effect") |>
     
     label_temp <- data.frame(label = "i)", x = 1, y = y_max * 1)
     lgd_pos <- c(0.125, 0.8)
-    y_temp <- expression(paste("Portfolio effect (", italic(CV), italic(beta), ")"))
+    y_temp <- "Portfolio effect (PE)"
     y_push <- 2.5
     
     if(unique(i$part) == "Total") {

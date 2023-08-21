@@ -236,8 +236,7 @@ gg_pe_pp <- cowplot::plot_grid(gg_part$Aboveground, gg_part$Total, nrow = 2,
                       x = 0.175, y = 0.02, size = base_size) +
   cowplot::draw_label(expression(paste("Meta-ecosystem scale (", italic(CV), italic(gamma), ")")), 
                       x = 0.525, y = 0.02, size = base_size) +
-  cowplot::draw_label(expression(paste("Portfolio effect (", italic(CV), italic(beta), ")")), 
-                      x = 0.875, y = 0.02, size = base_size)
+  cowplot::draw_label("Portfolio effect (PE)", x = 0.875, y = 0.02, size = base_size)
 
 #### Save ggplots ####
 
