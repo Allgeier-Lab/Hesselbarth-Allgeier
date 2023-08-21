@@ -146,7 +146,7 @@ w <- 1.0
 
 text_size <- 5
 
-color_enrich <- c("low" = "#648FFF", "medium" = "#FFB000", "high" = "#DC267F")
+color_enrich <- c("low" = "#009E73", "medium" = "#F0E442", "high" = "#CC79A7")
 
 #### Create ggplot ####
 

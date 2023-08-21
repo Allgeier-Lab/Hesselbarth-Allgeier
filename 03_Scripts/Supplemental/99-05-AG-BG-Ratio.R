@@ -63,7 +63,7 @@ gg_prod <- ggplot(data = df_pp) +
   annotate("segment", x = -Inf, xend = -Inf, y = -Inf, yend = Inf) +
   
   # set scales
-  scale_fill_manual(name = "Components", values = c(Aboveground = "#386cb0", Belowground = "#d95f02")) +
+  scale_fill_manual(name = "Components", values = c(Aboveground = "#44AA99", Belowground = "#117733")) +
   
   # set themes
   labs(y = expression(paste("Total primary production [", gDW~d^-1~m^-2, "]")), 

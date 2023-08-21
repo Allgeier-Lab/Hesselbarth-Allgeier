@@ -106,12 +106,12 @@ w <- 1.0
 arrow_width <- 0.3
 arrow_size <- 1.0
 
-color_beta <- c("Nutrient enrichment" = "#0072B2", "Spatial variation" = "#56B4E9", "Variation:Enrichment" = "#CC79A7",
-                "Population size" = "#009E73", "Connectivity" = "#D55E00", "Connectivity:Population" = "#F0E442",
+color_beta <- c("Nutrient enrichment" = "#74a9cf", "Spatial variation" = "#045a8d", "Variation:Enrichment" = "#f1eef6",
+                "Population size" = "#fd8d3c", "Connectivity" = "#a63603", "Connectivity:Population" = "#fdd0a2",
                 "Residuals" = "grey")
 
 # color_treatment <- c("Nutrient enrichment" = "#BD92BF", "Fish dynamics" = "#749F6F")
-color_treatment <- c("Nutrient enrichment" = "#0072B2", "Fish dynamics" = "#009E73")
+color_treatment <- c("Nutrient enrichment" = "#a6bddb", "Fish dynamics" = "#fdae6b")
 
 #### Create ggplot: Main ####
 
