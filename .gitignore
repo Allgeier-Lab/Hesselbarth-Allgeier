@@ -9,3 +9,5 @@
 05_Results/
 _rslurm_*/
 *.rds
+03_Scripts/Supplemental/99-99-data-Bridget.R
+03_Scripts/Supplemental/99-07-export-csv.R
