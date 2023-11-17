@@ -86,3 +86,7 @@ dplyr::filter(results_final_df, measure == "alpha", include == "yes", treatment 
 suppoRt::save_ggplot(plot = gg_prod, filename = "Figure-S5.png",
                      path = "04_Figures/Supplemental/", width = width, height = height * 0.35,
                      units = units, dpi = dpi, overwrite = FALSE)
+
+suppoRt::save_ggplot(plot = gg_prod, filename = "Figure-S5.pdf",
+                     path = "04_Figures/Supplemental/", width = width, height = height * 0.35,
+                     units = units, dpi = dpi, overwrite = FALSE)

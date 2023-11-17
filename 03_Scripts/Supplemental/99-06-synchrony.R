@@ -53,9 +53,9 @@ synchrony_pe_df <- dplyr::filter(results_final_df, measure %in% c("beta", "synch
 
 #### ggplot Synchrony vs PE ####
 
-color_treatment <- c("Nutrient enrichment" = "#a6bddb", "Fish dynamics" = "#fdae6b")
+color_treatment <- c("Nutrient enrichment" = "#a6bddb", "Fish dynamics" = "#fdae6b", "Combined" = "#ED679A")
 
-synchrony_pe_list <- dplyr::filter(synchrony_pe_df, treatment != "Combined") |> 
+synchrony_pe_list <- dplyr::filter(synchrony_pe_df) |> 
   dplyr::group_by(treatment) |> 
   dplyr::group_split()
 
@@ -63,12 +63,12 @@ synchrony_pe_list <- dplyr::filter(synchrony_pe_df, treatment != "Combined") |>
 gg_syn_pe_list <- purrr::map(synchrony_pe_list, function(df_temp) {
   
   axis_element <- NULL
-  plot_margin <- unit(c(0.5, 0.25, -0.5, -0.25), "cm")
+  plot_margin <- unit(c(0.5, 0.25, -0.5, -0.25), "cm") # t r b l
   foo <- function(x) sprintf("%.2f", x)
   
-  if (unique(df_temp$treatment) == "Nutrient enrichment") axis_element <- element_blank()
-  if (unique(df_temp$treatment) == "Fish dynamics") plot_margin <- unit(c(0.1, 0.25, 0.0, -0.25), "cm")
-  if (unique(df_temp$treatment) == "Fish dynamics") foo <- function(x) sprintf("%.1f", x)
+  if (unique(df_temp$treatment) %in% c("Nutrient enrichment", "Fish dynamics")) axis_element <- element_blank()
+  if (unique(df_temp$treatment) %in% c("Fish dynamics", "Combined")) foo <- function(x) sprintf("%.1f", x)
+  if (unique(df_temp$treatment)  %in% c("Fish dynamics", "Combined")) plot_margin <- unit(c(0.1, 0.25, -0.5, -0.25), "cm")
   
   ggplot(data = df_temp, aes(x = synchrony, y = beta, color = treatment)) + 
     
@@ -101,15 +101,16 @@ gg_syn_pe_list <- purrr::map(synchrony_pe_list, function(df_temp) {
 })
 
 # combine plots
-gg_syn_pe <- cowplot::plot_grid(plotlist = gg_syn_pe_list, nrow = 2)
+gg_syn_pe <- cowplot::plot_grid(plotlist = gg_syn_pe_list, nrow = 3)
 
-gg_syn_pe <- cowplot::ggdraw(gg_syn_pe, xlim = c(-0.01, 1), ylim = c(0, 1.01)) +
-  cowplot::draw_label("Synchrony", x = 0.525, y = 0.02, size = base_size) + 
-  cowplot::draw_label("Portfolio effect (PE)", x = 0.0, y = 0.55, size = base_size, angle = 90) +
-  cowplot::draw_label("Aboveground", x = 0.27, y = 0.98, size = base_size * 0.65) + 
-  cowplot::draw_label("Total", x = 0.8, y = 0.98, size = base_size * 0.65) + 
+gg_syn_pe <- cowplot::ggdraw(gg_syn_pe, xlim = c(-0.05, 1), ylim = c(-0.05, 1.025)) +
+  cowplot::draw_label("Synchrony", x = 0.525, y = -0.025, size = base_size) + 
+  cowplot::draw_label("Portfolio effect (PE)", x = -0.025, y = 0.5, size = base_size, angle = 90) +
+  cowplot::draw_label("Aboveground", x = 0.27, y = 1.0, size = base_size * 0.65) + 
+  cowplot::draw_label("Total", x = 0.8, y = 1.0, size = base_size * 0.65) + 
   cowplot::draw_label("Nutr. enrich.", x = 0.0, y = 0.8, size = base_size * 0.65, angle = 90) +
-  cowplot::draw_label("Fish dynamics", x = 0.0, y = 0.275, size = base_size * 0.65, angle = 90)
+  cowplot::draw_label("Fish dynamics", x = 0.0, y = 0.5, size = base_size * 0.65, angle = 90) + 
+  cowplot::draw_label("Combined", x = 0.0, y = 0.175, size = base_size * 0.65, angle = 90)
 
 #### ggplot Treatment vs Synchrony ####
 
@@ -192,9 +193,17 @@ gg_trt_syn <- cowplot::plot_grid(gg_trt_syn, gg_legend, rel_heights = c(0.95, 0.
 ### Save total figure ####
 
 suppoRt::save_ggplot(plot = gg_syn_pe, filename = "Figure-S6.png",
-                     path = "04_Figures/Supplemental/", width = width, height = height / 2,
+                     path = "04_Figures/Supplemental/", width = width, height = height * 2 / 3,
                      units = units, dpi = dpi, overwrite = FALSE)
 
 suppoRt::save_ggplot(plot = gg_trt_syn, filename = "Figure-S7.png",
-                     path = "04_Figures/Supplemental/", width = width, height = height / 2,
+                     path = "04_Figures/Supplemental/", width = width, height = height * 1 / 2,
+                     units = units, dpi = dpi, overwrite = FALSE)
+
+suppoRt::save_ggplot(plot = gg_syn_pe, filename = "Figure-S6.pdf",
+                     path = "04_Figures/Supplemental/", width = width, height = height * 2 / 3,
+                     units = units, dpi = dpi, overwrite = FALSE)
+
+suppoRt::save_ggplot(plot = gg_trt_syn, filename = "Figure-S7.pdf",
+                     path = "04_Figures/Supplemental/", width = width, height = height * 1 / 2,
                      units = units, dpi = dpi, overwrite = FALSE)

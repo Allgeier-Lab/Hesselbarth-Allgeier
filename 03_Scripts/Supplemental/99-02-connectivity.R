@@ -141,3 +141,7 @@ gg_probs_moved <- ggplot(data = move_meta_result_sum, aes(x = move_meta_sd, y = 
 suppoRt::save_ggplot(plot = gg_probs_moved, filename = "Figure-S2.png",
                      path = "04_Figures/Supplemental/", width = width, height = height * 0.33,
                      units = units, dpi = dpi, overwrite = FALSE)
+
+suppoRt::save_ggplot(plot = gg_probs_moved, filename = "Figure-S2.pdf",
+                     path = "04_Figures/Supplemental/", width = width, height = height * 0.33,
+                     units = units, dpi = dpi, overwrite = FALSE)

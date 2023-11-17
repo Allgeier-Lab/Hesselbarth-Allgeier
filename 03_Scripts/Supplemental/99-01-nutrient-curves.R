@@ -90,3 +90,7 @@ gg_combined <- ggplot() +
 suppoRt::save_ggplot(plot = gg_combined, filename = "Figure-S1.png",
                      path = "04_Figures/Supplemental/", width = width, height = height * 0.5,
                      units = units, dpi = dpi, overwrite = FALSE)
+
+suppoRt::save_ggplot(plot = gg_combined, filename = "Figure-S1.pdf",
+                     path = "04_Figures/Supplemental/", width = width, height = height * 0.5,
+                     units = units, dpi = dpi, overwrite = FALSE)

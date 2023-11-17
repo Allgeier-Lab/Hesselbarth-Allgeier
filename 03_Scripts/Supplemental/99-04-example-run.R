@@ -67,7 +67,7 @@ gg_biomass <- purrr::map_dfr(result_temp$seafloor, function(i) dplyr::filter(i, 
   # scale fill
   scale_fill_gradientn(name = expression(paste("AG biomass [", gDW~d^-1~m^-2, "]")),
                        colors = rev(MetBrewer::met.brewer(name = "Hokusai1", n = 255))) +
-  coord_fixed()+
+  coord_fixed() +
   
   # set themes
   theme_classic(base_size = base_size) +
@@ -81,3 +81,6 @@ suppoRt::save_ggplot(plot = gg_biomass, filename = "Figure-S4.png",
                      path = "04_Figures/Supplemental/", width = width, height = height * 0.5,
                      units = units, dpi = dpi, overwrite = FALSE)
 
+suppoRt::save_ggplot(plot = gg_biomass, filename = "Figure-S4.pdf",
+                     path = "04_Figures/Supplemental/", width = width, height = height * 0.5,
+                     units = units, dpi = dpi, overwrite = FALSE)
