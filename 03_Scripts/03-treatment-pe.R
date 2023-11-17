@@ -173,27 +173,135 @@ xy_lims <- list(Aboveground = c(0, 1.0), Total = c(0, 0.1))
 gg_cv <- purrr::map(c(Aboveground = "Aboveground", Total = "Total"), function(part_i) {
     
   # label_temp <- ifelse(test = part_i == "Aboveground", yes = "C)", no = "D)")
-  
   # x_temp <- ifelse(test = part_i == "Aboveground", yes = 0.01, no = 0.001)
   
   # set location of arrows for AG
-  arrow_x_2 <- 0.075
-  arrow_x_3 <- 0.2
-  arrow_x_4 <- 0.275
+  # light blue (alpha)
+  arrow_1_x_lo <- 0.0
+  arrow_1_x_hi <- 0.0
+  arrow_1_y_lo <- 0.95
+  arrow_1_y_hi <- 0.65
+  arrow_1 <- arrow(length = unit(arrow_width, "cm"))
   
-  arrow_y_1 <- 0.65
-  arrow_y_2 <- 0.95
+  # dark blue (alpha)
+  arrow_2_x_lo <- 0.075
+  arrow_2_x_hi <- 0.075
+  arrow_2_y_lo <- 0.65
+  arrow_2_y_hi <- 0.95
+  arrow_2 <- arrow(length = unit(arrow_width, "cm"))
+  
+  # light orange (alpha)
+  arrow_3_x_lo <- 0.2
+  arrow_3_x_hi <- 0.2
+  arrow_3_y_lo <- 0.95
+  arrow_3_y_hi <- 0.65
+  arrow_3 <- arrow(length = unit(arrow_width, "cm"))
+  
+  # dark orange (alpha)
+  arrow_4_x_lo <- 0.275
+  arrow_4_x_hi <- 0.275
+  arrow_4_y_lo <- 0.95
+  arrow_4_y_hi <- 0.65
+  arrow_4 <- arrow(length = unit(arrow_width, "cm"))
+  
+  # light blue (gamma)
+  arrow_5_x_lo <- 0.95
+  arrow_5_x_hi <- 0.65
+  arrow_5_y_lo <- 0.0
+  arrow_5_y_hi <- 0.0
+  arrow_5 <- arrow(length = unit(arrow_width, "cm"))
+  
+  # dark blue (gamma)
+  arrow_6_x_lo <- 0.65
+  arrow_6_x_hi <- 0.95
+  arrow_6_y_lo <- 0.075
+  arrow_6_y_hi <- 0.075
+  arrow_6 <- arrow(length = unit(arrow_width, "cm"))
+  
+  # light orange (gamma)
+  arrow_7_x_lo <- 0.95
+  arrow_7_x_hi <- 0.65
+  arrow_7_y_lo <- 0.2
+  arrow_7_y_hi <- 0.2
+  arrow_7 <- arrow(length = unit(arrow_width, "cm"))
+  
+  # dark orange (gamma)
+  arrow_8_x_lo <- 0.9
+  arrow_8_x_hi <- 0.7
+  arrow_8_y_lo <- 0.275
+  arrow_8_y_hi <- 0.275
+  arrow_8 <- NULL
   
   # TTL is on a different scale
   if (part_i == "Total") {
     
-    arrow_x_2 <- 0.0075
-    arrow_x_3 <- 0.02
-    arrow_x_4 <- 0.0275
+    # set location of arrows for AG
+    # light blue (alpha)
+    arrow_1_x_lo <- 0.0
+    arrow_1_x_hi <- 0.0
+    arrow_1_y_lo <- 0.095
+    arrow_1_y_hi <- 0.065
+    arrow_1 <- arrow(length = unit(arrow_width, "cm"))
     
-    arrow_y_1 <- 0.065
-    arrow_y_2 <- 0.095
+    # dark blue (alpha)
+    arrow_2_x_lo <- 0.0075
+    arrow_2_x_hi <- 0.0075
+    arrow_2_y_lo <- 0.065
+    arrow_2_y_hi <- 0.095
+    arrow_2 <- arrow(length = unit(arrow_width, "cm"))
     
+    # light orange (alpha)
+    arrow_3_x_lo <- 0.02
+    arrow_3_x_hi <- 0.02
+    arrow_3_y_lo <- 0.065
+    arrow_3_y_hi <- 0.095
+    arrow_3 <- arrow(length = unit(arrow_width, "cm"))
+    
+    # dark orange (alpha)
+    arrow_4_x_lo <- 0.0275
+    arrow_4_x_hi <- 0.0275
+    arrow_4_y_lo <- 0.095
+    arrow_4_y_hi <- 0.065
+    arrow_4 <- arrow(length = unit(arrow_width, "cm"))
+    
+    # light blue (gamma)
+    arrow_5_x_lo <- 0.09
+    arrow_5_x_hi <- 0.07
+    arrow_5_y_lo <- 0.0
+    arrow_5_y_hi <- 0.0
+    arrow_5 <- NULL
+    
+    # dark blue (gamma)
+    arrow_6_x_lo <- 0.065
+    arrow_6_x_hi <- 0.095
+    arrow_6_y_lo <- 0.0075
+    arrow_6_y_hi <- 0.0075
+    arrow_6 <- arrow(length = unit(arrow_width, "cm"))
+    
+    # light orange (gamma)
+    arrow_7_x_lo <- 0.095
+    arrow_7_x_hi <- 0.065
+    arrow_7_y_lo <- 0.02
+    arrow_7_y_hi <- 0.02
+    arrow_7 <- arrow(length = unit(arrow_width, "cm"))
+    
+    # dark orange (gamma)
+    arrow_8_x_lo <- 0.09
+    arrow_8_x_hi <- 0.07
+    arrow_8_y_lo <- 0.0275
+    arrow_8_y_hi <- 0.0275
+    arrow_8 <- NULL
+    
+  #   arrow_x_2 <- 0.0075
+  #   arrow_x_3 <- 0.02
+  #   arrow_x_4 <- 0.0275
+  #   
+  #   arrow_y_1 <- 0.065
+  #   arrow_y_2 <- 0.095
+  #   
+  #   arrow_y_11 <- 0.095
+  #   arrow_y_22 <- 0.065
+  #   
   }
   
   df_temp <- dplyr::filter(cv_temp, part == part_i)
@@ -213,24 +321,24 @@ gg_cv <- purrr::map(c(Aboveground = "Aboveground", Total = "Total"), function(pa
     geom_abline(slope = 1, intercept = 0, color = "grey", linetype = 2) +
     
     # add arrows y direction
-    geom_segment(aes(x = 0, y = arrow_y_1, xend = 0, yend = arrow_y_2), color = color_beta[[1]],
-                 arrow = arrow(length = unit(arrow_width, "cm")), linewidth = arrow_size) +
-    geom_segment(aes(x = arrow_x_2, y = arrow_y_1, xend = arrow_x_2, yend = arrow_y_2), color = color_beta[[2]],
-                 arrow = arrow(length = unit(arrow_width, "cm")), linewidth = arrow_size) +
-    geom_segment(aes(x = arrow_x_3, y = arrow_y_2, xend = arrow_x_3, yend = arrow_y_1), color = color_beta[[4]],
-                 arrow = arrow(length = unit(arrow_width, "cm")), linewidth = arrow_size) +
-    geom_segment(aes(x = arrow_x_4, y = arrow_y_2, xend = arrow_x_4, yend = arrow_y_1), color = color_beta[[5]],
-                 arrow = arrow(length = unit(arrow_width, "cm")), linewidth = arrow_size) +
+    geom_segment(aes(x = arrow_1_x_lo, y = arrow_1_y_lo, xend = arrow_1_x_hi, yend = arrow_1_y_hi), 
+                 color = color_beta[[1]], arrow = arrow_1, linewidth = arrow_size) +
+    geom_segment(aes(x = arrow_2_x_lo, y = arrow_2_y_lo, xend = arrow_2_x_hi, yend = arrow_2_y_hi), 
+                 color = color_beta[[2]], arrow = arrow_2, linewidth = arrow_size) +
+    geom_segment(aes(x = arrow_3_x_lo, y = arrow_3_y_lo, xend = arrow_3_x_hi, yend = arrow_3_y_hi), 
+                 color = color_beta[[4]], arrow = arrow_3, linewidth = arrow_size) +
+    geom_segment(aes(x = arrow_4_x_lo, y = arrow_4_y_lo, xend = arrow_4_x_hi, yend = arrow_4_y_hi), 
+                 color = color_beta[[5]], arrow = arrow_4, linewidth = arrow_size) +
     
     # add arrows x direction
-    geom_segment(aes(x = arrow_y_1, y = 0, xend = arrow_y_2, yend = 0), color = color_beta[[1]],
-                 arrow = arrow(length = unit(arrow_width, "cm")), linewidth = arrow_size) +
-    geom_segment(aes(x = arrow_y_1, y = arrow_x_2, xend = arrow_y_2, yend = arrow_x_2), color = color_beta[[2]],
-                 arrow = arrow(length = unit(arrow_width, "cm")), linewidth = arrow_size) +
-    geom_segment(aes(x = arrow_y_2, y = arrow_x_3, xend = arrow_y_1, yend = arrow_x_3), color = color_beta[[4]],
-                 arrow = arrow(length = unit(arrow_width, "cm")), linewidth = arrow_size) +
-    geom_segment(aes(x = arrow_y_2, y = arrow_x_4, xend = arrow_y_1, yend = arrow_x_4), color = color_beta[[5]],
-                 arrow = arrow(length = unit(arrow_width, "cm")), linewidth = arrow_size) +
+    geom_segment(aes(x = arrow_5_x_lo, y = arrow_5_y_lo, xend = arrow_5_x_hi, yend = arrow_5_y_hi), 
+                 color = color_beta[[1]], arrow = arrow_5, linewidth = arrow_size) +
+    geom_segment(aes(x = arrow_6_x_lo, y = arrow_6_y_lo, xend = arrow_6_x_hi, yend = arrow_6_y_hi), 
+                 color = color_beta[[2]], arrow = arrow_6, linewidth = arrow_size) +
+    geom_segment(aes(x = arrow_7_x_lo, y = arrow_7_y_lo, xend = arrow_7_x_hi, yend = arrow_7_y_hi), 
+                 color = color_beta[[4]], arrow = arrow_7, linewidth = arrow_size) +
+    geom_segment(aes(x = arrow_8_x_lo, y = arrow_8_y_lo, xend = arrow_8_x_hi, yend = arrow_8_y_hi), 
+                 color = color_beta[[5]], arrow = arrow_8, linewidth = arrow_size) +
     
     # change scales
     scale_x_continuous(limits = xy_lims[names(xy_lims) == part_i][[1]]) +
@@ -318,5 +426,9 @@ gg_combined <- cowplot::plot_grid(gg_pe, gg_cv$Aboveground, gg_relimp, gg_cv$Tot
 #### Save ggplot #### 
 
 suppoRt::save_ggplot(plot = gg_combined, filename = "Figure-2.png",
+                     path = "04_Figures/", width = width, height = height * 0.5,
+                     units = units, dpi = dpi, overwrite = FALSE)
+
+suppoRt::save_ggplot(plot = gg_combined, filename = "Figure-2.pdf",
                      path = "04_Figures/", width = width, height = height * 0.5,
                      units = units, dpi = dpi, overwrite = FALSE)

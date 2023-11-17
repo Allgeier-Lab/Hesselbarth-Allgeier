@@ -359,3 +359,6 @@ suppoRt::save_ggplot(plot = gg_final, filename = "Figure-3.png",
                      path = "04_Figures/", width = width, height = height * 0.75,
                      units = units, dpi = dpi, overwrite = FALSE)
 
+suppoRt::save_ggplot(plot = gg_final, filename = "Figure-3.pdf",
+                     path = "04_Figures/", width = width, height = height * 0.75,
+                     units = units, dpi = dpi, overwrite = FALSE)
