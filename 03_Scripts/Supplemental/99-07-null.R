@@ -35,62 +35,62 @@ experiment_df <- expand.grid(pop_n = pop_n, nutrient_input = nutrient_levels) |>
 
 #### Init HPC function ####
 
-foo_hpc <- function(pop_n, nutrient_input) {
-  
-  starting_values_list$pop_n <- pop_n
-  
-  # # update move meta_sd parameters
-  # parameters_list$move_meta_sd <- biotic
-  
-  # setup metaecosystems
-  metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = reef_matrix,
-                                         starting_values = starting_values_list, parameters = parameters_list,
-                                         dimensions = dimensions, grain = grain, 
-                                         use_log = FALSE, verbose = FALSE)
-  
-  # simulate nutrient input
-  input_temp <- meta.arrR::simulate_nutrient_noise(n = n, max_i = max_i, input_mn = nutrient_input, 
-                                                   verbose = FALSE)
-  
-  # run model
-  result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = parameters_list,
-                                                nutrients_input = input_temp, movement = "behav", 
-                                                torus_diffusion = TRUE, max_i = max_i, min_per_i = min_per_i,
-                                                seagrass_each = seagrass_each, save_each = save_each, 
-                                                verbose = FALSE)  |> 
-    meta.arrR::filter_meta(filter = c((max_i / years) * years_filter, max_i),
-                           reset = TRUE, verbose = FALSE)
-  
-  # calc mortality
-  mortality <- dplyr::bind_rows(result_temp$fishpop) |> 
-    dplyr::filter(timestep == max_i) |> 
-    dplyr::mutate(died_total = died_consumption + died_background) |> 
-    dplyr::select(id, died_consumption, died_background, died_total) |> 
-    dplyr::arrange(id)
-  
-  prod <- meta.arrR::summarize_meta(result = result_temp, biomass = FALSE, production = TRUE, 
-                                    fun = function(x, ...) {mean(x, ...) / ((save_each * 120) / 60 / 24)},
-                                    lag = c(NA, TRUE))[["production"]] |> 
-    dplyr::filter(timestep != min(timestep)) |> 
-    tidyr::pivot_longer(-c(meta, timestep), names_to = "part") |> 
-    dplyr::group_by(timestep, part) |> 
-    dplyr::summarise(alpha = mean(value), gamma = sum(value), .groups = "drop") |> 
-    tidyr::pivot_longer(-c(timestep, part), names_to = "measure") |> 
-    dplyr::group_by(part, measure) |> 
-    dplyr::summarise(value = mean(value), .groups = "drop")
-  
-  # calc cv
-  cv <- meta.arrR::calc_variability(x = result_temp, biomass = FALSE, production = TRUE, 
-                                    fun = function(x, ...) {mean(x, ...) / ((save_each * 120) / 60 / 24)},
-                                    lag = c(NA, TRUE))[["production"]]
-  
-  # combine to result data.frame and list
-  list(fishpop_init = dplyr::mutate(dplyr::bind_rows(metasyst_temp$fishpop), pop_n = pop_n, nutrient_input = nutrient_input), 
-       mortality = dplyr::mutate(mortality, pop_n = pop_n, nutrient_input = nutrient_input), 
-       prod = dplyr::mutate(prod, pop_n = pop_n, nutrient_input = nutrient_input), 
-       cv = dplyr::mutate(dplyr::bind_rows(cv), pop_n = pop_n, nutrient_input = nutrient_input)
-  )
-}
+# foo_hpc <- function(pop_n, nutrient_input) {
+#   
+#   starting_values_list$pop_n <- pop_n
+#   
+#   # # update move meta_sd parameters
+#   # parameters_list$move_meta_sd <- biotic
+#   
+#   # setup metaecosystems
+#   metasyst_temp <- meta.arrR::setup_meta(n = n, max_i = max_i, reef = reef_matrix,
+#                                          starting_values = starting_values_list, parameters = parameters_list,
+#                                          dimensions = dimensions, grain = grain, 
+#                                          use_log = FALSE, verbose = FALSE)
+#   
+#   # simulate nutrient input
+#   input_temp <- meta.arrR::simulate_nutrient_noise(n = n, max_i = max_i, input_mn = nutrient_input, 
+#                                                    verbose = FALSE)
+#   
+#   # run model
+#   result_temp <- meta.arrR::run_simulation_meta(metasyst = metasyst_temp, parameters = parameters_list,
+#                                                 nutrients_input = input_temp, movement = "behav", 
+#                                                 torus_diffusion = TRUE, max_i = max_i, min_per_i = min_per_i,
+#                                                 seagrass_each = seagrass_each, save_each = save_each, 
+#                                                 verbose = FALSE)  |> 
+#     meta.arrR::filter_meta(filter = c((max_i / years) * years_filter, max_i),
+#                            reset = TRUE, verbose = FALSE)
+#   
+#   # calc mortality
+#   mortality <- dplyr::bind_rows(result_temp$fishpop) |> 
+#     dplyr::filter(timestep == max_i) |> 
+#     dplyr::mutate(died_total = died_consumption + died_background) |> 
+#     dplyr::select(id, died_consumption, died_background, died_total) |> 
+#     dplyr::arrange(id)
+#   
+#   prod <- meta.arrR::summarize_meta(result = result_temp, biomass = FALSE, production = TRUE, 
+#                                     fun = function(x, ...) {mean(x, ...) / ((save_each * 120) / 60 / 24)},
+#                                     lag = c(NA, TRUE))[["production"]] |> 
+#     dplyr::filter(timestep != min(timestep)) |> 
+#     tidyr::pivot_longer(-c(meta, timestep), names_to = "part") |> 
+#     dplyr::group_by(timestep, part) |> 
+#     dplyr::summarise(alpha = mean(value), gamma = sum(value), .groups = "drop") |> 
+#     tidyr::pivot_longer(-c(timestep, part), names_to = "measure") |> 
+#     dplyr::group_by(part, measure) |> 
+#     dplyr::summarise(value = mean(value), .groups = "drop")
+#   
+#   # calc cv
+#   cv <- meta.arrR::calc_variability(x = result_temp, biomass = FALSE, production = TRUE, 
+#                                     fun = function(x, ...) {mean(x, ...) / ((save_each * 120) / 60 / 24)},
+#                                     lag = c(NA, TRUE))[["production"]]
+#   
+#   # combine to result data.frame and list
+#   list(fishpop_init = dplyr::mutate(dplyr::bind_rows(metasyst_temp$fishpop), pop_n = pop_n, nutrient_input = nutrient_input), 
+#        mortality = dplyr::mutate(mortality, pop_n = pop_n, nutrient_input = nutrient_input), 
+#        prod = dplyr::mutate(prod, pop_n = pop_n, nutrient_input = nutrient_input), 
+#        cv = dplyr::mutate(dplyr::bind_rows(cv), pop_n = pop_n, nutrient_input = nutrient_input)
+#   )
+# }
 
 # #### Run locally using future ####
 # 
@@ -214,6 +214,9 @@ gg_null_list <- purrr::map(c("Aboveground", "Total"), function(i) {
 gg_null <- cowplot::plot_grid(plotlist = gg_null_list, ncol = 2) |> 
   cowplot::ggdraw() +
   cowplot::draw_label("Stability value", x = 0.015, y = 0.5, angle = 90, size = base_size)
+
+
+#### Save results #### 
 
 suppoRt::save_ggplot(plot = gg_null, filename = "Figure-S8.png",
                      path = "04_Figures/Supplemental/", width = width, height = height * 1 / 3,
