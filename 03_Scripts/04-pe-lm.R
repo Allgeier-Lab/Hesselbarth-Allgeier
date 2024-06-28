@@ -246,7 +246,7 @@ gg_raw_part <- purrr::map(c("Aboveground", "Total"), function(i) {
     # mean and error of nutrients only model
     geom_point(data = dplyr::filter(cv_means_nf, part == i),
                aes(x = measure, y = mn, group = nutrient_input), position = position_dodge(w * 0.75),
-               color = "black", shape = 8, size = 2.5) +
+               color = "black", shape = 19, size = 2) +
 
     # adding facet labels
     geom_text(data = label_greek, aes(x = x , y = y, label = label), size = text_size,

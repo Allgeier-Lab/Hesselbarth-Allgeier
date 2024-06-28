@@ -118,7 +118,8 @@ color_treatment <- c("Nutrient enrichment" = "#a6bddb", "Fish dynamics" = "#fdae
 pe_values <- dplyr::filter(results_final_df, measure == "beta", treatment != "combined",
                            part != "Belowground") |> 
   dplyr::mutate(treatment = factor(treatment, levels = c("enrichment", "connectivity"), 
-                                   labels = c("Nutrient enrichment", "Fish dynamics")))
+                                   labels = c("Nutrient enrichment", "Fish dynamics")), 
+                part = factor(part, levels = c("Aboveground", "Total"), labels = c("AG PP", "TTL PP")))
     
 pe_sum <- dplyr::group_by(pe_values, part, treatment) |> 
   dplyr::summarise(mean = mean(value.cv), lower = mean - sd(value.cv), upper = mean + sd(value.cv), 
@@ -172,8 +173,8 @@ xy_lims <- list(Aboveground = c(0, 1.0), Total = c(0, 0.1))
     
 gg_cv <- purrr::map(c(Aboveground = "Aboveground", Total = "Total"), function(part_i) {
     
-  # label_temp <- ifelse(test = part_i == "Aboveground", yes = "C)", no = "D)")
-  # x_temp <- ifelse(test = part_i == "Aboveground", yes = 0.01, no = 0.001)
+  x_lab <- expression(paste("AG PP - Meta-ecosystem scale (", italic(CV), italic(gamma), ")"))
+  y_lab <-  expression(paste("AG PP - Local scale (", italic(CV), italic(alpha), ")"))
   
   # set location of arrows for AG
   # light blue (alpha)
@@ -234,6 +235,9 @@ gg_cv <- purrr::map(c(Aboveground = "Aboveground", Total = "Total"), function(pa
   
   # TTL is on a different scale
   if (part_i == "Total") {
+    
+    x_lab <- expression(paste("TTL PP - Meta-ecosystem scale (", italic(CV), italic(gamma), ")"))
+    y_lab <-  expression(paste("TTL PP - Local scale (", italic(CV), italic(alpha), ")"))
     
     # set location of arrows for AG
     # light blue (alpha)
@@ -354,11 +358,11 @@ gg_cv <- purrr::map(c(Aboveground = "Aboveground", Total = "Total"), function(pa
     annotate("segment", x = -Inf, xend = -Inf, y = -Inf, yend = Inf) +
         
     # change theme
-    labs(x = expression(paste("Meta-ecosystem scale (", italic(CV), italic(gamma), ")")),
-         y = expression(paste("Local scale (", italic(CV), italic(alpha), ")"))) +
+    labs(x = x_lab, y = y_lab) +
     theme_classic(base_size = base_size) + 
     theme(legend.position = "none", axis.line = element_blank(),
-          strip.background = element_blank(), strip.text = element_text(hjust = 0))
+          strip.background = element_blank(), strip.text = element_text(hjust = 0), 
+          axis.title = element_text(size = 11))
 
 })
 
@@ -399,7 +403,7 @@ gg_relimp <- dplyr::filter(relimp_df, beta != "Residuals", response == "beta") |
   scale_fill_manual(name = "", values = color_beta) +
   scale_color_manual(name = "", values = color_beta) +
   scale_pattern_manual(name = "", values = c("Aboveground"  = "none", "Total" = "stripe"), 
-                       labels = c("Aboveground" = "AG", "Total" = "TTL")) +
+                       labels = c("Aboveground" = "AG PP", "Total" = "TTL PP")) +
   scale_x_discrete(labels = c("Spatial variation" = "Enrich. var.", "Nutrient enrichment" = "Enrichment",
                               "Variation:Enrichment" = "Interaction", 
                               "Population size" = "Population",
@@ -414,8 +418,8 @@ gg_relimp <- dplyr::filter(relimp_df, beta != "Residuals", response == "beta") |
   # guides(shape = guide_legend(override.aes = list(size = 5))) +
   labs(y = "Relative importance [%]", x = "") + 
   theme_classic(base_size = base_size) + 
-  theme(legend.position = c(0.4, 0.95), legend.background = element_blank(),
-        legend.text = element_text(size = base_size * 0.85), legend.key.size = unit(0.4, "cm"),
+  theme(legend.position = c(0.925, 0.5), legend.background = element_blank(),
+        legend.text = element_text(size = 8.5), legend.key.size = unit(0.4, "cm"),
         axis.line = element_blank(), axis.text.x = element_text(size = 8), axis.title.y = element_text(hjust = 0.2),
         strip.text = element_blank(), strip.background = element_blank())
 
