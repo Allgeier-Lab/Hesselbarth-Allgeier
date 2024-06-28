@@ -228,10 +228,10 @@ gg_part <- purrr::map(c(Aboveground = "Aboveground", Total = "Total"), function(
 gg_pe_pp <- cowplot::plot_grid(gg_part$Aboveground, gg_part$Total, nrow = 2, 
                                labels = c("A)", "B)"), label_fontface = "plain") |> 
   cowplot::ggdraw(xlim = c(-0.035, 1.0), ylim = c(0.0, 1.0)) +
-  cowplot::draw_label("Number of observations", x = 0.015, y = 0.275, angle = 90, size = base_size) + 
-  cowplot::draw_label("Number of observations", x = 0.015, y = 0.78, angle = 90, size = base_size) + 
-  cowplot::draw_label("Aboveground", x = -0.02, y = 0.8, angle = 90, size = base_size) + 
-  cowplot::draw_label("Total", x = -0.02, y = 0.275, angle = 90, size = base_size) + 
+  cowplot::draw_label("AG Number of observations", x = 0.015, y = 0.275, angle = 90, size = 12) + 
+  cowplot::draw_label("TTL Number of observations", x = 0.015, y = 0.78, angle = 90, size = 12) + 
+  # cowplot::draw_label("AG", x = -0.02, y = 0.8, angle = 90, size = base_size) + 
+  # cowplot::draw_label("TTL", x = -0.02, y = 0.275, angle = 90, size = base_size) + 
   cowplot::draw_label(expression(paste("Local scale (", italic(CV), italic(alpha), ")")), 
                       x = 0.175, y = 0.02, size = base_size) +
   cowplot::draw_label(expression(paste("Meta-ecosystem scale (", italic(CV), italic(gamma), ")")), 
