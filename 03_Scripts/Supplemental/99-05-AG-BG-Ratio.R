@@ -79,7 +79,8 @@ dplyr::filter(results_final_df, measure == "alpha", include == "yes", treatment 
   dplyr::filter(part != "Total") |> 
   dplyr::group_by(nutrient_input, part) |>
   dplyr::summarise(prod.mn = mean(value.prod), prod.sd = sd(value.prod), n= dplyr::n(),
-                   .groups = "drop")
+                   .groups = "drop") |> 
+  dplyr::arrange(part, nutrient_input)
 
 #### Save figures #### 
 
