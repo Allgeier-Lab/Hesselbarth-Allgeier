@@ -1,4 +1,4 @@
-[![Static Badge](https://img.shields.io/badge/DOI-submitted-blue)]()
+[![DOI](https://img.shields.io/badge/DOI-submitted-blue.svg)]() 
 
 Code repository for all `R` scripts used in **High fish biomass and low nutrient enrichment synergistically enhance resilience in an artificial reef-seagrass meta-ecosystem** by *M.H.K. Hesselbarth* and *J.E. Allgeier**.
 
