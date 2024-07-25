@@ -192,18 +192,18 @@ gg_trt_syn <- cowplot::plot_grid(gg_trt_syn, gg_legend, rel_heights = c(0.95, 0.
 
 ### Save total figure ####
 
-suppoRt::save_ggplot(plot = gg_syn_pe, filename = "Figure-S6.png",
+suppoRt::save_ggplot(plot = gg_syn_pe, filename = "Figure-S10.png",
                      path = "04_Figures/Supplemental/", width = width, height = height * 2 / 3,
                      units = units, dpi = dpi, overwrite = FALSE)
 
-suppoRt::save_ggplot(plot = gg_trt_syn, filename = "Figure-S7.png",
+suppoRt::save_ggplot(plot = gg_trt_syn, filename = "Figure-S11.png",
                      path = "04_Figures/Supplemental/", width = width, height = height * 1 / 2,
                      units = units, dpi = dpi, overwrite = FALSE)
 
-suppoRt::save_ggplot(plot = gg_syn_pe, filename = "Figure-S6.pdf",
+suppoRt::save_ggplot(plot = gg_syn_pe, filename = "Figure-S10.pdf",
                      path = "04_Figures/Supplemental/", width = width, height = height * 2 / 3,
                      units = units, dpi = dpi, overwrite = FALSE)
 
-suppoRt::save_ggplot(plot = gg_trt_syn, filename = "Figure-S7.pdf",
+suppoRt::save_ggplot(plot = gg_trt_syn, filename = "Figure-S11.pdf",
                      path = "04_Figures/Supplemental/", width = width, height = height * 1 / 2,
                      units = units, dpi = dpi, overwrite = FALSE)

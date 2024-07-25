@@ -93,34 +93,34 @@ for (i in 1:length(results_final_list)) {
 
 #### Relative importance ####
 
-# rel_importance_df <- purrr::map_dfr(seq_along(results_final_list), function(i) {
-# 
-#   message("> Progress: ", i, "/", length(results_final_list))
-# 
-#   rel_r2 <- relaimpo::boot.relimp(best_lm_list[[i]][[1]], type = "lmg", b = 500, level = 0.95,
-#                                   fixed = FALSE) |>
-#     relaimpo::booteval.relimp(bty = "basic")
-# 
-#   tibble::tibble(
-#     part = names_list[[i]][[1]], measure = names_list[[i]][[2]],
-#     beta = c(rel_r2@namen[-1], "residual"), mean = c(rel_r2@lmg, 1 - sum(rel_r2@lmg)),
-#     lower = c(rel_r2@lmg.lower, NA), higher = c(rel_r2@lmg.upper, NA)) |>
-#     dplyr::mutate(dplyr::across(mean:higher, ~ .x * 100),
-#                   lower = dplyr::case_when(lower < 0 ~ 0.0, TRUE ~ lower))}) |>
-#   dplyr::mutate(measure = factor(measure, levels = c("alpha", "gamma" , "beta"),
-#                                  labels = c("alpha" = "Local scale", "gamma" = "Meta-ecosystem scale",
-#                                             "beta" = "Portfolio effect")),
-#                 beta = factor(beta, levels = c("abiotic", "biotic", "nutrient_input", "pop_n",
-#                                                "nutrient_input:pop_n", "biotic:nutrient_input",
-#                                                "abiotic:pop_n", "abiotic:biotic", "residual"),
-#                               labels = c("abiotic" = "Enrich. var.", "biotic" = "Connectivity",
-#                                          "nutrient_input" = "Enrichment", "pop_n" = "Pop. size",
-#                                          "nutrient_input:pop_n" = "Enrich:Pop", "biotic:nutrient_input" = "Enrich:Con",
-#                                          "abiotic:pop_n" = "Var:Pop", "abiotic:biotic" = "Var:Con",
-#                                          "residual" = "Residuals")))
-# 
-# suppoRt::save_rds(object = rel_importance_df, filename = "rel-importance-df.rds",
-#                   path = "02_Data/", overwrite = FALSE)
+rel_importance_df <- purrr::map_dfr(seq_along(results_final_list), function(i) {
+
+  message("> Progress: ", i, "/", length(results_final_list))
+
+  rel_r2 <- relaimpo::boot.relimp(best_lm_list[[i]][[1]], type = "lmg", b = 500, level = 0.95,
+                                  fixed = FALSE) |>
+    relaimpo::booteval.relimp(bty = "basic")
+
+  tibble::tibble(
+    part = names_list[[i]][[1]], measure = names_list[[i]][[2]],
+    beta = c(rel_r2@namen[-1], "residual"), mean = c(rel_r2@lmg, 1 - sum(rel_r2@lmg)),
+    lower = c(rel_r2@lmg.lower, NA), higher = c(rel_r2@lmg.upper, NA)) |>
+    dplyr::mutate(dplyr::across(mean:higher, ~ .x * 100),
+                  lower = dplyr::case_when(lower < 0 ~ 0.0, TRUE ~ lower))}) |>
+  dplyr::mutate(measure = factor(measure, levels = c("alpha", "gamma" , "beta"),
+                                 labels = c("alpha" = "Local scale", "gamma" = "Meta-ecosystem scale",
+                                            "beta" = "Portfolio effect")),
+                beta = factor(beta, levels = c("abiotic", "biotic", "nutrient_input", "pop_n",
+                                               "nutrient_input:pop_n", "biotic:nutrient_input",
+                                               "abiotic:pop_n", "abiotic:biotic", "residual"),
+                              labels = c("abiotic" = "Enrich. var.", "biotic" = "Connectivity",
+                                         "nutrient_input" = "Enrichment", "pop_n" = "Pop. size",
+                                         "nutrient_input:pop_n" = "Enrich:Pop", "biotic:nutrient_input" = "Enrich:Con",
+                                         "abiotic:pop_n" = "Var:Pop", "abiotic:biotic" = "Var:Con",
+                                         "residual" = "Residuals")))
+
+suppoRt::save_rds(object = rel_importance_df, filename = "rel-importance-df.rds",
+                  path = "02_Data/", overwrite = FALSE)
 
 rel_importance_df <- readr::read_rds("02_Data/rel-importance-df.rds")
 
