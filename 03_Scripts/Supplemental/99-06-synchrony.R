@@ -15,7 +15,8 @@ source("01_Functions/plot-lm.R")
 
 base_size <- 13.5
 alpha_pts <- 1
-line_width <- 0.5
+line_width <- 0.75
+point_size <- 1.25
 
 #### Load/wrangle simulated data ####
 
@@ -74,8 +75,8 @@ gg_syn_pe_list <- purrr::map(synchrony_pe_list, function(df_temp) {
     
     # adding geoms
     geom_hline(yintercept = 1, linetype = 2, color = "lightgrey") +
-    geom_point(pch = 1, alpha = alpha_pts) +
-    geom_smooth(se = FALSE, span = 0.1, linewidth = line_width, linetype = 2) +
+    geom_point(pch = 1, alpha = alpha_pts, size = point_size) +
+    geom_smooth(se = FALSE, span = 0.1, linewidth = line_width, linetype = 1) +
     
     # facet wrap by treatment (rows) and part (cols)
     facet_wrap(. ~ part, scales = "fixed") +
@@ -122,10 +123,12 @@ gg_dummy <- data.frame(pop_n = c(8, 16, 32, 64, 128), x = 1:5, y = 1) |>
   ggplot(aes(x = x, y = y, color = factor(pop_n))) + 
   geom_point() + geom_line() +
   scale_color_manual(name = "Pop. size", values = color_pop) + 
+  guides(color = guide_legend(nrow = 1)) +
   theme_classic(base_size = base_size) + 
-  theme(legend.position = "bottom")
+  theme(legend.text = element_text(size = base_size * 0.75), 
+        legend.title.position = "left")
 
-gg_legend <- cowplot::get_legend(gg_dummy)
+gg_legend <- cowplot::get_plot_component(gg_dummy, pattern = "guide-box", return_all = TRUE)[[1]]
 
 treat_synchrony_list <- dplyr::filter(synchrony_pe_df, treatment == "Combined") |> 
   dplyr::group_by(part) |> 
@@ -194,16 +197,16 @@ gg_trt_syn <- cowplot::plot_grid(gg_trt_syn, gg_legend, rel_heights = c(0.95, 0.
 
 suppoRt::save_ggplot(plot = gg_syn_pe, filename = "Figure-S10.png",
                      path = "04_Figures/Supplemental/", width = width, height = height * 2 / 3,
-                     units = units, dpi = dpi, overwrite = FALSE)
+                     units = units, dpi = dpi, overwrite = T)
 
 suppoRt::save_ggplot(plot = gg_trt_syn, filename = "Figure-S11.png",
                      path = "04_Figures/Supplemental/", width = width, height = height * 1 / 2,
-                     units = units, dpi = dpi, overwrite = FALSE)
+                     units = units, dpi = dpi, overwrite = T)
 
 suppoRt::save_ggplot(plot = gg_syn_pe, filename = "Figure-S10.pdf",
                      path = "04_Figures/Supplemental/", width = width, height = height * 2 / 3,
-                     units = units, dpi = dpi, overwrite = FALSE)
+                     units = units, dpi = dpi, overwrite = T)
 
 suppoRt::save_ggplot(plot = gg_trt_syn, filename = "Figure-S11.pdf",
                      path = "04_Figures/Supplemental/", width = width, height = height * 1 / 2,
-                     units = units, dpi = dpi, overwrite = FALSE)
+                     units = units, dpi = dpi, overwrite = T)

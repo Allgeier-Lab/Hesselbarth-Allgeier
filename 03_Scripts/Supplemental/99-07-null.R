@@ -105,30 +105,30 @@ foo_hpc <- function(pop_n, nutrient_input) {
 
 #### Submit HPC ####
 
-globals <- c("n", "max_i", "reef_matrix", "starting_values_list", "parameters_list", "dimensions", "grain", # setup_meta
-             "min_per_i", "seagrass_each", "save_each", # run_simulation_meta
-             "years", "years_filter") # filter_meta
-
-sbatch_noise <- rslurm::slurm_apply(f = foo_hpc, params = experiment_df,
-                                    global_objects = globals, jobname = "null_model",
-                                    nodes = nrow(experiment_df), cpus_per_node = 1,
-                                    slurm_options = list("account" = account,
-                                                         "partition" = "standard",
-                                                         "time" = time,
-                                                         "mem-per-cpu" = mem_per_cpu),
-                                    pkgs = c("arrR", "dplyr", "meta.arrR", "purrr", "tidyr"),
-                                    rscript_path = rscript_path, submit = FALSE)
+# globals <- c("n", "max_i", "reef_matrix", "starting_values_list", "parameters_list", "dimensions", "grain", # setup_meta
+#              "min_per_i", "seagrass_each", "save_each", # run_simulation_meta
+#              "years", "years_filter") # filter_meta
+# 
+# sbatch_noise <- rslurm::slurm_apply(f = foo_hpc, params = experiment_df,
+#                                     global_objects = globals, jobname = "null_model",
+#                                     nodes = nrow(experiment_df), cpus_per_node = 1,
+#                                     slurm_options = list("account" = account,
+#                                                          "partition" = "standard",
+#                                                          "time" = time,
+#                                                          "mem-per-cpu" = mem_per_cpu),
+#                                     pkgs = c("arrR", "dplyr", "meta.arrR", "purrr", "tidyr"),
+#                                     rscript_path = rscript_path, submit = FALSE)
 
 #### Collect results ####
 
-suppoRt::rslurm_missing(x = sbatch_noise)
-
-cv_noise <- rslurm::get_slurm_out(sbatch_noise, outtype = "raw")
-
-suppoRt::save_rds(object = cv_noise, path = "02_Data/", filename = "result-null.rds",
-                  overwrite = FALSE)
-
-rslurm::cleanup_files(sbatch_noise)
+# suppoRt::rslurm_missing(x = sbatch_noise)
+# 
+# cv_noise <- rslurm::get_slurm_out(sbatch_noise, outtype = "raw")
+# 
+# suppoRt::save_rds(object = cv_noise, path = "02_Data/", filename = "result-null.rds",
+#                   overwrite = FALSE)
+# 
+# rslurm::cleanup_files(sbatch_noise)
 
 #### Load data ### 
 
@@ -235,7 +235,7 @@ gg_pop <- dplyr::filter(results_pop_df, part %in% c("Aboveground", "Total"), mea
   
   # adding geoms
   geom_hline(yintercept = 1, linetype = 2, color = 'grey') +
-  geom_point(aes(x = pop_n, y = mn, color = nutrient_input)) + 
+  geom_point(aes(x = pop_n, y = mn, color = nutrient_input), size = 3.5) + 
   geom_line(aes(x = pop_n, y = mn, color = nutrient_input, group = nutrient_input)) +
   geom_errorbar(aes(x = pop_n, ymin = mn - sd, ymax = mn + sd, color = nutrient_input), width = 0) +
   
@@ -277,9 +277,9 @@ gg_combined <- cowplot::plot_grid(gg_null, gg_pop, nrow = 2,
 
 suppoRt::save_ggplot(plot = gg_combined, filename = "Figure-S12.png",
                      path = "04_Figures/Supplemental/", width = width, height = height * 3 / 4,
-                     units = units, dpi = dpi, overwrite = FALSE)
+                     units = units, dpi = dpi, overwrite = T)
 
 suppoRt::save_ggplot(plot = gg_combined, filename = "Figure-S12.pdf",
                      path = "04_Figures/Supplemental/", width = width, height = height * 3 / 4,
-                     units = units, dpi = dpi, overwrite = FALSE)
+                     units = units, dpi = dpi, overwrite = T)
 

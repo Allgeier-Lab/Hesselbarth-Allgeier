@@ -119,12 +119,14 @@ rel_importance_df <- purrr::map_dfr(seq_along(best_lm_list), function(i) {
     beta = c(rel_r2@namen[-1], "residual"), mean = c(rel_r2@lmg, 1 - sum(rel_r2@lmg)),
     lower = c(rel_r2@lmg.lower, NA), higher = c(rel_r2@lmg.upper, NA)) |>
     dplyr::mutate(dplyr::across(mean:higher, ~ .x * 100), 
-                  lower = dplyr::case_when(lower < 0 ~ 0.0, TRUE ~ lower))}) |> 
-  dplyr::mutate(beta = factor(beta, levels = c("abiotic", "biotic", "nutrient_input", "pop_n", "value.cv",
-                                               "residual"),
-                              labels = c("abiotic" = "Enrich. var.", "biotic" = "Connectivity", 
-                                         "nutrient_input" = "Enrichment", "pop_n" = "Pop. size",  
-                                         "value.cv" = "Stability", "residual" = "Residuals")))
+                  lower = dplyr::case_when(lower < 0 ~ 0.0, TRUE ~ lower),
+                  beta = factor(beta, levels = c("abiotic", "biotic", "nutrient_input", "pop_n", "value.cv",
+                                                 "residual"),
+                                labels = c("abiotic" = "Enrich. var.", "biotic" = "Connectivity", 
+                                           "nutrient_input" = "Enrichment", "pop_n" = "Pop. size",  
+                                           "value.cv" = "Stability", "residual" = "Residuals"))) |> 
+                    tidyr::complete(beta, fill = list(part = names_list[[i]][[1]], measure = names_list[[i]][[2]],
+                                                      mean = 0, lower = 0, higher = 0))})
 
 #### Setup ggplot ####
 

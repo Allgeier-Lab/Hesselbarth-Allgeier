@@ -56,48 +56,49 @@ for (i in 1:length(dataset)){
   
   #plots
   
-  colores1 <- c( "#e41a1c" ,"#377eb8", "#4daf4a", "#984ea3", "#ff7f00")
-  if(i ==1) { colores <- colores1[1:3] } else { colores <- colores1}
-  
-  enrich.colors <- data.frame(col.reps = colores1[1:3],
-                              nutrient_input = c("low", "medium", "high"))
-  fish.colors <- data.frame(col.reps = colores1,
+  if(i ==1) {
+    colors_df <- data.frame(col.reps = c("#009E73", "#F0E442", "#CC79A7"),
+                            nutrient_input = c("low", "medium", "high"))
+  } else {
+    colors_df <- data.frame(col.reps = c("#888888" ,"#117733", "#88CCEE", "#DDCC77", "#CC6677"), 
                             pop_n = c(8,16,32,64,128))
+  }
+  
   #for TA
-  if(i ==1) { q.ta <- merge(q.ta, enrich.colors)  } else 
-    { q.ta <- merge(q.ta, fish.colors) }
+  if(i ==1) { q.ta <- merge(q.ta, colors_df)  } else 
+    { q.ta <- merge(q.ta, colors_df) }
   
-  if(i ==1) { q.tg <- merge(q.tg, enrich.colors)  } else 
-    { q.tg <- merge(q.tg, fish.colors) }
+  if(i ==1) { q.tg <- merge(q.tg, colors_df)  } else 
+    { q.tg <- merge(q.tg, colors_df) }
   
-  if(i ==1) { q.tb <- merge(q.tb, enrich.colors)  } else 
-  { q.tb <- merge(q.tb, fish.colors) }
+  if(i ==1) { q.tb <- merge(q.tb, colors_df)  } else 
+  { q.tb <- merge(q.tb, colors_df) }
   
   #for AA
-  if(i ==1) { q.aa <- merge(q.aa, enrich.colors)  } else 
-  { q.aa <- merge(q.aa, fish.colors) }
+  if(i ==1) { q.aa <- merge(q.aa, colors_df)  } else 
+  { q.aa <- merge(q.aa, colors_df) }
   
-  if(i ==1) { q.ag <- merge(q.ag, enrich.colors)  } else 
-  { q.ag <- merge(q.ag, fish.colors) }
+  if(i ==1) { q.ag <- merge(q.ag, colors_df)  } else 
+  { q.ag <- merge(q.ag, colors_df) }
   
-  if(i ==1) { q.ab <- merge(q.ab, enrich.colors)  } else 
-  { q.ab <- merge(q.ab, fish.colors) }
+  if(i ==1) { q.ab <- merge(q.ab, colors_df)  } else 
+  { q.ab <- merge(q.ab, colors_df) }
   
-  #if(i ==1) { col.reps <- rep(colores, each = 50) } else { col.reps <- rep(colores, each = 150) }
+  # if(i ==1) { col.reps <- rep(colores, each = 50) } else { col.reps <- rep(colores, each = 150) }
   
   x11(width = 11, height = 6)
   par(mfrow = c(2,5))
   barplot( cbind(alpha.t, gamma.t), beside = T, 
-           col = colores,
+           col = colors_df$col.reps,
            main = ifelse(i == 1, "Enrichment Level TLPP", "Fish Pop TLPP"),
            names.arg = c("CValpha", "CVgamma"))
   legend(ifelse(i == 1, "topright","topright"), 
          plot.text, 
-         text.col = colores,
+         text.col = colors_df$col.reps,
          bty = "n")
   
   barplot( cbind(beta.t), beside = T, 
-           col = colores,
+           col = colors_df$col.reps,
            main = ifelse(i == 1, "Enrichment Level TLPP", "Fish Pop TLPP"),
            names.arg = c("CVbeta (PE)"))
   
@@ -113,15 +114,15 @@ for (i in 1:length(dataset)){
   
   #Above ground
   barplot( cbind(alpha.a, gamma.a), beside = T, 
-           col = colores,
+           col = colors_df$col.reps,
            main = ifelse(i == 1, "Enrichment Level AGPP", "Fish Pop AGPP"),
            names.arg = c("CValpha", "CVgamma"))
   legend("topright", 
          plot.text, 
-         text.col = colores,
+         text.col = colors_df$col.reps,
          bty = "n")
   barplot( cbind( beta.a), beside = T, 
-           col = colores,
+           col = colors_df$col.reps,
            main = ifelse(i == 1, "Enrichment Level AGPP", "Fish Pop AGPP"),
            names.arg = c("CVbeta (PE)"))
   
