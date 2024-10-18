@@ -130,7 +130,7 @@ rel_importance_df <- purrr::map_dfr(seq_along(best_lm_list), function(i) {
 
 #### Setup ggplot ####
 
-base_size <- 13.5
+base_size <- 8.0
 
 #### Create ggplot ####
 
@@ -174,7 +174,7 @@ gg_part <- purrr::map(c(Aboveground = "Aboveground", Total = "Total"), function(
       geom_col(aes(x = pe_class, y = n, fill = value.prod)) +
       
       # # adding facet labels
-      annotate(geom = "text", x = 1, y = max(df_sum$n) * 1.03, label = label_temp, size = 3.5) +
+      annotate(geom = "text", x = 1, y = max(df_sum$n) * 1.03, label = label_temp, size = 2.5) +
       
       # adding box
       annotate("segment", x = -Inf, xend = Inf, y = -Inf, yend = -Inf) +
@@ -197,7 +197,7 @@ gg_part <- purrr::map(c(Aboveground = "Aboveground", Total = "Total"), function(
       theme(axis.line = element_blank(),
             legend.position = c(0.8, 0.4), legend.title = element_text(size = base_size * 0.5),
             legend.text = element_text(size = base_size * 0.65), legend.key.height = unit(3.5, "mm"),
-            legend.key.size = unit(0.5, "cm"),
+            legend.key.size = unit(0.25, "cm"),
             legend.background = element_rect(colour = NA, fill = NA))
     
     gg_inset <- ggplot(data = rel_imp_temp, aes(x = beta, y = mean, group = beta)) + 
@@ -216,7 +216,7 @@ gg_part <- purrr::map(c(Aboveground = "Aboveground", Total = "Total"), function(
       labs(y = "Rel. importance [%]") +
       theme_classic(base_size = base_size * 0.65) +
       theme(legend.position = "none", axis.title.y = element_blank(), 
-            axis.text.y = element_text(size = base_size * 0.675))
+            axis.text.y = element_text(size = base_size * 0.65))
     
     ggdraw(gg_pp) + 
       draw_plot(gg_inset, x = 0.495, y = 0.61, width = 0.475, height = 0.3525)
@@ -228,10 +228,11 @@ gg_part <- purrr::map(c(Aboveground = "Aboveground", Total = "Total"), function(
 })
 
 gg_pe_pp <- cowplot::plot_grid(gg_part$Aboveground, gg_part$Total, nrow = 2, 
-                               labels = c("A)", "B)"), label_fontface = "plain") |> 
+                               labels = c("A)", "B)"), label_fontface = "plain", 
+                               label_size = 12.0, hjust = 0.5) |> 
   cowplot::ggdraw(xlim = c(-0.035, 1.0), ylim = c(0.0, 1.0)) +
-  cowplot::draw_label("AG Number of observations", x = 0.015, y = 0.275, angle = 90, size = 12) + 
-  cowplot::draw_label("TTL Number of observations", x = 0.015, y = 0.78, angle = 90, size = 12) + 
+  cowplot::draw_label("AG Number of observations", x = 0.015, y = 0.275, angle = 90, size = base_size) + 
+  cowplot::draw_label("TTL Number of observations", x = 0.015, y = 0.78, angle = 90, size = base_size) + 
   # cowplot::draw_label("AG", x = -0.02, y = 0.8, angle = 90, size = base_size) + 
   # cowplot::draw_label("TTL", x = -0.02, y = 0.275, angle = 90, size = base_size) + 
   cowplot::draw_label(expression(paste("Local scale (", italic(CV), italic(alpha), ")")), 
@@ -243,9 +244,9 @@ gg_pe_pp <- cowplot::plot_grid(gg_part$Aboveground, gg_part$Total, nrow = 2,
 #### Save ggplots ####
 
 suppoRt::save_ggplot(plot = gg_pe_pp, filename = "Figure-4.png",
-                     path = "04_Figures/", width = height, height = width * 0.75,
+                     path = "04_Figures/", width = width, height = height * 1/3,
                      units = units, dpi = dpi, overwrite = FALSE)
 
 suppoRt::save_ggplot(plot = gg_pe_pp, filename = "Figure-4.pdf",
-                     path = "04_Figures/", width = height, height = width * 0.75,
+                     path = "04_Figures/", width = width, height = height * 1/3,
                      units = units, dpi = dpi, overwrite = FALSE)

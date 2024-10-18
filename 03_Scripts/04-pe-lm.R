@@ -140,7 +140,7 @@ marginal_means <- purrr::map_dfr(seq_along(results_final_list), function(i) {
 
 #### Create dummy plot #### 
 
-base_size <- 13.0
+base_size <- 8.0
 
 w <- 1.0
 
@@ -157,16 +157,18 @@ gg_importance_part <- dplyr::filter(rel_importance_df, beta != "Residuals") |>
   dplyr::group_split() |> 
   purrr::map(function(i) {
     
-    label_temp <- data.frame(label = "i)", x = 1, y = 67)
+    label_temp <- data.frame(label = "i)", x = 1, y = 65)
     lgd_pos <- "none"
+    lgd_pos2 <- NULL
     y_just <- 0.1
     y_push <- 1.5
     y_temp <- "Relative importance [%]" # ifelse(test = i == "Aboveground", yes = "Stability value", no = "")
     
     if(unique(i$part) == "Total") {
       
-      label_temp <- data.frame(label = "ii)", x = 1, y = 67)
-      lgd_pos <- c(0.8, 0.925)
+      label_temp <- data.frame(label = "ii)", x = 1, y = 65)
+      lgd_pos <- "inside"
+      lgd_pos2 <- c(0.85, 0.9)
       y_just <- 0.35
       y_temp <- ""
       y_push <- 4.25
@@ -211,8 +213,9 @@ gg_importance_part <- dplyr::filter(rel_importance_df, beta != "Residuals") |>
       # labels and themes
       labs(y = y_temp, x = "") +
       theme_classic(base_size = base_size) +
-      theme(legend.position = lgd_pos, legend.background = element_blank(), 
-            legend.text = element_text(size = base_size * 0.75), legend.key.size = unit(0.35, "cm"),
+      theme(legend.position = lgd_pos, legend.position.inside = lgd_pos2, 
+            legend.background = element_blank(), 
+            legend.text = element_text(size = base_size * 0.65), legend.key.size = unit(0.35, "cm"),
             axis.line = element_blank(), axis.text.x = element_text(angle = 45, hjust = 1),
             axis.title.y = element_text(hjust = y_just, margin = unit(c(0, y_push, 0, 0), "mm")), 
             strip.text = element_blank())
@@ -229,17 +232,19 @@ gg_raw_part <- purrr::map(c("Aboveground", "Total"), function(i) {
   y_temp <- ifelse(test = i == "Aboveground", yes = "Stability value", no = "")
 
   label_greek <- data.frame(facet = c("cv", "PE"), label = c("i)", "ii)"),
-                            x = c(1, 1), y = c(0.325, 7.15))
+                            x = c(1, 1), y = c(0.3, 6.5))
 
   lgd_pos <- "none"
+  lgd_pos2 <- NULL
   nudge_temp <- c(-0.4, -0.45)
 
   if (i != "Aboveground") {
 
     label_greek <- data.frame(facet = c("cv", "PE"), label = c("iii)", "iv)"),
-                              x = c(1, 1), y = c(0.04, 9.2))
+                              x = c(1, 1), y = c(0.0325, 9.0))
 
-    lgd_pos <- c(0.875, 0.925)
+    lgd_pos <- "inside"
+    lgd_pos2 <- c(0.875, 0.9)
     nudge_temp <- c(-0.3, -0.45)
 
   }
@@ -283,8 +288,8 @@ gg_raw_part <- purrr::map(c("Aboveground", "Total"), function(i) {
     guides(fill = guide_legend(ncol = 1)) +
     labs(x = "", y = y_temp) +
     theme_classic(base_size = base_size) +
-    theme(legend.position = lgd_pos, legend.background = element_blank(),
-          legend.text = element_text(size = base_size * 0.75), legend.key.size = unit(0.35, "cm"),
+    theme(legend.position = lgd_pos, legend.position.inside = lgd_pos2, legend.background = element_blank(),
+          legend.text = element_text(size = base_size * 0.65), legend.key.size = unit(0.35, "cm"),
           strip.text = element_blank(), axis.line = element_blank())
 })
 
@@ -298,15 +303,17 @@ gg_means_part <- dplyr::filter(marginal_means, measure == "Portfolio effect") |>
     
     y_max <- exp(max(marginal_means$CI_high, na.rm = TRUE))
     
-    label_temp <- data.frame(label = "i)", x = 1, y = y_max * 1)
+    label_temp <- data.frame(label = "i)", x = 1, y = y_max * 0.95)
     lgd_pos <- "none"
+    lgd_pos2 <- NULL
     y_temp <- "Portfolio effect (PE)"
     y_push <- 2.5
     
     if(unique(i$part) == "Total") {
       
-      label_temp <- data.frame(label = "ii)", x = 1, y = y_max * 1)
-      lgd_pos <- c(0.85, 0.925)
+      label_temp <- data.frame(label = "ii)", x = 1, y = y_max * 0.95)
+      lgd_pos <- "inside"
+      lgd_pos2 <- c(0.825, 0.9)
       y_temp <- ""
       y_push <- 5.15
       
@@ -343,9 +350,9 @@ gg_means_part <- dplyr::filter(marginal_means, measure == "Portfolio effect") |>
       # change theme
       labs(x = "", y = y_temp) +
       theme_classic(base_size = base_size) +
-      theme(legend.position = lgd_pos, legend.background = element_blank(),
-            legend.text = element_text(size = base_size * 0.75), legend.key.size = unit(0.35, "cm"),
-            axis.line = element_blank(), 
+      theme(legend.position = lgd_pos, legend.position.inside = lgd_pos2, legend.background = element_blank(),
+            legend.text = element_text(size = base_size * 0.65), legend.key.size = unit(0.35, "cm"),
+            axis.line = element_blank(),  
             axis.title.y = element_text(hjust = 0.0, margin = unit(c(0, y_push, 0, 0), "mm")))
     
   })
@@ -358,7 +365,7 @@ gg_means <- cowplot::ggdraw(gg_means) +
 
 gg_final <- cowplot::plot_grid(gg_importance, gg_raw, gg_means, nrow = 3, rel_heights = c(0.4, 0.3, 0.3), 
                                labels = c("A)", "B)", "C)"), label_fontface = "plain", 
-                               vjust = c(1.5, 1.5, 1.0)) |> 
+                               vjust = c(1.25, 1.5, 1.0), hjust = 0.0) |> 
   cowplot::ggdraw(ylim = c(0.0, 1.025)) +
   cowplot::draw_line(x = c(0.52, 0.52), y = c(0.05, 1.025 - 0.05), color = "grey") +
   cowplot::draw_label("Aboveground", x = 0.275, y = 1.01, size = base_size) + 
@@ -367,9 +374,9 @@ gg_final <- cowplot::plot_grid(gg_importance, gg_raw, gg_means, nrow = 3, rel_he
 #### Save table and ggplot #### 
 
 suppoRt::save_ggplot(plot = gg_final, filename = "Figure-3.png",
-                     path = "04_Figures/", width = width, height = height * 0.75,
+                     path = "04_Figures/", width = width, height = height * 0.5,
                      units = units, dpi = dpi, overwrite = FALSE)
 
 suppoRt::save_ggplot(plot = gg_final, filename = "Figure-3.pdf",
-                     path = "04_Figures/", width = width, height = height * 0.75,
+                     path = "04_Figures/", width = width, height = height * 0.5,
                      units = units, dpi = dpi, overwrite = FALSE)

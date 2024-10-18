@@ -99,7 +99,7 @@ relimp_df <- purrr::map_dfr(results_final_list, function(i) {
 
 #### Setup ggplot ####
 
-base_size <- 13.5
+base_size <- 8.0
 
 w <- 1.0
 
@@ -165,7 +165,8 @@ gg_pe <- ggplot(data = pe_sum, aes(x = part, color = treatment, group = treatmen
   guides(color = guide_legend(nrow = 2)) +
   labs(x = "", y = "Portfolio effect (PE)") +
   theme_classic(base_size = base_size) + 
-  theme(legend.position = c(0.2, 0.95), legend.text = element_text(size = base_size * 0.85), 
+  theme(legend.position	= "inside", legend.position.inside = c(0.15, 0.85), 
+        legend.text = element_text(size = base_size * 0.65), 
         legend.background = element_rect(colour = NA, fill = NA), axis.line = element_blank())
   
 # set ylims based on AG vs TTL
@@ -173,8 +174,8 @@ xy_lims <- list(Aboveground = c(0, 1.0), Total = c(0, 0.1))
     
 gg_cv <- purrr::map(c(Aboveground = "Aboveground", Total = "Total"), function(part_i) {
     
-  x_lab <- expression(paste("AG PP - Meta-ecosystem scale (", italic(CV), italic(gamma), ")"))
-  y_lab <-  expression(paste("AG PP - Local scale (", italic(CV), italic(alpha), ")"))
+  x_lab <- expression(paste("AG PP: Meta-ecosyst. scale (", italic(CV), italic(gamma), ")"))
+  y_lab <-  expression(paste("AG PP: Local scale (", italic(CV), italic(alpha), ")"))
   
   # set location of arrows for AG
   # light blue (alpha)
@@ -236,8 +237,8 @@ gg_cv <- purrr::map(c(Aboveground = "Aboveground", Total = "Total"), function(pa
   # TTL is on a different scale
   if (part_i == "Total") {
     
-    x_lab <- expression(paste("TTL PP - Meta-ecosystem scale (", italic(CV), italic(gamma), ")"))
-    y_lab <-  expression(paste("TTL PP - Local scale (", italic(CV), italic(alpha), ")"))
+    x_lab <- expression(paste("TTL PP: Meta-ecosyst. scale (", italic(CV), italic(gamma), ")"))
+    y_lab <-  expression(paste("TTL PP: Local scale (", italic(CV), italic(alpha), ")"))
     
     # set location of arrows for AG
     # light blue (alpha)
@@ -315,11 +316,11 @@ gg_cv <- purrr::map(c(Aboveground = "Aboveground", Total = "Total"), function(pa
     # adding points
     geom_point(data = dplyr::filter(df_temp, treatment != "combined"),
                aes(x = gamma, y = alpha, color = treatment), 
-               alpha = 0.5, shape = 19, size = 2.5) +
+               alpha = 0.5, shape = 19, size = 1.5) +
     
     geom_point(data = dplyr::filter(df_temp, treatment == "combined"),
                aes(x = gamma, y = alpha, color = treatment), 
-               alpha = 0.5, shape = 19, size = 2.5) +
+               alpha = 0.5, shape = 19, size = 1.5) +
     
     # adding PE = 1 line
     geom_abline(slope = 1, intercept = 0, color = "grey", linetype = 2) +
@@ -348,8 +349,7 @@ gg_cv <- purrr::map(c(Aboveground = "Aboveground", Total = "Total"), function(pa
     scale_x_continuous(limits = xy_lims[names(xy_lims) == part_i][[1]]) +
     scale_y_continuous(limits = xy_lims[names(xy_lims) == part_i][[1]]) +
     coord_equal(ratio = 1) +
-    scale_color_manual(name = "", values = color_treatment) + 
-    scale_fill_manual(values = color_beta) +
+    scale_color_manual(name = "", values = color_treatment) +
         
     # adding box
     annotate("segment", x = -Inf, xend = Inf, y = -Inf, yend = -Inf) +
@@ -361,8 +361,7 @@ gg_cv <- purrr::map(c(Aboveground = "Aboveground", Total = "Total"), function(pa
     labs(x = x_lab, y = y_lab) +
     theme_classic(base_size = base_size) + 
     theme(legend.position = "none", axis.line = element_blank(),
-          strip.background = element_blank(), strip.text = element_text(hjust = 0), 
-          axis.title = element_text(size = 11))
+          strip.background = element_blank(), strip.text = element_text(hjust = 0))
 
 })
 
@@ -386,7 +385,7 @@ gg_relimp <- dplyr::filter(relimp_df, beta != "Residuals", response == "beta") |
   geom_text(data = data.frame(model = c("abiotic", "biotic"), label = c("Nutrient enrichment", "Fish dynamics"),
                               x = c(1, 1), y = c(ceiling(max_imp / 5) * 5,  
                               ceiling(max_imp / 5) * 5)), aes(x = x, y = y, label = label),
-            nudge_x = c(0.4, 0.2), size = 3.5) +
+            nudge_x = c(0.2, 0.1), size = 2.5) +
   
   # facet wrap by model type
   facet_wrap(. ~ model, nrow = 1, labeller = labeller(model = c("abiotic" = "Variation nutrient entrichment",  
@@ -418,9 +417,10 @@ gg_relimp <- dplyr::filter(relimp_df, beta != "Residuals", response == "beta") |
   # guides(shape = guide_legend(override.aes = list(size = 5))) +
   labs(y = "Relative importance [%]", x = "") + 
   theme_classic(base_size = base_size) + 
-  theme(legend.position = c(0.925, 0.5), legend.background = element_blank(),
-        legend.text = element_text(size = 8.5), legend.key.size = unit(0.4, "cm"),
-        axis.line = element_blank(), axis.text.x = element_text(size = 8), axis.title.y = element_text(hjust = 0.2),
+  theme(legend.position = "inside", legend.position.inside = c(0.925, 0.8), 
+        legend.background = element_blank(), legend.text = element_text(size = base_size * 0.65), 
+        legend.key.size = unit(0.4, "cm"),
+        axis.line = element_blank(), axis.title.y = element_text(hjust = 0.2),
         strip.text = element_blank(), strip.background = element_blank())
 
 gg_combined <- cowplot::plot_grid(gg_pe, gg_cv$Aboveground, gg_relimp, gg_cv$Total,
@@ -430,9 +430,9 @@ gg_combined <- cowplot::plot_grid(gg_pe, gg_cv$Aboveground, gg_relimp, gg_cv$Tot
 #### Save ggplot #### 
 
 suppoRt::save_ggplot(plot = gg_combined, filename = "Figure-2.png",
-                     path = "04_Figures/", width = width, height = height * 0.5,
+                     path = "04_Figures/", width = width, height = height * 1/3,
                      units = units, dpi = dpi, overwrite = FALSE)
 
 suppoRt::save_ggplot(plot = gg_combined, filename = "Figure-2.pdf",
-                     path = "04_Figures/", width = width, height = height * 0.5,
+                     path = "04_Figures/", width = width, height = height * 1/3,
                      units = units, dpi = dpi, overwrite = FALSE)

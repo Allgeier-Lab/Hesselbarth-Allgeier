@@ -81,7 +81,7 @@ threshold_mort <- 1000
 # DINA4
 units <- "mm"
 
-width <- 210
+width <- 180
 
 height <- 297
 
