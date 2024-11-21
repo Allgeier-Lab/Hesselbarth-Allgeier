@@ -1,6 +1,6 @@
-[![DOI](https://img.shields.io/badge/DOI-submitted-blue.svg)]() 
+[![DOI](https://img.shields.io/badge/DOI-In_press-blue.svg)]() 
 
-Code repository for all `R` scripts used in **High fish biomass and low nutrient enrichment synergistically enhance resilience in an artificial reef-seagrass meta-ecosystem** by *M.H.K. Hesselbarth* and *J.E. Allgeier**.
+Code repository for all `R` scripts used in Hesselbarth, M.H.K., Allgeier, J.E. (In press).  **High Fish Biomass and Low Nutrient Enrichment Synergistically Enhance Stability in a Seagrass Meta‐Ecosystem**. Conservation Letters.
 
 The repository contains the following folders (however, not all folders are included in the version control due to large size)
 - `/01_Functions/`
